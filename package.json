@@ -1,0 +1,15 @@
+{
+  "name": "cedroavs",
+  "version": "1.0.0",
+  "description": "CedroAVS is a AI based service where AI agents detect and provide Defi opputunities for users",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.2"
+  }
+}
