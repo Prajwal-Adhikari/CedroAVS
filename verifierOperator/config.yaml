@@ -1,0 +1,8 @@
+chains:
+  - name: avalanche
+    chain: evm
+    contract_address: contract_address_ava_evm
+  - name: ethereum
+    chain: evm 
+    contract_address: contract_address_eth_evm 
+
