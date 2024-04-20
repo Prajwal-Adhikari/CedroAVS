@@ -1,22 +1,15 @@
-package client
+package evm
 
 import (
-	"fmt"
-	"time"
+	"github.com/Cedro-Finance/CedroAVS/verifierOperator/common"
 )
 
 var (
-	RegisteredChains map[string]func()
+	RegisteredChains map[string]func() common.IClient
 )
 
 func init() {
-	RegisteredChains = make(map[string]func())
-	RegisteredChains["eth"] = func() {
-		fmt.Println("hello eth")
-		time.Sleep(time.Second * 2)
-	}
-	RegisteredChains["avalanche"] = func() {
-		fmt.Println("hello avalanche")
-		time.Sleep(time.Second * 2)
-	}
+	RegisteredChains = make(map[string]func() common.IClient)
+	RegisteredChains["eth"] = NewClient
+	RegisteredChains["avalanche"] = NewClient
 }
