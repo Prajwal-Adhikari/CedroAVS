@@ -4,19 +4,25 @@ import (
 	"fmt"
 	"sync"
 
-	client "github.com/Cedro-Finance/CedroAVS/verifierOperator/client/evm"
+	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/eigen"
+	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/evm"
+	"github.com/Cedro-Finance/CedroAVS/verifierOperator/common"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
 )
 
 func main() {
 	configFile := config.LoadConfig("config.yaml")
-	fmt.Println("config is ", configFile)
+	_ = configFile
+	eigen.Client()
+
 	wg := sync.WaitGroup{}
-	for _, v := range client.RegisteredChains {
+	for _, v := range evm.RegisteredChains {
 		wg.Add(1)
-		go func(v func()) {
+		go func(v func() common.IClient) {
 			defer wg.Done()
-			v()
+			cl := v()
+			balance := cl.Balance()
+			fmt.Println("balance is", balance)
 		}(v)
 	}
 	wg.Wait()
