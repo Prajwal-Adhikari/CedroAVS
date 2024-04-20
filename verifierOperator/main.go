@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/eigen"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/evm"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/common"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
@@ -13,7 +12,6 @@ import (
 func main() {
 	configFile := config.LoadConfig("config.yaml")
 	_ = configFile
-	eigen.Client()
 
 	wg := sync.WaitGroup{}
 	for _, v := range evm.RegisteredChains {
