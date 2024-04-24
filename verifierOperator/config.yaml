@@ -2,7 +2,14 @@ chains:
   - name: avalanche
     chain: evm
     contract_address: contract_address_ava_evm
+    node_url: node_Url
   - name: ethereum
     chain: evm 
-    contract_address: contract_address_eth_evm 
+    contract_address: contract_address_eth_evm
+    node_url: node_url
 
+avs:
+  - chain: ethereum
+  - chain_type: evm
+  - contract_address: contract_address_avs_evm
+  - node_url: node_url
