@@ -19,6 +19,13 @@ interface ISwapRouter {
     function setRoleManager(address roleManagerAddress) external;
 
     /**
+     * @notice Configures swap status
+     * This function can only be accessed by account with role ACTIONS_ADMIN.
+     * @param status - status of the swap.
+     **/
+    function setSwapStatus(bool status) external;
+
+    /**
      * @notice Configures dex router address
      * This function can only be accessed by the account with role DEFAULT_ADMIN.
      * @param routerAddress - dex router address.
