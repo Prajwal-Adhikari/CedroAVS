@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	// "fmt"
 	"math/big"
 	"sync"
 
@@ -37,8 +37,8 @@ func main() {
 					cl := evm.RegisteredChains[cfg.Name](cfg)
 					cl.UpdateBalance(0, common.Address{})
 					// wait for finality
-					balance := cl.Balance()
-					fmt.Println("balance is", balance)
+					// balance := cl.Balance()
+					// fmt.Println("balance is", balance)
 				}(chainConfig)
 			}
 			wg.Wait()

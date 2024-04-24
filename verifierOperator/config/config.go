@@ -30,6 +30,7 @@ type Config struct {
 	AVS       AVSConfig     `yaml:"avs"`
 	LogConfig *LoggerConfig `yaml:"log"`
 	Mode      string        `yaml:"mode"`
+	KeyStore *KeyStore      `yaml:"keystore"`
 }
 
 type ChainConfig struct {
@@ -40,6 +41,10 @@ type ChainConfig struct {
 }
 
 var config *Config
+type KeyStore struct {
+	Path     string `yaml:"path"`
+	Password string `yaml:"password"`
+}
 
 func LoadConfig(path string) *Config {
 	file, err := os.ReadFile(path)

@@ -7,6 +7,12 @@ chains:
     chain: evm 
     contract_address: contract_address_eth_evm
     node_url: node_url
+    contract_address: contract_address_eth_evm
+
+keystore: 
+  path: /Users/swopnilparajuli/Library/Ethereum/keystore/UTC--2024-04-24T04-05-00.770546000Z--1978916c1fab33e0847ef27c7fd85d9728f1334d
+  password: hello
+
 
 avs:
   - chain: ethereum
