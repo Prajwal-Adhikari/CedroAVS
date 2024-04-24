@@ -7,13 +7,19 @@ import (
 )
 
 type Config struct {
-	Chains []ChainConfig `yaml:"chains"`
+	Chains   []ChainConfig `yaml:"chains"`
+	KeyStore *KeyStore      `yaml:"keystore"`
 }
 
 type ChainConfig struct {
 	Name           string `yaml:"name"`
 	Chain          string `yaml:"chain"`
 	ContactAddress string `yaml:"contract_address"`
+}
+
+type KeyStore struct {
+	Path     string `yaml:"path"`
+	Password string `yaml:"password"`
 }
 
 func LoadConfig(path string) *Config {
