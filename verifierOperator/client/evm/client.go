@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/avs"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/common"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
 	ethCommon "github.com/ethereum/go-ethereum/common"
@@ -15,8 +16,8 @@ type Client struct {
 	contract ethCommon.Address
 }
 
-func (c *Client) Balance() *big.Int {
-	return big.NewInt(100)
+func (c *Client) Balance(balanceRequest *avs.Request, balanceChan chan<-*big.Int) *big.Int {
+	return ethCommon.Big0
 }
 
 // snapshots the balace of lp in the respective chain
