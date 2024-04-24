@@ -116,10 +116,10 @@ contract UniSwapV2Action is ReentrancyGuardUpgradeable, ContextUpgradeable {
             srcToken := mload(add(payload, 52))
             dstToken := mload(add(payload, 72))
             recipient := mload(add(payload, 92))
-            swapType := mload(add(payload,100))
-            amountIn := mload(add(payload, 132))
-            amountOut := mload(add(payload, 164))
-            deadline := mload(add(payload, 196))
+            swapType := mload(add(payload,93))
+            amountIn := mload(add(payload, 125))
+            amountOut := mload(add(payload, 157))
+            deadline := mload(add(payload, 189))
         }
 
         if (!allowedAsset[srcToken]) revert AssetNotSupported(TAG);
