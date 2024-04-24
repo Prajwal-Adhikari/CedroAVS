@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/evm"
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/common"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 func main() {
@@ -14,14 +14,16 @@ func main() {
 	_ = configFile
 
 	wg := sync.WaitGroup{}
-	for _, v := range evm.RegisteredChains {
+	for _, chainConfig := range configFile.Chains {
 		wg.Add(1)
-		go func(v func() common.IClient) {
+		go func(cfg config.ChainConfig) {
 			defer wg.Done()
-			cl := v()
+			cl := evm.RegisteredChains[cfg.Name](cfg)
+			cl.UpdateBalance(0, common.Address{})
+			// wait for finality
 			balance := cl.Balance()
 			fmt.Println("balance is", balance)
-		}(v)
+		}(chainConfig)
 	}
 	wg.Wait()
 }
