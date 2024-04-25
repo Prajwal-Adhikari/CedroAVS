@@ -128,8 +128,6 @@ contract UniSwapV2Action is ReentrancyGuardUpgradeable, ContextUpgradeable {
 
         if (amountIn == 0) revert InvalidTokenAmount(TAG);
 
-        IERC20(srcToken).transferFrom(_msgSender(), address(this), amountIn);
-
         IERC20(srcToken).approve(routerAddress, amountIn);
 
         if (swapType == TYPE_SWAPEXACTTOKENSFORTOKENS) {
