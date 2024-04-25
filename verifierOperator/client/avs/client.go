@@ -9,6 +9,7 @@ import (
 
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/avs/abi"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
+	"github.com/Cedro-Finance/CedroAVS/verifierOperator/logger"
 	ether "github.com/ethereum/go-ethereum"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -24,31 +25,8 @@ const (
 	defaultPollDuration = defaultHeightDifferenceForFilterLogs * 2 / 3 * time.Second
 )
 
-// type ethClientI interface {
-// 	GetCurrentBlock(ctx context.Context) (uint64, error)
-// 	FilterLogs(
-// 		ctx context.Context, fromHeight uint64, toHeight uint64,
-// 		contractAddress ethCommon.Address, topics ethCommon.Hash) ([]types.Log, error)
-// }
-
-type ethClient struct {
-	eth *ethclient.Client
-}
-
-func NewEthClient(rpcUrl string) *ethClient {
-	rpcClient, err := rpc.Dial(rpcUrl)
-
-	if err != nil {
-		panic(err)
-	}
-
-	return &ethClient{
-		eth: ethclient.NewClient(rpcClient),
-	}
-}
-
-func (eth *ethClient) GetCurrentBlock(ctx context.Context) (uint64, error) {
-	currentBlock, err := eth.eth.BlockNumber(ctx)
+func (avs *AVSClient) GetCurrentBlock(ctx context.Context) (uint64, error) {
+	currentBlock, err := avs.eth.BlockNumber(ctx)
 
 	if err != nil {
 		return 0, err
@@ -57,11 +35,11 @@ func (eth *ethClient) GetCurrentBlock(ctx context.Context) (uint64, error) {
 	return currentBlock, nil
 }
 
-func (eth *ethClient) FilterLogs(
+func (avs *AVSClient) FilterLogs(
 	ctx context.Context, fromHeight uint64, toHeight uint64,
 	contractAddress ethCommon.Address, topics ethCommon.Hash) ([]types.Log, error) {
 
-	logs, err := eth.eth.FilterLogs(ctx, ether.FilterQuery{
+	logs, err := avs.eth.FilterLogs(ctx, ether.FilterQuery{
 		FromBlock: big.NewInt(int64(fromHeight)),
 		ToBlock:   big.NewInt(int64(toHeight)),
 		Addresses: []ethCommon.Address{contractAddress},
@@ -73,34 +51,31 @@ func (eth *ethClient) FilterLogs(
 	return logs, err
 }
 
-type AVSContract struct {
-	avs *abi.AVS
-}
-
-func NewAVSContract(addr ethCommon.Address, ethClient *ethclient.Client) (*AVSContract, error) {
-	avs, err := abi.NewAVS(addr, ethClient)
+func (avs *AVSClient) NewAVSContract() *abi.AVS  {
+	contract, err := abi.NewAVS(avs.contract, avs.eth)
 
 	if err != nil {
-		return nil, err
+		logger.GetLogger().Error("Error while initializing contract")
+		panic(err)
 	}
 
-	return &AVSContract{
-		avs: avs,
-	}, err
+	return contract
 }
 
-func (avs *AVSContract) GetRequestId() (*big.Int, error)  {
-	reqId, err := avs.avs.ReqId(nil)
+func (avs *AVSClient) GetRequestId() (*big.Int, error) {
 
-	if (err != nil ) {
+	contract:= avs.NewAVSContract()
+	reqId, err := contract.ReqId(nil)
+
+	if err != nil {
 		return big.NewInt(0), err
 	}
 
 	return reqId, nil
 }
 
-func (avs *AVSContract) ParseGetBalanceLog(log types.Log) (*abi.AVSGetChainTVL, error) {
-	parsed, err := avs.avs.ParseGetChainTVL(log)
+func (avs *AVSClient) ParseGetBalanceLog(log types.Log) (*abi.AVSGetChainTVL, error) {
+	parsed, err := avs.NewAVSContract().ParseGetChainTVL(log)
 
 	if err != nil {
 		return nil, err
@@ -110,37 +85,41 @@ func (avs *AVSContract) ParseGetBalanceLog(log types.Log) (*abi.AVSGetChainTVL, 
 }
 
 type AVSClient struct {
-	contract        *AVSContract
-	contractAddress ethCommon.Address
-	ethClient       *ethClient
+	contract        ethCommon.Address
+	eth             *ethclient.Client
 	startBlock      uint64
 	nextBlockHeight uint64
 	pollDuration    time.Duration
 }
 
 func NewAVSClient(cfg *config.AVSConfig) *AVSClient {
-	ethClient := NewEthClient(cfg.NodeUrl)
-	avsContract, err := NewAVSContract(ethCommon.HexToAddress(cfg.ContactAddress), ethClient.eth)
+	rpc, err := rpc.Dial(cfg.NodeUrl)
+	if err != nil {
+		logger.GetLogger().Error("failed to create rpc client for avs")
+	}
+
+	eth := ethclient.NewClient(rpc)
 
 	if err != nil {
 		panic(err)
 	}
 
 	return &AVSClient{
-		contract:        avsContract,
-		ethClient:       ethClient,
+		contract:        ethCommon.HexToAddress(cfg.ContactAddress),
+		eth:             eth,
 		startBlock:      cfg.StartBlock,
 		nextBlockHeight: cfg.StartBlock,
-		contractAddress: ethCommon.HexToAddress(cfg.ContactAddress),
 		pollDuration:    time.Duration(time.Minute),
 	}
 }
 
-
-type Request struct{}
+type Request struct {
+	reqId  *big.Int
+	height *big.Int
+}
 
 // polls the balance request events from the AVS contract on eth
-func (c *AVSClient) PollEvents(ctx context.Context, ch chan<- *big.Int) {
+func (c *AVSClient) PollEvents(ctx context.Context, ch chan<- *Request) {
 
 	dur := c.pollDuration
 
@@ -160,14 +139,14 @@ func (c *AVSClient) PollEvents(ctx context.Context, ch chan<- *big.Int) {
 
 	L1:
 		for {
-			currentBlock, err := c.ethClient.GetCurrentBlock(ctx)
+			currentBlock, err := c.GetCurrentBlock(ctx)
 
 			if err != nil {
 				//handle error properly
 				break L1
 			}
 
-			currentReqId, err := c.contract.GetRequestId()
+			currentReqId, err := c.GetRequestId()
 
 			if err != nil {
 				break L1
@@ -180,7 +159,7 @@ func (c *AVSClient) PollEvents(ctx context.Context, ch chan<- *big.Int) {
 					endHeight = currentBlock
 				}
 
-				logs, err := c.ethClient.FilterLogs(ctx, startHeight, endHeight, c.contractAddress, ethCommon.Hash{})
+				logs, err := c.FilterLogs(ctx, startHeight, endHeight, c.contract, ethCommon.Hash{})
 
 				if err != nil {
 					//Implement Logger
@@ -188,14 +167,17 @@ func (c *AVSClient) PollEvents(ctx context.Context, ch chan<- *big.Int) {
 				}
 
 				for _, log := range logs {
-					parsed, err := c.contract.ParseGetBalanceLog(log)
+					parsed, err := c.ParseGetBalanceLog(log)
 
 					if err != nil {
 						break L1
 					}
 
 					if currentReqId == parsed.ReqId {
-						ch <- parsed.ReqId
+						ch <- &Request{
+							reqId:  parsed.ReqId,
+							height: parsed.ReqId,
+						}
 					}
 				}
 
