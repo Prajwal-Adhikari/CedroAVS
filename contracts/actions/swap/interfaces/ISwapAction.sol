@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-// @title swap interface of different dex
+// @title swap action interface
 
 interface ISwapActions {
     /**
