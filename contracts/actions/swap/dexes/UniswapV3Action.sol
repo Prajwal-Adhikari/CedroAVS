@@ -111,32 +111,30 @@ contract UniSwapV3Action is ReentrancyGuardUpgradeable, ContextUpgradeable {
         address srcToken;
         address middleWareToken;
         address dstToken;
-        address recipient;
-        uint256 deadline;
+        uint8 swapType;
         uint256 amountIn;
         uint256 amountOut;
+        uint256 deadline;
         uint24 fee;
-        uint8 swapType;
+        address recipient;
         uint160 sqrtPriceLimitX96;
 
         assembly {
             srcToken := mload(add(payload, 52))
             middleWareToken := mload(add(payload, 72))
             dstToken := mload(add(payload, 92))
-            recipient := mload(add(payload, 112))
-            deadline := mload(add(payload, 144))
-            amountIn := mload(add(payload, 176))
-            amountOut := mload(add(payload, 208))
-            fee := mload(add(payload, 211))
-            swapType := mload(add(payload, 212))
+            swapType := mload(add(payload, 93))
+            amountIn := mload(add(payload, 125))
+            amountOut := mload(add(payload, 157))
+            deadline := mload(add(payload, 189))
+            fee := mload(add(payload, 192))
+            recipient := mload(add(payload, 212))
             sqrtPriceLimitX96 := mload(add(payload, 232))
         }
 
         if (!allowedAsset[srcToken]) revert AssetNotSupported(TAG);
 
         if (!allowedAsset[dstToken]) revert AssetNotSupported(TAG);
-
-        IERC20(srcToken).transferFrom(_msgSender(), address(this), amountIn);
 
         IERC20(srcToken).approve(routerAddress, amountIn);
 
