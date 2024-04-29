@@ -2,20 +2,23 @@ package evm
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"fmt"
 	"math/big"
 	"time"
 
+	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/agents"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/agents/evm/abi"
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/avs"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/common"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
+	"github.com/Cedro-Finance/CedroAVS/verifierOperator/keys"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/logger"
 	ether "github.com/ethereum/go-ethereum"
+
+	// ethAbi "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -26,7 +29,7 @@ const (
 	defaultRequestId                     = 1
 	defaultPollDuration                  = defaultHeightDifferenceForFilterLogs * 2 / 3 * time.Second
 
-	maxRetry = 10
+	maxRetry      = 10
 	retryInterval = 10 * time.Second
 )
 
@@ -47,7 +50,9 @@ func NewClient(config config.ChainConfig) common.IClient {
 		eth:             ethClient,
 		startBlock:      100,
 		nextBlockHeight: 100,
-		pollDuration: time.Second * 100,
+		pollDuration:    time.Second * 100,
+		blockFinality:   config.BlockFinality,
+		blockTime:       config.BlockTime * time.Second,
 	}
 }
 
@@ -60,10 +65,25 @@ type Client struct {
 	pollDuration    time.Duration
 	startBlock      uint64
 	nextBlockHeight uint64
+	blockFinality   uint64
+	blockTime       time.Duration //in second
 }
 
 func (c *Client) GetCurrentBlock(ctx context.Context) (uint64, error) {
 	return c.eth.BlockNumber(ctx)
+}
+
+func (c *Client) GetFinalizedBlock(ctx context.Context) (uint64, error) {
+	currentBlock, err := c.GetCurrentBlock(ctx)
+
+	if err != nil {
+		logger.GetLogger().Error("Error while getting block information")
+
+		return 0, err
+	}
+
+	return currentBlock - c.blockFinality, nil
+
 }
 
 func (c *Client) NonceAt(ctx context.Context, account ethCommon.Address, blockNumber *big.Int) (uint64, error) {
@@ -101,28 +121,85 @@ func (c *Client) NewAgentContract() *abi.Agent {
 	return agent
 }
 
-func (c *Client) Balance(balanceRequest *avs.Request, balanceChan chan<- *big.Int) *big.Int {
+func (c *Client) Balance(ctx context.Context, balanceChan chan *agents.BalanceResponse) {
 	// agent := c.NewAgentContract()
 
-	return big.NewInt(10)
+	dur := c.pollDuration
 
-	// return agent.
+	if dur == 0 {
+		dur = defaultPollDuration
+	}
+
+	ticker := time.NewTicker(dur)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+
+		case <-ticker.C:
+
+		}
+	pollLoop:
+		for {
+			finalizedBlock, err := c.GetFinalizedBlock(ctx)
+
+			if err != nil {
+				break pollLoop
+			}
+
+			if finalizedBlock < c.nextBlockHeight {
+				diff := c.nextBlockHeight - finalizedBlock
+				time.Sleep((time.Duration(diff) * c.blockTime))
+				break pollLoop
+			}
+
+			for startHeight := c.nextBlockHeight; startHeight <= finalizedBlock; startHeight += defaultHeightDifferenceForFilterLogs + 1 {
+				endHeight := startHeight + defaultHeightDifferenceForFilterLogs + 1
+
+				if endHeight > finalizedBlock {
+					endHeight = finalizedBlock
+				}
+
+				logs, err := c.FilterLogs(ctx, startHeight, endHeight, c.contractAddress, ethCommon.Hash{})
+
+				if err != nil {
+					break pollLoop
+				}
+
+				for _, log := range logs {
+					parsed, err := c.NewAgentContract().ParseBalance(log)
+
+					if err != nil {
+						logger.GetLogger().Error("Error while parsing Balance event")
+						break pollLoop
+					}
+
+					fmt.Print(parsed)
+				}
+
+				c.nextBlockHeight = endHeight + 1
+			}
+		}
+
+	}
 }
 
 // snapshots the balace of lp in the respective chain
 // sendtx method
-func (c *Client) UpdateBalance(rxId uint64, address ethCommon.Address) *types.Transaction{
+func (c *Client) UpdateBalance(ctx context.Context, rxId *big.Int, address ethCommon.Address) *types.Transaction {
+
+	ks := keys.LoadKeys(config.GetConfig().KeyStore)
 
 	retries := 0
 
-	var transaction *types.Transaction;
+	var transaction *types.Transaction
 
 	for retries <= maxRetry {
 		time.Sleep(retryInterval)
-		
-		agent := c.NewAgentContract()
-		ctx := context.TODO()
 
+		agent := c.NewAgentContract()
 		gasPrice, err := c.SuggestGasPrice(ctx)
 
 		if err != nil {
@@ -130,26 +207,29 @@ func (c *Client) UpdateBalance(rxId uint64, address ethCommon.Address) *types.Tr
 			continue
 		}
 
-		auth, err := bind.NewKeyedTransactorWithChainID(&ecdsa.PrivateKey{}, big.NewInt(10))
+		auth, err := bind.NewKeyedTransactorWithChainID(ks.PrivateKey, big.NewInt(10))
 
 		if err != nil {
 			logger.GetLogger().Error("Error getting private key")
 			continue
 		}
 
-		nonce, err := c.eth.PendingNonceAt(ctx, address)
+		nonce, err := c.eth.PendingNonceAt(ctx, crypto.PubkeyToAddress(*ks.PublicKey))
 
 		if err != nil {
 			logger.GetLogger().Error("Error getting Nonce")
 			continue
 		}
 
+		// agAbi, _ := abi.AgentMetaData.GetAbi()
+
+		// ethAbi.ABI.Pack(*agAbi, "", rxId);
 
 		auth.GasPrice = gasPrice
 		auth.Nonce = big.NewInt(int64(nonce))
 		auth.GasLimit = uint64(600000) //TODO: Replace with actual value
 
-		res, err := agent.UpdateBalance(auth, big.NewInt(int64(rxId)), big.NewInt(int64(rxId)))
+		res, err := agent.UpdateBalance(auth, rxId, rxId)
 
 		if err != nil {
 			logger.GetLogger().Error("Error while transacting")
@@ -159,6 +239,10 @@ func (c *Client) UpdateBalance(rxId uint64, address ethCommon.Address) *types.Tr
 
 		transaction = res
 	}
-	
+
+	// if (retries == maxRetry && transaction == nil) {
+	// 	// operator no need to loop now.
+	// }
+
 	return transaction
 }

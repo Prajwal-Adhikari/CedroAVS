@@ -3,61 +3,73 @@ package relay
 import (
 	"context"
 	"fmt"
-	"math/big"
 
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/agents"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/avs"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/common"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
+	"github.com/Cedro-Finance/CedroAVS/verifierOperator/keys"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 )
 
-var RegisteredClients map[string] common.IClient
+var RegisteredClients map[string]func(config.ChainConfig) common.IClient
 
 type Relay struct {
 	avs *avs.AVSClient
+	agents []common.IClient
+	keystore *keys.KeyStore
 
 }
 
 
-func (r *Relay) GetChainBalances(eventCh <-chan *big.Int) {
-	requestEvent := <-eventCh
-	balanceCh := make(chan *big.Int, len(RegisteredClients))
-	for _, v := range RegisteredClients {
-		go v.Balance(requestEvent, balanceCh) // TODO: filter balance related event
+func (r *Relay) GetChainBalances(ctx context.Context, eventCh <-chan *avs.Request, balanceCh chan *agents.BalanceResponse) {
+
+	for _, ag := range r.agents {
+		go ag.Balance(ctx, balanceCh)
 	}
-	ctx := context.TODO() // remove later
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case balance := <-balanceCh:
+			//TODO: handle whether this response is same as the request or we don't need to?
 			fmt.Println("balance is", balance)
-
 		}
 	}
 }
 
-func (r *Relay) UpdateChainBalances(reqCh <-chan *avs.Request, balanceCh chan *big.Int) {
-	reqEvent := <-reqCh
-
-	for _, v := range RegisteredClients {
-		go v.UpdateBalance(reqEvent.reqId, ethCommon.Address{})
+func (r *Relay) UpdateChainBalances(ctx context.Context, reqCh <-chan *avs.Request) {
+	for {
+		reqEvent := <-reqCh
+		
+		for _, ag := range r.agents {
+			go ag.UpdateBalance(ctx, avs.GetRequestId(reqEvent), ethCommon.Address{})
+		}
 	}
 }
 
 func StartRelay(ctx context.Context, cfg *config.Config) {
 	avsClient := avs.NewAVSClient(&cfg.AVS);
 	balanceReqCh := make(chan *avs.Request) //Chanel to accept request from AVS contract
-	balanceCh := make(chan *agents.BalanceResponse)  //Channel to accept balance from agent contract
+	balanceCh := make(chan *agents.BalanceResponse, len(RegisteredClients))
 
 
+	regAgents := make([]common.IClient, len(cfg.Chains))
+	for _, cfg := range cfg.Chains {
+		regAgents = append(regAgents, RegisteredClients[cfg.Name](cfg))
+	}
 
+	keystore := keys.LoadKeys(cfg.KeyStore)
+	
 	r := Relay {
 		avs: avsClient,
-
+		agents: regAgents,
+		keystore: keystore,
 	}
+
+
+
 	go r.avs.PollEvents(ctx, balanceReqCh)
-	go r.UpdateChainBalances(balanceReqCh, balanceCh)
-	// go r.GetChainBalances(balanceReqCh, balanceCh)
+	go r.UpdateChainBalances(ctx, balanceReqCh)
+	go r.GetChainBalances(ctx, balanceReqCh, balanceCh)
 }

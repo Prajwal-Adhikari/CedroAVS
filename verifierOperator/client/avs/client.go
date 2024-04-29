@@ -35,6 +35,19 @@ func (avs *AVSClient) GetCurrentBlock(ctx context.Context) (uint64, error) {
 	return currentBlock, nil
 }
 
+func (avs *AVSClient) GetFinalizedBlock(ctx context.Context) (uint64, error) {
+	currentBlock, err := avs.GetCurrentBlock(ctx)
+
+	if err != nil {
+		logger.GetLogger().Error("Error while getting block information")
+
+		return 0, err
+	}
+
+	return currentBlock - avs.blockFinality, nil
+
+}
+
 func (avs *AVSClient) FilterLogs(
 	ctx context.Context, fromHeight uint64, toHeight uint64,
 	contractAddress ethCommon.Address, topics ethCommon.Hash) ([]types.Log, error) {
@@ -51,7 +64,7 @@ func (avs *AVSClient) FilterLogs(
 	return logs, err
 }
 
-func (avs *AVSClient) NewAVSContract() *abi.AVS  {
+func (avs *AVSClient) NewAVSContract() *abi.AVS {
 	contract, err := abi.NewAVS(avs.contract, avs.eth)
 
 	if err != nil {
@@ -64,7 +77,7 @@ func (avs *AVSClient) NewAVSContract() *abi.AVS  {
 
 func (avs *AVSClient) GetRequestId() (*big.Int, error) {
 
-	contract:= avs.NewAVSContract()
+	contract := avs.NewAVSContract()
 	reqId, err := contract.ReqId(nil)
 
 	if err != nil {
@@ -85,11 +98,15 @@ func (avs *AVSClient) ParseGetBalanceLog(log types.Log) (*abi.AVSGetChainTVL, er
 }
 
 type AVSClient struct {
-	contract        ethCommon.Address
-	eth             *ethclient.Client
-	startBlock      uint64
-	nextBlockHeight uint64
-	pollDuration    time.Duration
+	contract         ethCommon.Address
+	eth              *ethclient.Client
+	startBlock       uint64
+	nextBlockHeight  uint64
+	pollDuration     time.Duration
+	currentRequestId uint64
+
+	blockTime     time.Duration
+	blockFinality uint64
 }
 
 func NewAVSClient(cfg *config.AVSConfig) *AVSClient {
@@ -105,17 +122,25 @@ func NewAVSClient(cfg *config.AVSConfig) *AVSClient {
 	}
 
 	return &AVSClient{
-		contract:        ethCommon.HexToAddress(cfg.ContactAddress),
-		eth:             eth,
-		startBlock:      cfg.StartBlock,
-		nextBlockHeight: cfg.StartBlock,
-		pollDuration:    time.Duration(time.Minute),
+		contract:         ethCommon.HexToAddress(cfg.ContactAddress),
+		eth:              eth,
+		startBlock:       cfg.StartBlock,
+		nextBlockHeight:  cfg.StartBlock,
+		pollDuration:     time.Duration(time.Minute),
+		currentRequestId: 0,
+
+		blockTime:     cfg.BlockTime * time.Second,
+		blockFinality: cfg.BlockFinality,
 	}
 }
 
 type Request struct {
 	reqId  *big.Int
 	height *big.Int
+}
+
+func GetRequestId(req *Request) *big.Int {
+	return req.reqId
 }
 
 // polls the balance request events from the AVS contract on eth
@@ -139,10 +164,16 @@ func (c *AVSClient) PollEvents(ctx context.Context, ch chan<- *Request) {
 
 	L1:
 		for {
-			currentBlock, err := c.GetCurrentBlock(ctx)
+			finalizedBlock, err := c.GetFinalizedBlock(ctx)
 
 			if err != nil {
 				//handle error properly
+				break L1
+			}
+
+			if finalizedBlock < c.nextBlockHeight {
+				diff := c.nextBlockHeight - finalizedBlock
+				time.Sleep((time.Duration(diff) * c.blockTime))
 				break L1
 			}
 
@@ -152,11 +183,11 @@ func (c *AVSClient) PollEvents(ctx context.Context, ch chan<- *Request) {
 				break L1
 			}
 
-			for startHeight := c.nextBlockHeight; startHeight <= currentBlock; startHeight += defaultHeightDifferenceForFilterLogs + 1 {
+			for startHeight := c.nextBlockHeight; startHeight <= finalizedBlock; startHeight += defaultHeightDifferenceForFilterLogs + 1 {
 				endHeight := startHeight + defaultHeightDifferenceForFilterLogs
 
-				if endHeight > currentBlock {
-					endHeight = currentBlock
+				if endHeight > finalizedBlock {
+					endHeight = finalizedBlock
 				}
 
 				logs, err := c.FilterLogs(ctx, startHeight, endHeight, c.contract, ethCommon.Hash{})
@@ -178,6 +209,9 @@ func (c *AVSClient) PollEvents(ctx context.Context, ch chan<- *Request) {
 							reqId:  parsed.ReqId,
 							height: parsed.ReqId,
 						}
+
+						//TODO: Will there be condition when reqId 2 arrives before settling reqId 1?
+						c.currentRequestId += 1
 					}
 				}
 

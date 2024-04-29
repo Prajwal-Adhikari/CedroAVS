@@ -1,3 +1,6 @@
 package agents
 
-type BalanceResponse struct {}
+type BalanceResponse struct {
+	// chain string
+	// reqId *big.Int
+}

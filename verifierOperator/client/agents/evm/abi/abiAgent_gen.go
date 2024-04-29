@@ -38,6 +38,7 @@ var AgentMetaData = &bind.MetaData{
 // Deprecated: Use AgentMetaData.ABI instead.
 var AgentABI = AgentMetaData.ABI
 
+
 // Agent is an auto generated Go binding around an Ethereum contract.
 type Agent struct {
 	AgentCaller     // Read-only binding to the contract
@@ -103,6 +104,7 @@ func NewAgent(address common.Address, backend bind.ContractBackend) (*Agent, err
 	if err != nil {
 		return nil, err
 	}
+
 	return &Agent{AgentCaller: AgentCaller{contract: contract}, AgentTransactor: AgentTransactor{contract: contract}, AgentFilterer: AgentFilterer{contract: contract}}, nil
 }
 
@@ -130,6 +132,8 @@ func NewAgentFilterer(address common.Address, filterer bind.ContractFilterer) (*
 	if err != nil {
 		return nil, err
 	}
+
+	
 	return &AgentFilterer{contract: contract}, nil
 }
 

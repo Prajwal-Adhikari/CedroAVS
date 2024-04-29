@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -23,6 +24,8 @@ type AVSConfig struct {
 	ContactAddress string `yaml:"contract_address"`
 	NodeUrl        string `yaml:"node_url"`
 	StartBlock     uint64 `yaml:"start_block"`
+	BlockFinality  uint64 `yaml:"block_finality"`
+	BlockTime      time.Duration `yaml:"block_time"` //in second
 }
 
 type Config struct {
@@ -30,20 +33,27 @@ type Config struct {
 	AVS       AVSConfig     `yaml:"avs"`
 	LogConfig *LoggerConfig `yaml:"log"`
 	Mode      string        `yaml:"mode"`
-	KeyStore *KeyStore      `yaml:"keystore"`
+	KeyStore  *KeyStore     `yaml:"keystore"`
 }
 
 type ChainConfig struct {
-	Name           string `yaml:"name"`
-	Chain          string `yaml:"chain"`
-	ContactAddress string `yaml:"contract_address"`
-	NodeUrl        string `yaml:"node_url"`
+	Name           string        `yaml:"name"`
+	Chain          string        `yaml:"chain"`
+	ContactAddress string        `yaml:"contract_address"`
+	NodeUrl        string        `yaml:"node_url"`
+	BlockFinality  uint64        `yaml:"block_finality"`
+	BlockTime      time.Duration `yaml:"block_time"` //in second
 }
 
 var config *Config
+
 type KeyStore struct {
 	Path     string `yaml:"path"`
 	Password string `yaml:"password"`
+}
+
+func GetConfig() *Config {
+	return config
 }
 
 func LoadConfig(path string) *Config {
@@ -59,6 +69,6 @@ func LoadConfig(path string) *Config {
 	if err != nil {
 		panic("could not unmarshal config")
 	}
-
+	
 	return config
 }

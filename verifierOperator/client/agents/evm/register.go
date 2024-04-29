@@ -1,16 +1,10 @@
 package evm
 
 import (
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/common"
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
-)
-
-var (
-	RegisteredChains map[string]func(config.ChainConfig) common.IClient
+	"github.com/Cedro-Finance/CedroAVS/verifierOperator/relay"
 )
 
 func init() {
-	RegisteredChains = make(map[string]func(config config.ChainConfig) common.IClient)
-	RegisteredChains["ethereum"] = NewClient
-	RegisteredChains["avalanche"] = NewClient
+	relay.RegisteredClients["ethereum"] = NewClient
+	relay.RegisteredClients["avalanche"] = NewClient
 }

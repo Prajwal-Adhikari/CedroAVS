@@ -13,6 +13,8 @@ type KeyStore struct {
 	PrivateKey *ecdsa.PrivateKey
 }
 
+var kstore *KeyStore;
+
 func LoadKeys(cfg *config.KeyStore) *KeyStore {
 	file, err := os.ReadFile(cfg.Path)
 	if err != nil {
@@ -22,6 +24,8 @@ func LoadKeys(cfg *config.KeyStore) *KeyStore {
 	if err != nil {
 		panic(err)
 	}
+
+	
 
 	return &KeyStore{
 		PrivateKey: key.PrivateKey,
