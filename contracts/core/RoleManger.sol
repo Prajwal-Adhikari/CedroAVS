@@ -13,6 +13,7 @@ string constant TAG = "RoleManagerCore";
  **/
 contract RoleManager is ContextUpgradeable, AccessControlUpgradeable {
     bytes32 public constant AVS_ADMIN = keccak256("AVS_ADMIN");
+    bytes32 public constant REGISTRYCOORDINATOR_ADMIN = keccak256("REGISTRYCOORDINATOR_ADMIN");
    
 
     /// @custom:oz-upgrades-unsafe-allow constructor

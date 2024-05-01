@@ -24,9 +24,14 @@ interface IRoleManager {
     function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
 
     /**
-     * @notice Returns bytes32 value of the public variable ACTIONS_ADMIN
+     * @notice Returns bytes32 value of the public variable AVS_ADMIN
      **/
     function AVS_ADMIN() external view returns (bytes32);
+
+    /**
+     * @notice Returns bytes32 value of the public variable REGISTRYCOORDINATOR_ADMIN()
+     **/
+    function REGISTRYCOORDINATOR_ADMIN() external view returns (bytes32);
 
     /**
      * @notice Returns bytes32 value of the public variable SWAP_ACTION
