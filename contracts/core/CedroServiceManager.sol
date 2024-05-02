@@ -72,6 +72,10 @@ contract CedroServiceManager is
         _disableInitializers();
     }
 
+    //////////////////////////////////////////////////////////////////////////////
+    //                              Admin Functions                             //
+    //////////////////////////////////////////////////////////////////////////////
+
     /**
      * @notice Whitelists operators
      * This function can only be accessed by account with role AVS_ADMIN.
@@ -98,7 +102,7 @@ contract CedroServiceManager is
         }
     }
 
-     /**
+    /**
      * @notice Configures role manager address
      * This function can only be accessed by the account with role DEFAULT_ADMIN_ROLE.
      * @param roleManagerAddress - address of the roleManager contract.
@@ -109,20 +113,24 @@ contract CedroServiceManager is
         roleManager = roleManagerAddress;
     }
 
-
     //////////////////////////////////////////////////////////////////////////////
     //                          Operator Registration                           //
     //////////////////////////////////////////////////////////////////////////////
 
     /**
      * @notice Register an operator with the AVS. Forwards call to EigenLayer' AVSDirectory.
+     * @param operator The address of the operator to register.
      * @param operatorSignature The signature, salt, and expiry of the operator's signature.
      */
     function registerOperatorToAVS(
         address operator,
         ISignatureUtils.SignatureWithSaltAndExpiry memory operatorSignature
-    ) public override(ServiceManagerBase) onlyRole(IRoleManager(roleManager).REGISTRYCOORDINATOR_ADMIN()) {
-         if (! operatorAllowlist[operator]) {
+    )
+        public
+        override(ServiceManagerBase)
+        onlyRole(IRoleManager(roleManager).REGISTRYCOORDINATOR_ADMIN())
+    {
+        if (!operatorAllowlist[operator]) {
             revert NotInAllowlist(TAG);
         }
         _avsDirectory.registerOperatorToAVS(operator, operatorSignature);
@@ -132,10 +140,14 @@ contract CedroServiceManager is
     /**
      * @notice Deregister an operator from the AVS. Forwards a call to EigenLayer's AVSDirectory.
      */
-    function deregisterOperatorFromAVS(address operator) public override(ServiceManagerBase) onlyRole(IRoleManager(roleManager).REGISTRYCOORDINATOR_ADMIN()) {
+    function deregisterOperatorFromAVS(
+        address operator
+    )
+        public
+        override(ServiceManagerBase)
+        onlyRole(IRoleManager(roleManager).REGISTRYCOORDINATOR_ADMIN())
+    {
         _avsDirectory.deregisterOperatorFromAVS(operator);
         emit OperatorDeRegistered(operator);
     }
-
-    
 }
