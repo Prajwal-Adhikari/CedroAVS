@@ -53,6 +53,7 @@ contract AIAgent is Context, ReentrancyGuard {
     error AssetNotEnabledByAgent(bytes32 asset);
     error SignatureCorrupted(bytes signature);
     error AlreadySigned(address operator, uint256 requestID);
+    error StaleMessage(bytes signature);
 
     constructor(
         address _operatorManager,
@@ -132,6 +133,8 @@ contract AIAgent is Context, ReentrancyGuard {
                 _signature
             )
         ) revert SignatureCorrupted(_signature);
+
+        if (block.timestamp > _timeThreshold) revert StaleMessage(_signature);
 
         Data.UserDepositData storage userData = userDeposits[txnIdCounter];
         userData.txnID = txnIdCounter;
