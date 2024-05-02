@@ -34,7 +34,7 @@ contract AIAgent is Context, ReentrancyGuard {
     mapping(bytes32 => bool) public isAssetAccepted;
     bytes32[] public acceptedAssetList;
 
-    event getAssetsData(uint256 balacnceRequestId, Data.AssetsData[] assetData, uint256 totalLiquidityUSD);
+    event getSnapshotData(uint256 balacnceRequestId, Data.AssetsData[] assetData, uint256 totalLiquidityUSD);
     error IncorrectRequestId(
         string contractTAG,
         uint256 sentId,
@@ -66,6 +66,11 @@ contract AIAgent is Context, ReentrancyGuard {
         oracle = _oracle;
     }
 
+    /**
+     * @notice Approves list of asset from Operator contract
+     * This function can only be accessed by _owner
+     * @param _assets - list of ids of the asset
+     **/
     function approveAsset(bytes32[] memory _assets) external {
         uint256 len = _assets.length;
         for (uint256 i; i < len; i++) {
@@ -79,6 +84,11 @@ contract AIAgent is Context, ReentrancyGuard {
         }
     }
 
+    /**
+     * @notice Removes asset from the approved list
+     * This function can only be accessed by the account with role AIAGENT.
+     * @param _asset - id of the asset
+     **/
     function delistAsset(bytes32 _asset) external {
         uint256 len = acceptedAssetList.length;
         for (uint256 i; i < len; i++) {
@@ -98,6 +108,8 @@ contract AIAgent is Context, ReentrancyGuard {
      * @param _amount - amount of the asset
      * @param _timeInterval - time for which user wants to deposit
      * @param _interestRate - rate provided by AI agent
+     * @param _timeThreshold - block time till which signature is valid
+     * @param _signature - msg signed by the AI agent
      **/
     function depositAsset(
         bytes32 _asset,
@@ -105,7 +117,7 @@ contract AIAgent is Context, ReentrancyGuard {
         uint256 _timeInterval,
         uint256 _interestRate,
         uint256 _timeThreshold,
-        bytes memory signature
+        bytes memory _signature
     ) external payable {
         if (!isAssetAccepted[_asset]) revert AssetNotEnabledByAgent(_asset);
 
@@ -117,9 +129,9 @@ contract AIAgent is Context, ReentrancyGuard {
                 _timeInterval,
                 _interestRate,
                 _timeThreshold,
-                signature
+                _signature
             )
-        ) revert SignatureCorrupted(signature);
+        ) revert SignatureCorrupted(_signature);
 
         Data.UserDepositData storage userData = userDeposits[txnIdCounter];
         userData.txnID = txnIdCounter;
@@ -153,7 +165,7 @@ contract AIAgent is Context, ReentrancyGuard {
         uint256 _timeInterval,
         uint256 _interestRate,
         uint256 _timeThreshold,
-        bytes memory signature
+        bytes memory _signature
     ) internal view returns (address) {
         // Build the hash and check the sig
         // We only accept sigs from the system
@@ -170,24 +182,26 @@ contract AIAgent is Context, ReentrancyGuard {
         bytes32 signedHash = keccak256(
             abi.encodePacked("\x19Ethereum Signed Message:\n32", msgHash)
         );
-        return signedHash.recover(signature);
+        return signedHash.recover(_signature);
     }
 
-    //TODO: to be called by whilelisted operator
-    function getBalanceData(uint256 requestId)
-        external
-        returns (Data.AssetsData[] memory assetData)
-    {   
+    /**
+     * @notice Emits event with assets data and total liquidity in USD
+     * This function can only be accessed by the account with role SNAPSHOT_OPERATOR
+     * @param _requestId - request number
+     **/
+    function snapshotAssetData(uint256 _requestId) external {   
+        Data.AssetsData[] memory assetData;
         uint256 totalLiquidityUSD;
         uint256 len = acceptedAssetList.length;
         assetData = new Data.AssetsData[](len);
-        confirmatonCount[requestId]++;
-        if (signed[_msgSender()][requestId])
-            revert AlreadySigned(_msgSender(), requestId);
-        if (confirmatonCount[requestId] < confirmationThreshold)
-            return assetData;
-        if (requestId != balanceRequestId)
-            revert IncorrectRequestId(TAG, requestId, balanceRequestId);
+        confirmatonCount[_requestId]++;
+        if (signed[_msgSender()][_requestId])
+            revert AlreadySigned(_msgSender(), _requestId);
+        if (confirmatonCount[_requestId] < confirmationThreshold)
+            return;
+        if (_requestId != balanceRequestId)
+            revert IncorrectRequestId(TAG, _requestId, balanceRequestId);
 
         for (uint256 i; i < len; i++) {
             assetData[i].assetId = acceptedAssetList[i];
@@ -202,12 +216,16 @@ contract AIAgent is Context, ReentrancyGuard {
                 .div(1e18);
         }
 
-        signed[_msgSender()][requestId] = true;
+        signed[_msgSender()][_requestId] = true;
         balanceRequestId++;
 
-        emit getAssetsData(balanceRequestId, assetData, totalLiquidityUSD);
+        emit getSnapshotData(balanceRequestId, assetData, totalLiquidityUSD);
     }
 
+    /**
+     * @notice Returns balance of the asset holded by the contract
+     * @param _token - address of the asset
+     **/
     function getAssetBalance(address _token)
         public
         view

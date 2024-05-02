@@ -34,11 +34,7 @@ contract Operator is Context, ReentrancyGuard {
         owner = _owner;
         oracle = _oracle;
     }
-
-    function setOracle(address _oracle) external {
-        oracle = _oracle;
-    }
-
+    
     /**
      * @notice Enrolls agent to the operator
      * This function can only be accessed by the account with role AI_AGENT.
@@ -69,6 +65,11 @@ contract Operator is Context, ReentrancyGuard {
         }
     }
 
+    /**
+     * @notice Approves list of asset from Operator Manager contract
+     * This function can only be accessed by the account with role OPERATOR.
+     * @param _assets - list of ids of the asset
+     **/
     function approveAsset(bytes32[] memory _assets) external {
         uint256 len = _assets.length;
         for (uint256 i; i < len; i++) {
@@ -85,6 +86,11 @@ contract Operator is Context, ReentrancyGuard {
 
     }
 
+    /**
+     * @notice Removes asset from the approved list
+     * This function can only be accessed by the account with role OPERATOR.
+     * @param _asset - id of the asset
+     **/
     function delistAsset(bytes32 _asset) external {
         uint256 len = acceptedAssetList.length;
         for (uint256 i; i < len; i++) {

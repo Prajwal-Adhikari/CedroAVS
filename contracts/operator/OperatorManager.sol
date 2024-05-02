@@ -48,6 +48,11 @@ contract OperatorManager is
         __ReentrancyGuard_init();
     }
 
+    /**
+     * @notice Configures oracle
+     * This function can only be accessed by the account with role MANAGER.
+     * @param _oracle - address of the oracle
+     **/
     function setOracle(address _oracle) external {
         oracle = _oracle;
     }
@@ -102,7 +107,12 @@ contract OperatorManager is
         pool.token = _token;
     }
 
-    // To be called by only operator contract
+    /**
+     * @notice Maps the agent to its corresponding operator
+     * This function can only be accessed by account with role OPERATOR.
+     * @param _agent - address of the agent.
+     * @param _operatorContract - address of the operator contract.
+     **/
     function mapAgent(address _agent, address _operatorContract) external {
         agentToOperator[_agent] = _operatorContract;
     }
@@ -134,6 +144,8 @@ contract OperatorManager is
     /**
      * @notice Slash an agent in case of major deviation in holdings
      * This function can only be accessed by Operator.
+     * @param _agent - address of the agent.
+     * @param _agent - amount to be slashed
      **/
     function slashAgent(address _agent, uint256 _slashAmount) external {
         Data.SnapshotInfo memory snapshot = snapshots[_agent];
