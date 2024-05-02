@@ -2,7 +2,7 @@
 pragma solidity 0.8.24;
 import "../libraries/Data.sol";
 
-interface IServiceManager {
+interface IOperatorManager {
     /**
      * @notice Returns the pool info of the asset
      * @param _assetId - id of the asset.
