@@ -57,15 +57,15 @@ contract OperatorManager is
      * This function can only be accessed by the account with role OPERATOR.
      **/
     function enrollOperator() external {
-        if (isOperator[msg.sender]) revert OperatorAlreadyExists(msg.sender);
-        operators.push(msg.sender);
-        isOperator[msg.sender] = true;
+        if (isOperator[_msgSender()]) revert OperatorAlreadyExists(_msgSender());
+        operators.push(_msgSender());
+        isOperator[_msgSender()] = true;
         Operator OperatorInstance = new Operator(
             address(this),
-            msg.sender,
+            _msgSender(),
             oracle
         );
-        operatorContract[msg.sender] = OperatorInstance;
+        operatorContract[_msgSender()] = OperatorInstance;
     }
 
     /**
@@ -88,18 +88,18 @@ contract OperatorManager is
     /**
      * @notice Configures pool for an asset
      * This function can only be accessed by account with role MANAGER.
-     * @param id - pool id for the asset.
-     * @param token - address of the asset.
-     * @param enable - status of the pool
+     * @param _id - pool id for the asset.
+     * @param _token - address of the asset.
+     * @param _enable - status of the pool.
      **/
     function setPool(
-        bytes32 id,
-        address token,
-        bool enable
+        bytes32 _id,
+        address _token,
+        bool _enable
     ) external {
-        Data.PoolInfo storage pool = pools[id];
-        pool.enable = enable;
-        pool.token = token;
+        Data.PoolInfo storage pool = pools[_id];
+        pool.enable = _enable;
+        pool.token = _token;
     }
 
     // To be called by only operator contract
@@ -108,8 +108,9 @@ contract OperatorManager is
     }
 
     /**
-     * @notice Triggers a snapshot update event for the agent
+     * @notice Triggers a snapshot update event for the agent.
      * This function can only be accessed by any user.
+     * @param _agent - address of the agent.
      **/
     function updateSnapshot(address _agent) external payable {
         // TODO: take some bond amount to trigger update event or whitelist callers

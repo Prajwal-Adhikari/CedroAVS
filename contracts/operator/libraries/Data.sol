@@ -27,7 +27,7 @@ library Data {
     }
    
     struct AssetsData {
-        uint256 totalBalance;
+        uint256 balance;
         bytes32 assetId;
         address assetAddress;
     }

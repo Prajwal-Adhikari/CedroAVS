@@ -3,20 +3,23 @@ pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/IOperator.sol";
-import "./interfaces/IServiceManager.sol";
+import "./interfaces/IOperatorManager.sol";
 import "./libraries/Data.sol";
 
 string constant TAG = "AIAgent";
 
-contract AIAgent is ReentrancyGuard {
+contract AIAgent is Context, ReentrancyGuard {
     using ECDSA for bytes32;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
+
+    uint256 public constant ROOT_DECIMALS = 18;
 
     uint256 public balanceRequestId;
     uint256 public confirmationThreshold;
@@ -26,12 +29,12 @@ contract AIAgent is ReentrancyGuard {
     address public owner;
     mapping(uint256 => Data.UserDepositData) public userDeposits;
     address public operator;
-    address public serviceManager;
+    address public operatorManager;
     uint256 public txnIdCounter;
     mapping(bytes32 => bool) public isAssetAccepted;
     bytes32[] public acceptedAssetList;
 
-    event getAssetsData(uint256 balacnceRequestId, Data.AssetsData[] assetData);
+    event getAssetsData(uint256 balacnceRequestId, Data.AssetsData[] assetData, uint256 totalLiquidityUSD);
     error IncorrectRequestId(
         string contractTAG,
         uint256 sentId,
@@ -52,12 +55,12 @@ contract AIAgent is ReentrancyGuard {
     error AlreadySigned(address operator, uint256 requestID);
 
     constructor(
-        address _serviceManager,
+        address _operatorManager,
         address _operator,
         address _owner,
         address _oracle
     ) {
-        serviceManager = _serviceManager;
+        operatorManager = _operatorManager;
         operator = _operator;
         owner = _owner;
         oracle = _oracle;
@@ -128,7 +131,7 @@ contract AIAgent is ReentrancyGuard {
         userData.timeInterval = _timeInterval;
         userData.interestRate = _interestRate;
         userData.createdAt = block.timestamp;
-        Data.PoolInfo memory pool = IServiceManager(serviceManager).pools(
+        Data.PoolInfo memory pool = IOperatorManager(operatorManager).pools(
             _asset
         );
         _pay(pool.token, _amount);
@@ -140,7 +143,7 @@ contract AIAgent is ReentrancyGuard {
             if (msg.value < amount)
                 revert InsufficientValue(TAG, msg.value, amount - 1);
         } else {
-            IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+            IERC20(token).safeTransferFrom(_msgSender(), address(this), amount);
         }
     }
 
@@ -156,7 +159,7 @@ contract AIAgent is ReentrancyGuard {
         // We only accept sigs from the system
         bytes32 msgHash = keccak256(
             abi.encodePacked(
-                msg.sender,
+                _msgSender(),
                 _asset,
                 _amount,
                 _timeInterval,
@@ -174,32 +177,39 @@ contract AIAgent is ReentrancyGuard {
     function getBalanceData(uint256 requestId)
         external
         returns (Data.AssetsData[] memory assetData)
-    {
+    {   
+        uint256 totalLiquidityUSD;
         uint256 len = acceptedAssetList.length;
         assetData = new Data.AssetsData[](len);
         confirmatonCount[requestId]++;
-        if (signed[msg.sender][requestId])
-            revert AlreadySigned(msg.sender, requestId);
+        if (signed[_msgSender()][requestId])
+            revert AlreadySigned(_msgSender(), requestId);
         if (confirmatonCount[requestId] < confirmationThreshold)
             return assetData;
         if (requestId != balanceRequestId)
             revert IncorrectRequestId(TAG, requestId, balanceRequestId);
-        assetData = new Data.AssetsData[](len);
+
         for (uint256 i; i < len; i++) {
             assetData[i].assetId = acceptedAssetList[i];
 
-            Data.PoolInfo memory pool = IServiceManager(serviceManager).pools(
+            Data.PoolInfo memory pool = IOperatorManager(operatorManager).pools(
                 acceptedAssetList[i]
             );
-            assetData[i].totalBalance = IERC20(pool.token).balanceOf(
-                address(this)
-            );
             assetData[i].assetAddress = pool.token;
+            if (pool.token == address(0)) {
+                assetData[i].balance = address(this).balance;
+            } else {
+                assetData[i].balance = IERC20(pool.token).balanceOf(address(this));
+            }
+            totalLiquidityUSD += _buildAmount(assetData[i].balance, pool.token)
+                .mul(IOracle(oracle).getSinglePrice(acceptedAssetList[i]))
+                .div(1e18);
         }
-        signed[msg.sender][requestId] = true;
+
+        signed[_msgSender()][requestId] = true;
         balanceRequestId++;
 
-        emit getAssetsData(balanceRequestId, assetData);
+        emit getAssetsData(balanceRequestId, assetData, totalLiquidityUSD);
     }
 
     function getAssetBalance(bytes32 assetId)
@@ -207,9 +217,35 @@ contract AIAgent is ReentrancyGuard {
         view
         returns (uint256 assetBalance)
     {
-        Data.PoolInfo memory pool = IServiceManager(serviceManager).pools(
+        Data.PoolInfo memory pool = IOperatorManager(operatorManager).pools(
             assetId
         );
         assetBalance = IERC20(pool.token).balanceOf(address(this));
     }
+
+    function _buildAmount(
+        uint256 _localAmount,
+        address _token
+    ) internal view returns (uint256 amount) {
+        uint8 decimals = _getTokenDecimal(_token);
+
+        if (decimals > ROOT_DECIMALS) {
+            amount = _localAmount / (10 ** (decimals - ROOT_DECIMALS));
+        } else {
+            amount = _localAmount * (10 ** (ROOT_DECIMALS - decimals));
+        }
+    }
+
+    function _getTokenDecimal(
+        address _token
+    ) internal view returns (uint8 decimals) {
+        decimals = 18;
+        if (_token != address(0)) {
+            (, bytes memory data) = _token.staticcall(
+                abi.encodeWithSignature("decimals()")
+            );
+            decimals = abi.decode(data, (uint8));
+        }
+    }
+
 }

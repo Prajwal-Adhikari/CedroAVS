@@ -3,15 +3,16 @@ pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./libraries/Data.sol";
-import "./interfaces/IServiceManager.sol";
+import "./interfaces/IOperatorManager.sol";
 import {AIAgent} from "./AIAgent.sol";
 
 string constant TAG = "Operator";
 
-contract Operator {
+contract Operator is Context, ReentrancyGuard {
     using SafeMath for uint256;
     address[] public agents;
     mapping(address => bool) public isAgent;
@@ -21,15 +22,15 @@ contract Operator {
     bytes32[] public acceptedAssetList;
     address public oracle;
     address public owner;
-    address public serviceManager;
+    address public operatorManager;
 
     error NotAnAgent(address agent);
     error AgentAlreadyExists(address agent);
     error AssetNotEnabledByServiceManager(bytes32 asset);
     error AssetAlreadyExists(bytes32 asset);
 
-    constructor(address _serviceManager, address _owner, address _oracle) {
-        serviceManager = _serviceManager;
+    constructor(address _operatorManager, address _owner, address _oracle) {
+        operatorManager = _operatorManager;
         owner = _owner;
         oracle = _oracle;
     }
@@ -43,12 +44,12 @@ contract Operator {
      * This function can only be accessed by the account with role AI_AGENT.
      **/
     function enrollAgent() external {
-        if (isAgent[msg.sender]) revert AgentAlreadyExists(msg.sender);
-        agents.push(msg.sender);
-        isAgent[msg.sender] = true;
-        AIAgent AIAgentInstance = new AIAgent(serviceManager, address(this), msg.sender, oracle);
-        agentContract[msg.sender] = AIAgentInstance;
-        IServiceManager(serviceManager).mapAgent(msg.sender,address(this));
+        if (isAgent[_msgSender()]) revert AgentAlreadyExists(_msgSender());
+        agents.push(_msgSender());
+        isAgent[_msgSender()] = true;
+        AIAgent AIAgentInstance = new AIAgent(operatorManager, address(this), _msgSender(), oracle);
+        agentContract[_msgSender()] = AIAgentInstance;
+        IOperatorManager(operatorManager).mapAgent(_msgSender(),address(this));
     }
 
     /**
@@ -72,7 +73,7 @@ contract Operator {
         uint256 len = _assets.length;
         for (uint256 i; i < len; i++) {
 
-        Data.PoolInfo memory pool = IServiceManager(serviceManager).pools(_assets[i]);
+        Data.PoolInfo memory pool = IOperatorManager(operatorManager).pools(_assets[i]);
         if (! pool.enable)
             revert AssetNotEnabledByServiceManager(_assets[i]);
         if(isAssetAccepted[_assets[i]])
@@ -102,8 +103,8 @@ contract Operator {
      * This function can only be accessed by the account with role Agent.
      **/
     function updateBondAmount() external payable {
-        if (!isAgent[msg.sender]) revert NotAnAgent(msg.sender);
-        agentBond[msg.sender] += msg.value;
+        if (!isAgent[_msgSender()]) revert NotAnAgent(_msgSender());
+        agentBond[_msgSender()] += msg.value;
     }
 
 
