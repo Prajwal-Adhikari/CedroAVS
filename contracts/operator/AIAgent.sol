@@ -196,11 +196,7 @@ contract AIAgent is Context, ReentrancyGuard {
                 acceptedAssetList[i]
             );
             assetData[i].assetAddress = pool.token;
-            if (pool.token == address(0)) {
-                assetData[i].balance = address(this).balance;
-            } else {
-                assetData[i].balance = IERC20(pool.token).balanceOf(address(this));
-            }
+            assetData[i].balance = getAssetBalance(pool.token);
             totalLiquidityUSD += _buildAmount(assetData[i].balance, pool.token)
                 .mul(IOracle(oracle).getSinglePrice(acceptedAssetList[i]))
                 .div(1e18);
@@ -212,15 +208,16 @@ contract AIAgent is Context, ReentrancyGuard {
         emit getAssetsData(balanceRequestId, assetData, totalLiquidityUSD);
     }
 
-    function getAssetBalance(bytes32 assetId)
+    function getAssetBalance(address _token)
         public
         view
         returns (uint256 assetBalance)
     {
-        Data.PoolInfo memory pool = IOperatorManager(operatorManager).pools(
-            assetId
-        );
-        assetBalance = IERC20(pool.token).balanceOf(address(this));
+        if (_token == address(0)) {
+                assetBalance = address(this).balance;
+            } else {
+                assetBalance = IERC20(_token).balanceOf(address(this));
+            }
     }
 
     function _buildAmount(
