@@ -21,20 +21,15 @@ contract AIAgent is Context, ReentrancyGuard {
 
     uint256 public constant ROOT_DECIMALS = 18;
 
-    uint256 public balanceRequestId;
-    uint256 public confirmationThreshold;
-    mapping(uint256 => uint256) public confirmatonCount;
-    mapping(address => mapping(uint256 => bool)) public signed;
     address public oracle;
     address public owner;
-    mapping(uint256 => Data.UserDepositData) public userDeposits;
+    mapping(uint256 => Data.UserDepositData) public userDeposits; // txnID => userDeposits
     address public operator;
     address public operatorManager;
     uint256 public txnIdCounter;
-    mapping(bytes32 => bool) public isAssetAccepted;
+    mapping(bytes32 => bool) public isAssetAccepted; // assetID => isAccepted
     bytes32[] public acceptedAssetList;
 
-    event getSnapshotData(uint256 balacnceRequestId, Data.AssetsData[] assetData, uint256 totalLiquidityUSD);
     error IncorrectRequestId(
         string contractTAG,
         uint256 sentId,
@@ -52,7 +47,6 @@ contract AIAgent is Context, ReentrancyGuard {
     error AssetAlreadyExists(bytes32 asset);
     error AssetNotEnabledByAgent(bytes32 asset);
     error SignatureCorrupted(bytes signature);
-    error AlreadySigned(address operator, uint256 requestID);
     error StaleMessage(bytes signature);
 
     constructor(
@@ -74,7 +68,7 @@ contract AIAgent is Context, ReentrancyGuard {
      **/
     function approveAsset(bytes32[] memory _assets) external {
         uint256 len = _assets.length;
-        for (uint256 i; i < len; i++) {
+        for (uint256 i; i < len; ) {
             if (!IOperator(operator).isAssetAccepted(_assets[i]))
                 revert AssetNotEnabledByOperator(_assets[i]);
             if (isAssetAccepted[_assets[i]])
@@ -82,6 +76,9 @@ contract AIAgent is Context, ReentrancyGuard {
 
             acceptedAssetList.push(_assets[i]);
             isAssetAccepted[_assets[i]] = true;
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -92,12 +89,15 @@ contract AIAgent is Context, ReentrancyGuard {
      **/
     function delistAsset(bytes32 _asset) external {
         uint256 len = acceptedAssetList.length;
-        for (uint256 i; i < len; i++) {
+        for (uint256 i; i < len; ) {
             if (acceptedAssetList[i] == _asset) {
                 acceptedAssetList[i] = acceptedAssetList[len - 1];
                 acceptedAssetList.pop();
                 isAssetAccepted[_asset] = false;
                 break;
+            }
+            unchecked {
+                i++;
             }
         }
     }
@@ -121,7 +121,7 @@ contract AIAgent is Context, ReentrancyGuard {
         bytes memory _signature
     ) external payable {
         if (!isAssetAccepted[_asset]) revert AssetNotEnabledByAgent(_asset);
-
+        if (block.timestamp > _timeThreshold) revert StaleMessage(_signature);
         if (
             owner !=
             isDepositorValid(
@@ -133,8 +133,6 @@ contract AIAgent is Context, ReentrancyGuard {
                 _signature
             )
         ) revert SignatureCorrupted(_signature);
-
-        if (block.timestamp > _timeThreshold) revert StaleMessage(_signature);
 
         Data.UserDepositData storage userData = userDeposits[txnIdCounter];
         userData.txnID = txnIdCounter;
@@ -150,7 +148,7 @@ contract AIAgent is Context, ReentrancyGuard {
             _asset
         );
         _pay(pool.token, _amount);
-        txnIdCounter++;
+        ++txnIdCounter;
     }
 
     function _pay(address token, uint256 amount) internal {
@@ -189,43 +187,6 @@ contract AIAgent is Context, ReentrancyGuard {
     }
 
     /**
-     * @notice Emits event with assets data and total liquidity in USD
-     * This function can only be accessed by the account with role SNAPSHOT_OPERATOR
-     * @param _requestId - request number
-     **/
-    function snapshotAssetData(uint256 _requestId) external {   
-        Data.AssetsData[] memory assetData;
-        uint256 totalLiquidityUSD;
-        uint256 len = acceptedAssetList.length;
-        assetData = new Data.AssetsData[](len);
-        confirmatonCount[_requestId]++;
-        if (signed[_msgSender()][_requestId])
-            revert AlreadySigned(_msgSender(), _requestId);
-        if (confirmatonCount[_requestId] < confirmationThreshold)
-            return;
-        if (_requestId != balanceRequestId)
-            revert IncorrectRequestId(TAG, _requestId, balanceRequestId);
-
-        for (uint256 i; i < len; i++) {
-            assetData[i].assetId = acceptedAssetList[i];
-
-            Data.PoolInfo memory pool = IOperatorManager(operatorManager).pools(
-                acceptedAssetList[i]
-            );
-            assetData[i].assetAddress = pool.token;
-            assetData[i].balance = getAssetBalance(pool.token);
-            totalLiquidityUSD += _buildAmount(assetData[i].balance, pool.token)
-                .mul(IOracle(oracle).getSinglePrice(acceptedAssetList[i]))
-                .div(1e18);
-        }
-
-        signed[_msgSender()][_requestId] = true;
-        balanceRequestId++;
-
-        emit getSnapshotData(balanceRequestId, assetData, totalLiquidityUSD);
-    }
-
-    /**
      * @notice Returns balance of the asset holded by the contract
      * @param _token - address of the asset
      **/
@@ -235,28 +196,31 @@ contract AIAgent is Context, ReentrancyGuard {
         returns (uint256 assetBalance)
     {
         if (_token == address(0)) {
-                assetBalance = address(this).balance;
-            } else {
-                assetBalance = IERC20(_token).balanceOf(address(this));
-            }
-    }
-
-    function _buildAmount(
-        uint256 _localAmount,
-        address _token
-    ) internal view returns (uint256 amount) {
-        uint8 decimals = _getTokenDecimal(_token);
-
-        if (decimals > ROOT_DECIMALS) {
-            amount = _localAmount / (10 ** (decimals - ROOT_DECIMALS));
+            assetBalance = address(this).balance;
         } else {
-            amount = _localAmount * (10 ** (ROOT_DECIMALS - decimals));
+            assetBalance = IERC20(_token).balanceOf(address(this));
         }
     }
 
-    function _getTokenDecimal(
-        address _token
-    ) internal view returns (uint8 decimals) {
+    function _buildAmount(uint256 _localAmount, address _token)
+        internal
+        view
+        returns (uint256 amount)
+    {
+        uint8 decimals = _getTokenDecimal(_token);
+
+        if (decimals > ROOT_DECIMALS) {
+            amount = _localAmount / (10**(decimals - ROOT_DECIMALS));
+        } else {
+            amount = _localAmount * (10**(ROOT_DECIMALS - decimals));
+        }
+    }
+
+    function _getTokenDecimal(address _token)
+        internal
+        view
+        returns (uint8 decimals)
+    {
         decimals = 18;
         if (_token != address(0)) {
             (, bytes memory data) = _token.staticcall(
@@ -265,5 +229,4 @@ contract AIAgent is Context, ReentrancyGuard {
             decimals = abi.decode(data, (uint8));
         }
     }
-
 }

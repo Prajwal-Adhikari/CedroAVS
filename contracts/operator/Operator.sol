@@ -43,9 +43,14 @@ contract Operator is Context, ReentrancyGuard {
         if (isAgent[_msgSender()]) revert AgentAlreadyExists(_msgSender());
         agents.push(_msgSender());
         isAgent[_msgSender()] = true;
-        AIAgent AIAgentInstance = new AIAgent(operatorManager, address(this), _msgSender(), oracle);
+        AIAgent AIAgentInstance = new AIAgent(
+            operatorManager,
+            address(this),
+            _msgSender(),
+            oracle
+        );
         agentContract[_msgSender()] = AIAgentInstance;
-        IOperatorManager(operatorManager).mapAgent(_msgSender(),address(this));
+        IOperatorManager(operatorManager).mapAgent(_msgSender(), address(this));
     }
 
     /**
@@ -55,12 +60,15 @@ contract Operator is Context, ReentrancyGuard {
      **/
     function delistAgent(address _agent) external {
         uint256 len = agents.length;
-        for (uint256 i; i < len; i++) {
+        for (uint256 i; i < len; ) {
             if (agents[i] == _agent) {
                 agents[i] = agents[len - 1];
                 agents.pop();
                 isAgent[_agent] = false;
                 break;
+            }
+            unchecked {
+                i++;
             }
         }
     }
@@ -72,18 +80,21 @@ contract Operator is Context, ReentrancyGuard {
      **/
     function approveAsset(bytes32[] memory _assets) external {
         uint256 len = _assets.length;
-        for (uint256 i; i < len; i++) {
+        for (uint256 i; i < len; ) {
+            Data.PoolInfo memory pool = IOperatorManager(operatorManager).pools(
+                _assets[i]
+            );
+            if (!pool.enable)
+                revert AssetNotEnabledByServiceManager(_assets[i]);
+            if (isAssetAccepted[_assets[i]])
+                revert AssetAlreadyExists(_assets[i]);
 
-        Data.PoolInfo memory pool = IOperatorManager(operatorManager).pools(_assets[i]);
-        if (! pool.enable)
-            revert AssetNotEnabledByServiceManager(_assets[i]);
-        if(isAssetAccepted[_assets[i]])
-            revert AssetAlreadyExists(_assets[i]);
-        
-        acceptedAssetList.push(_assets[i]);
-        isAssetAccepted[_assets[i]] = true;
+            acceptedAssetList.push(_assets[i]);
+            isAssetAccepted[_assets[i]] = true;
+            unchecked {
+                i++;
+            }
         }
-
     }
 
     /**
@@ -93,15 +104,17 @@ contract Operator is Context, ReentrancyGuard {
      **/
     function delistAsset(bytes32 _asset) external {
         uint256 len = acceptedAssetList.length;
-        for (uint256 i; i < len; i++) {
+        for (uint256 i; i < len; ) {
             if (acceptedAssetList[i] == _asset) {
                 acceptedAssetList[i] = acceptedAssetList[len - 1];
                 acceptedAssetList.pop();
                 isAssetAccepted[_asset] = false;
                 break;
             }
+            unchecked {
+                i++;
+            }
         }
-
     }
 
     /**
@@ -112,6 +125,4 @@ contract Operator is Context, ReentrancyGuard {
         if (!isAgent[_msgSender()]) revert NotAnAgent(_msgSender());
         agentBond[_msgSender()] += msg.value;
     }
-
-
 }

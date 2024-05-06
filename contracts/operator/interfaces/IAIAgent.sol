@@ -37,13 +37,6 @@ interface IAIAgent {
     ) external payable;
 
     /**
-     * @notice Emits event with assets data and total liquidity in USD
-     * This function can only be accessed by the account with role SNAPSHOT_OPERATOR
-     * @param _requestId - request number
-     **/
-    function snapshotAssetData(uint256 _requestId) external;
-
-    /**
      * @notice Returns balance of the asset holded by the contract
      * @param _token - address of the asset
      **/

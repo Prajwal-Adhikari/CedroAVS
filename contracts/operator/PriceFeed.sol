@@ -70,9 +70,12 @@ contract PriceFeed is Initializable, ContextUpgradeable {
     ) external {
         if (_symbols.length != _prices.length)
             revert ArrayLengthMismatched(TAG);
-        for (uint256 i; i < _symbols.length; i++) {
+        for (uint256 i; i < _symbols.length;) {
             proposedPrices[_symbols[i]] = _prices[i];
             proposedStatus[_symbols[i]] = true;
+            unchecked {
+                i++;
+            }
         }
         emit ProposePrice(_symbols, _prices, block.timestamp);
     }
@@ -92,7 +95,7 @@ contract PriceFeed is Initializable, ContextUpgradeable {
         uint256 deviation;
         if (_symbols.length != _prices.length)
             revert ArrayLengthMismatched(TAG);
-        for (uint256 i; i < _symbols.length; i++) {
+        for (uint256 i; i < _symbols.length;) {
             if (_prices[i] > proposedPrices[_symbols[i]]) {
                 minPrice = proposedPrices[_symbols[i]];
                 maxPrice = _prices[i];
@@ -118,6 +121,9 @@ contract PriceFeed is Initializable, ContextUpgradeable {
             proposedStatus[_symbols[i]] = false;
             proposedCount[_symbols[i]] = 0;
             emit SetPrice(_symbols[i], _prices[i], block.timestamp);
+            unchecked {
+                i++;
+            }
         }
     }
 
@@ -129,10 +135,13 @@ contract PriceFeed is Initializable, ContextUpgradeable {
         bytes32[] memory _symbols
     ) external view returns (uint256[] memory results) {
         results = new uint256[](_symbols.length);
-        for (uint256 i; i < _symbols.length; i++) {
+        for (uint256 i; i < _symbols.length;) {
             uint256 price = prices[_symbols[i]];
             if (price <= 0) revert PriceNotSet(TAG);
             results[i] = price;
+            unchecked {
+                i++;
+            }
         }
     }
 

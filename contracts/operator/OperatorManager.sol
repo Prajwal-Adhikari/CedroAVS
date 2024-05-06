@@ -62,7 +62,8 @@ contract OperatorManager is
      * This function can only be accessed by the account with role OPERATOR.
      **/
     function enrollOperator() external {
-        if (isOperator[_msgSender()]) revert OperatorAlreadyExists(_msgSender());
+        if (isOperator[_msgSender()])
+            revert OperatorAlreadyExists(_msgSender());
         operators.push(_msgSender());
         isOperator[_msgSender()] = true;
         Operator OperatorInstance = new Operator(
@@ -80,12 +81,16 @@ contract OperatorManager is
      **/
     function delistOperator(address _operator) external {
         uint256 len = operators.length;
-        for (uint256 i; i < len; i++) {
+        for (uint256 i; i < len; ) {
             if (operators[i] == _operator) {
                 operators[i] = operators[len - 1];
                 operators.pop();
                 isOperator[_operator] = false;
                 break;
+            }
+
+            unchecked {
+                i++;
             }
         }
     }
