@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.12;
 
+import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import {IBLSSignatureChecker} from "./interfaces/IBLSSignatureChecker.sol";
 import {IRoleManager} from "../interfaces/IRoleManager.sol";
 import {IRegistryCoordinator} from "./interfaces/IRegistryCoordinator.sol";
@@ -9,18 +10,15 @@ import {IStakeRegistry, IDelegationManager} from "./interfaces/IStakeRegistry.so
 import {BitmapUtils} from "./libraries/BitmapUtils.sol";
 import {BN254} from "./libraries/BN254.sol";
 
-import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-
-
 /**
  * @title Used for checking BLS aggregate signatures from the operators of a `BLSRegistry`.
  * @author Layr Labs, Inc.
  * @notice Terms of Service: https://docs.eigenlayer.xyz/overview/terms-of-service
  * @notice This is the contract for checking the validity of aggregate operator signatures.
  */
-contract BLSSignatureChecker is IBLSSignatureChecker,ContextUpgradeable {
+contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
     using BN254 for BN254.G1Point;
-    address roleManager;
+    address public roleManager;
 
     // CONSTANTS & IMMUTABLES
 
@@ -29,19 +27,19 @@ contract BLSSignatureChecker is IBLSSignatureChecker,ContextUpgradeable {
 
     IRegistryCoordinator public registryCoordinator;
     IStakeRegistry public stakeRegistry;
-    IBLSApkRegistry public  blsApkRegistry;
+    IBLSApkRegistry public blsApkRegistry;
     IDelegationManager public delegation;
     /// @notice If true, check the staleness of the operator stakes and that its within the delegation withdrawalDelayBlocks window.
     bool public staleStakesForbidden;
 
-    modifier onlyCoordinatorOwner() {
-        require(
-            msg.sender == registryCoordinator.owner(),
-            "BLSSignatureChecker.onlyCoordinatorOwner: caller is not the owner of the registryCoordinator"
-        );
-        _;
-    }
-     /**
+    // modifier onlyCoordinatorOwner() {
+    //     require(
+    //         msg.sender == registryCoordinator.owner(),
+    //         "BLSSignatureChecker.onlyCoordinatorOwner: caller is not the owner of the registryCoordinator"
+    //     );
+    //     _;
+    // }
+    /**
      * @dev Modifier that checks if caller has a specific role.
      **/
     modifier onlyRole(bytes32 role) {
@@ -49,12 +47,18 @@ contract BLSSignatureChecker is IBLSSignatureChecker,ContextUpgradeable {
         _;
     }
 
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    constructor(address _roleManager) {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function _BLSSignatureChecker_init(
+        address _roleManager
+    ) internal onlyInitializing {
         roleManager = _roleManager;
     }
 
-     function setRegistryCoordinatorAddress(
+    function setRegistryCoordinatorAddress(
         IRegistryCoordinator _registryCoordinator
     ) external {
         registryCoordinator = _registryCoordinator;
@@ -69,7 +73,8 @@ contract BLSSignatureChecker is IBLSSignatureChecker,ContextUpgradeable {
      * than the delegation.minWithdrawalDelayBlocks() window.
      * @param value to toggle staleStakesForbidden
      */
-    function setStaleStakesForbidden(bool value) external onlyCoordinatorOwner {
+    // onlyCoordinatorOwner
+    function setStaleStakesForbidden(bool value) external {
         _setStaleStakesForbidden(value);
     }
 
@@ -349,6 +354,17 @@ contract BLSSignatureChecker is IBLSSignatureChecker,ContextUpgradeable {
             apkG2,
             PAIRING_EQUALITY_CHECK_GAS
         );
+    }
+
+    /**
+     * @notice Configures role manager address
+     * This function can only be accessed by the account with role DEFAULT_ADMIN_ROLE.
+     * @param roleManagerAddress - address of the roleManager contract.
+     **/
+    function setRoleManager(
+        address roleManagerAddress
+    ) external onlyRole(IRoleManager(roleManager).DEFAULT_ADMIN_ROLE()) {
+        roleManager = roleManagerAddress;
     }
 
     function _setStaleStakesForbidden(bool value) internal {
