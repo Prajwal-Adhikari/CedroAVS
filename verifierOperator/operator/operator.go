@@ -121,6 +121,7 @@ func (r *Operator) SignAndSendBalanceResponse(ctx context.Context, aggr <-chan [
 		//SIgn THE MESSAGE HERE IN WHAT FORMAT?
 
 		//MAKE HTTP CALL TO THE AGGREGATOR SERVICE
+
 	}
 }
 
@@ -238,8 +239,7 @@ func StartRelay(ctx context.Context, cfg *config.Config) {
 	go op.avs.PollEvents(ctx, balanceReqCh)
 	go op.GetChainBalances(ctx, balanceReqCh)
 
-
-	// go r.UpdateChainBalances(ctx, balanceReqCh)
-	// go r.AggregateAndSend(ctx, balanceCh)
+	go op.UpdateChainBalances(ctx, balanceReqCh)
+	go op.AggregateAndSend(ctx, balanceCh)
 
 }
