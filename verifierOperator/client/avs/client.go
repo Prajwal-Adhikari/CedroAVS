@@ -6,18 +6,18 @@ import (
 
 	// "fmt"
 	"math/big"
-
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/avs/abi"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/logger"
+	"github.com/Layr-Labs/eigensdk-go/chainio/clients/eth"
+	"github.com/Layr-Labs/eigensdk-go/logging"
 	ether "github.com/ethereum/go-ethereum"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/rpc"
 )
 
 const (
+	defaultBlockTime = time.Duration(12) * time.Second
+
 	defaultStartBlock                    = 1234
 	defaultHeightDifferenceForFilterLogs = 100
 	defaultRequestId                     = 1
@@ -64,42 +64,40 @@ func (avs *AVSClient) FilterLogs(
 	return logs, err
 }
 
-func (avs *AVSClient) NewAVSContract() *abi.AVS {
-	contract, err := abi.NewAVS(avs.contract, avs.eth)
+// func (avs *AVSClient) NewAVSContract() *abi.AVS {
+// 	contract, err := abi.NewAVS(avs.contract, avs.eth)
 
-	if err != nil {
-		logger.GetLogger().Error("Error while initializing contract")
-		panic(err)
-	}
+// 	if err != nil {
+// 		logger.GetLogger().Error("Error while initializing contract")
+// 		panic(err)
+// 	}
 
-	return contract
-}
+// 	return contract
+// }
 
-func (avs *AVSClient) GetRequestId() (*big.Int, error) {
+// func (avs *AVSClient) GetRequestId() (*big.Int, error) {
+// 	contract := avs.NewAVSContract()
+// 	reqId, err := contract.ReqId(nil)
 
-	contract := avs.NewAVSContract()
-	reqId, err := contract.ReqId(nil)
+// 	if err != nil {
+// 		return big.NewInt(0), err
+// 	}
 
-	if err != nil {
-		return big.NewInt(0), err
-	}
+// 	return reqId, nil
+// }
 
-	return reqId, nil
-}
+// func (avs *AVSClient) ParseGetBalanceLog(log types.Log) (*abi.AVSGetChainTVL, error) {
+// 	parsed, err := avs.NewAVSContract().ParseGetChainTVL(log)
 
-func (avs *AVSClient) ParseGetBalanceLog(log types.Log) (*abi.AVSGetChainTVL, error) {
-	parsed, err := avs.NewAVSContract().ParseGetChainTVL(log)
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	if err != nil {
-		return nil, err
-	}
-
-	return parsed, nil
-}
+// 	return parsed, nil
+// }
 
 type AVSClient struct {
-	contract         ethCommon.Address
-	eth              *ethclient.Client
+	eth              eth.Client
 	startBlock       uint64
 	nextBlockHeight  uint64
 	pollDuration     time.Duration
@@ -107,40 +105,42 @@ type AVSClient struct {
 
 	blockTime     time.Duration
 	blockFinality uint64
+
+	avsReader *AvsReader
+	avsWriter *AvsWriter
 }
 
-func NewAVSClient(cfg *config.AVSConfig) *AVSClient {
-	rpc, err := rpc.Dial(cfg.NodeUrl)
-	if err != nil {
-		logger.GetLogger().Error("failed to create rpc client for avs")
-	}
+func NewAVSClient(cfg *config.AVSConfig, logger logging.Logger) *AVSClient {
 
-	eth := ethclient.NewClient(rpc)
+	ethClient, err := eth.NewClient(cfg.EthRpcUrl)
 
 	if err != nil {
 		panic(err)
 	}
 
+	avsReader, err := NewAvsReader(cfg, ethClient, logger)
+
+	if err != nil {
+		logger.Error("Error while Createing AVS Reader")
+	}
+
 	return &AVSClient{
-		contract:         ethCommon.HexToAddress(cfg.ContactAddress),
-		eth:              eth,
-		startBlock:       cfg.StartBlock,
-		nextBlockHeight:  cfg.StartBlock,
+		eth:              ethClient,
+		startBlock:       cfg.StartHeight,
+		nextBlockHeight:  cfg.StartHeight,
 		pollDuration:     time.Duration(time.Minute),
 		currentRequestId: 0,
+		blockTime:        defaultBlockTime,
+		blockFinality:    cfg.BlockFinality,
 
-		blockTime:     cfg.BlockTime * time.Second,
-		blockFinality: cfg.BlockFinality,
+		avsReader: avsReader,
 	}
 }
 
 type Request struct {
-	reqId  *big.Int
-	height *big.Int
-}
-
-func GetRequestId(req *Request) *big.Int {
-	return req.reqId
+	ReqId        *big.Int
+	Height       *big.Int
+	AgentAddress string
 }
 
 // polls the balance request events from the AVS contract on eth
@@ -174,7 +174,6 @@ func (c *AVSClient) PollEvents(ctx context.Context, ch chan<- *Request) {
 			if finalizedBlock < c.nextBlockHeight {
 				diff := c.nextBlockHeight - finalizedBlock
 				time.Sleep((time.Duration(diff) * c.blockTime))
-				break L1
 			}
 
 			currentReqId, err := c.GetRequestId()
@@ -190,10 +189,11 @@ func (c *AVSClient) PollEvents(ctx context.Context, ch chan<- *Request) {
 					endHeight = finalizedBlock
 				}
 
-				logs, err := c.FilterLogs(ctx, startHeight, endHeight, c.contract, ethCommon.Hash{})
+				logs, err := c.FilterLogs(ctx, startHeight, endHeight, c.RegistryCoordinatorAddr, ethCommon.Hash{}) //TODO: get topics from config
 
 				if err != nil {
 					//Implement Logger
+					logger.GetLogger().Error("")
 					break L1
 				}
 
@@ -206,8 +206,8 @@ func (c *AVSClient) PollEvents(ctx context.Context, ch chan<- *Request) {
 
 					if currentReqId == parsed.ReqId {
 						ch <- &Request{
-							reqId:  parsed.ReqId,
-							height: parsed.ReqId,
+							ReqId:  parsed.ReqId,
+							Height: parsed.ReqId,
 						}
 
 						//TODO: Will there be condition when reqId 2 arrives before settling reqId 1?

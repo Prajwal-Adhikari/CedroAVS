@@ -6,14 +6,25 @@ import (
 
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/herumi/bls-go-binary/bls"
 )
 
-type KeyStore struct {
+type ECSDAKeyStore struct {
 	PublicKey  *ecdsa.PublicKey
 	PrivateKey *ecdsa.PrivateKey
 }
 
-var kstore *KeyStore;
+type BLSKeyStore struct {
+	PublicKey  *bls.PublicKey
+	PrivateKey *bls.SecretKey
+}
+
+type KeyStore struct {
+	BlsKeyStore   *BLSKeyStore
+	ECSDAKeyStore *ECSDAKeyStore
+}
+
+var Kstore *KeyStore
 
 func LoadKeys(cfg *config.KeyStore) *KeyStore {
 	file, err := os.ReadFile(cfg.Path)
@@ -25,10 +36,12 @@ func LoadKeys(cfg *config.KeyStore) *KeyStore {
 		panic(err)
 	}
 
-	
+	ecdsa := &ECSDAKeyStore{
+		PublicKey:  &key.PrivateKey.PublicKey,
+		PrivateKey: key.PrivateKey,
+	}
 
 	return &KeyStore{
-		PrivateKey: key.PrivateKey,
-		PublicKey:  &key.PrivateKey.PublicKey,
+		ECSDAKeyStore: ecdsa,
 	}
 }

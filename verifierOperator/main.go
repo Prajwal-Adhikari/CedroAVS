@@ -4,18 +4,18 @@ import (
 	"context"
 	// "fmt"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/logger"
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/relay"
+	"github.com/Cedro-Finance/CedroAVS/verifierOperator/operator"
 )
 
 func main() {
-	configFile := config.LoadConfig("config.yaml")
+	configFile, err := config.LoadConfig("config.yaml")
+
+	if err != nil {
+		panic("Failed loading config")
+	}
 	_ = configFile
-	
+
 	ctx := context.Background()
 
-	logger.InitLogging(configFile.Mode, configFile.LogConfig)
-	logger.GetLogger().Info("Operator started")
-
-	relay.StartRelay(ctx, configFile)
+	operator.StartRelay(ctx, configFile)
 }
