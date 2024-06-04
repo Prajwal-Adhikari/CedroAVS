@@ -49,7 +49,7 @@ interface IPaymentCoordinator {
      * cannot have duplicate strategies and need to be sorted in ascending address order
      * @param token The payment token to be distributed
      * @param amount The total amount of tokens to be distributed
-     * @param startTimestamp The timestamp at which the payment range is considered for distribution
+     * @param startTimestamp The timestamp (seconds) at which the payment range is considered for distribution
      * could start in the past or in the future but within a valid range. See the diagram above.
      * @param duration The duration of the payment range in seconds. Must be <= MAX_PAYMENT_DURATION
      */
@@ -67,8 +67,8 @@ interface IPaymentCoordinator {
      * if they wish but the merkle tree contains the cumulative earnings of all earners and tokens for a given period so earners (or their claimers if set)
      * only need to claim against the latest root to claim all available earnings.
      * @param root The merkle root of the distribution
-     * @param paymentCalculationEndTimestamp The timestamp until which payments have been calculated
-     * @param activatedAt The timestamp at which the root can be claimed against
+     * @param paymentCalculationEndTimestamp The timestamp (seconds) until which payments have been calculated
+     * @param activatedAt The timestamp (seconds) at which the root can be claimed against
      */
     struct DistributionRoot {
         bytes32 root;
@@ -152,14 +152,13 @@ interface IPaymentCoordinator {
         bool indexed newValue
     );
     event ActivationDelaySet(uint32 oldActivationDelay, uint32 newActivationDelay);
-    event CalculationIntervalSecondsSet(uint32 oldCalculationIntervalSeconds, uint32 newCalculationIntervalSeconds);
     event GlobalCommissionBipsSet(uint16 oldGlobalCommissionBips, uint16 newGlobalCommissionBips);
     event ClaimerForSet(address indexed earner, address indexed oldClaimer, address indexed claimer);
     /// @notice rootIndex is the specific array index of the newly created root in the storage array
     event DistributionRootSubmitted(
         uint32 indexed rootIndex,
         bytes32 indexed root,
-        uint32 paymentCalculationEndTimestamp,
+        uint32 indexed paymentCalculationEndTimestamp,
         uint32 activatedAt
     );
     /// @notice root is one of the submitted distribution roots that was claimed against
@@ -167,37 +166,40 @@ interface IPaymentCoordinator {
         bytes32 root,
         address indexed earner,
         address indexed claimer,
-        IERC20 indexed token,
+        address indexed recipient,
+        IERC20 token,
         uint256 claimedAmount
     );
 
-    /// VIEW FUNCTIONS ///
+    /*******************************************************************************
+                            VIEW FUNCTIONS
+    *******************************************************************************/
 
     /// @notice The address of the entity that can update the contract with new merkle roots
     function paymentUpdater() external view returns (address);
-
+    
     /**
      * @notice The interval in seconds at which the calculation for range payment distribution is done.
      * @dev Payment durations must be multiples of this interval.
      */
-    function calculationIntervalSeconds() external view returns (uint32);
+    function CALCULATION_INTERVAL_SECONDS() external view returns (uint32);
 
-    /// @notice The maximum amount of time that a range payment can end in the future
+    /// @notice The maximum amount of time (seconds) that a range payment can span over
     function MAX_PAYMENT_DURATION() external view returns (uint32);
 
-    /// @notice max amount of time that a payment can start in the past
+    /// @notice max amount of time (seconds) that a payment can start in the past
     function MAX_RETROACTIVE_LENGTH() external view returns (uint32);
 
-    /// @notice max amount of time that a payment can start in the future
+    /// @notice max amount of time (seconds) that a payment can start in the future
     function MAX_FUTURE_LENGTH() external view returns (uint32);
 
-    /// @notice absolute min timestamp that a payment can start at
+    /// @notice absolute min timestamp (seconds) that a payment can start at
     function GENESIS_PAYMENT_TIMESTAMP() external view returns (uint32);
 
-    /// @notice Delay in timestamp before a posted root can be claimed against
+    /// @notice Delay in timestamp (seconds) before a posted root can be claimed against
     function activationDelay() external view returns (uint32);
 
-    /// @notice Mapping: earner => the address of the entity to which new payments are directed on behalf of the earner
+    /// @notice Mapping: earner => the address of the entity who can call `processClaim` on behalf of the earner
     function claimerFor(address earner) external view returns (address);
 
     /// @notice Mapping: claimer => token => total amount claimed
@@ -205,6 +207,10 @@ interface IPaymentCoordinator {
 
     /// @notice the commission for all operators across all avss
     function globalOperatorCommissionBips() external view returns (uint16);
+
+    /// @notice the commission for a specific operator for a specific avs
+    /// NOTE: Currently unused and simply returns the globalOperatorCommissionBips value but will be used in future release
+    function operatorCommissionBips(address operator, address avs) external view returns (uint16);
 
     /// @notice return the hash of the earner's leaf
     function calculateEarnerLeafHash(EarnerTreeMerkleLeaf calldata leaf) external pure returns (bytes32);
@@ -216,7 +222,15 @@ interface IPaymentCoordinator {
     /// but will revert if not valid
     function checkClaim(PaymentMerkleClaim calldata claim) external view returns (bool);
 
-    /// EXTERNAL FUNCTIONS ///
+    /// @notice The timestamp until which payments have been calculated
+    function currPaymentCalculationEndTimestamp() external view returns (uint32);
+
+    /// @notice loop through distribution roots from reverse and return hash
+    function getRootIndexFromHash(bytes32 rootHash) external view returns (uint32);
+
+    /*******************************************************************************
+                            EXTERNAL FUNCTIONS 
+    *******************************************************************************/
 
     /**
      * @notice Creates a new range payment on behalf of an AVS, to be split amongst the
@@ -242,32 +256,34 @@ interface IPaymentCoordinator {
      * @notice Claim payments against a given root (read from distributionRoots[claim.rootIndex]).
      * Earnings are cumulative so earners don't have to claim against all distribution roots they have earnings for,
      * they can simply claim against the latest root and the contract will calculate the difference between
-     * their cumulativeEarnings and cumulativeClaimed. This difference is then transferred to claimerFor[claim.earner]
+     * their cumulativeEarnings and cumulativeClaimed. This difference is then transferred to recipient address.
      * @param claim The PaymentMerkleClaim to be processed.
      * Contains the root index, earner, payment leaves, and required proofs
+     * @param recipient The address recipient that receives the ERC20 payments
      * @dev only callable by the valid claimer, that is
      * if claimerFor[claim.earner] is address(0) then only the earner can claim, otherwise only
      * claimerFor[claim.earner] can claim the payments.
      */
-    function processClaim(PaymentMerkleClaim calldata claim) external;
+    function processClaim(PaymentMerkleClaim calldata claim, address recipient) external;
 
     /**
      * @notice Creates a new distribution root. activatedAt is set to block.timestamp + activationDelay
      * @param root The merkle root of the distribution
-     * @param paymentCalculationEndTimestamp The timestamp until which payments have been calculated
+     * @param paymentCalculationEndTimestamp The timestamp (seconds) until which payments have been calculated
      * @dev Only callable by the paymentUpdater
      */
     function submitRoot(bytes32 root, uint32 paymentCalculationEndTimestamp) external;
 
     /**
-     * @notice Sets the permissioned `paymentUpdater` address which can post new roots
-     * @dev Only callable by the contract owner
+     * @notice Sets the address of the entity that can call `processClaim` on behalf of the earner (msg.sender)
+     * @param claimer The address of the entity that can claim payments on behalf of the earner
+     * @dev Only callable by the `earner`
      */
-    function setPaymentUpdater(address _paymentUpdater) external;
+    function setClaimerFor(address claimer) external;
 
     /**
      * @notice Sets the delay in timestamp before a posted root can be claimed against
-     * @param _activationDelay Delay in timestamp before a posted root can be claimed against
+     * @param _activationDelay Delay in timestamp (seconds) before a posted root can be claimed against
      * @dev Only callable by the contract owner
      */
     function setActivationDelay(uint32 _activationDelay) external;
@@ -280,9 +296,16 @@ interface IPaymentCoordinator {
     function setGlobalOperatorCommission(uint16 _globalCommissionBips) external;
 
     /**
-     * @notice Sets the address of the entity that can claim payments on behalf of the earner (msg.sender)
-     * @param claimer The address of the entity that can claim payments on behalf of the earner
-     * @dev Only callable by the `earner`
+     * @notice Sets the permissioned `paymentUpdater` address which can post new roots
+     * @dev Only callable by the contract owner
      */
-    function setClaimerFor(address claimer) external;
+    function setPaymentUpdater(address _paymentUpdater) external;
+
+    /**
+     * @notice Sets the permissioned `payAllForRangeSubmitter` address which can submit payAllForRange
+     * @dev Only callable by the contract owner
+     * @param _submitter The address of the payAllForRangeSubmitter
+     * @param _newValue The new value for isPayAllForRangeSubmitter
+     */
+    function setPayAllForRangeSubmitter(address _submitter, bool _newValue) external;
 }
