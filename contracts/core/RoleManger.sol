@@ -11,9 +11,10 @@ string constant TAG = "RoleManagerCore";
  * @title RoleManager
  * @notice RoleManager is used to grant roles .
  **/
-contract RoleManager is ContextUpgradeable, AccessControlUpgradeable {
+contract RoleManagerCore is ContextUpgradeable, AccessControlUpgradeable {
     bytes32 public constant AVS_ADMIN = keccak256("AVS_ADMIN");
     bytes32 public constant REGISTRYCOORDINATOR_ADMIN = keccak256("REGISTRYCOORDINATOR_ADMIN");
+    bytes32 public constant VERIFIER_ADMIN = keccak256("VERIFIER_ADMIN");
    
 
     /// @custom:oz-upgrades-unsafe-allow constructor
