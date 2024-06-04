@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.24;
+pragma solidity 0.8.24;
 
 interface IRoleManager {
     /**
@@ -28,6 +28,7 @@ interface IRoleManager {
      **/
     function AVS_ADMIN() external view returns (bytes32);
 
+    function VERIFIER_ADMIN() external view returns(bytes32);
     /**
      * @notice Returns bytes32 value of the public variable REGISTRYCOORDINATOR_ADMIN()
      **/
