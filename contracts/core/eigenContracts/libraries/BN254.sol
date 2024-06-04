@@ -21,6 +21,7 @@
 
 pragma solidity ^0.8.12;
 
+
 /**
  * @title Library for operations on the BN254 elliptic curve.
  * @author Layr Labs, Inc.
@@ -209,6 +210,7 @@ library BN254 {
             input[j + 4] = p2[i].Y[0];
             input[j + 5] = p2[i].Y[1];
         }
+        
 
         uint256[1] memory out;
         bool success;

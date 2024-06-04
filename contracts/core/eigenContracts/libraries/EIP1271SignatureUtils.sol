@@ -19,7 +19,11 @@ library EIP1271SignatureUtils {
      * If the `signer` contains no code -- i.e. it is not (yet, at least) a contract address, then checks using standard ECDSA logic
      * Otherwise, passes on the signature to the signer to verify the signature and checks that it returns the `EIP1271_MAGICVALUE`.
      */
-    function checkSignature_EIP1271(address signer, bytes32 digestHash, bytes memory signature) internal view {
+    function checkSignature_EIP1271(
+        address signer,
+        bytes32 digestHash,
+        bytes memory signature
+    ) internal view {
         /**
          * check validity of signature:
          * 1) if `signer` is an EOA, then `signature` must be a valid ECDSA signature from `signer`,
@@ -32,9 +36,9 @@ library EIP1271SignatureUtils {
                 "EIP1271SignatureUtils.checkSignature_EIP1271: signature not from signer"
             );
         } else {
-           
-             require(
-                IERC1271(signer).isValidSignature(digestHash, signature) == EIP1271_MAGICVALUE,
+            require(
+                // IERC1271(signer).isValidSignature(digestHash, signature) == EIP1271_MAGICVALUE,
+                ECDSA.recover(digestHash, signature) == signer,
                 "EIP1271SignatureUtils.checkSignature_EIP1271: ERC1271 signature verification failed"
             );
         }
