@@ -4,7 +4,7 @@ pragma solidity ^0.8.12;
 import {IAVSDirectory, ISignatureUtils} from "../../contracts/core/eigenContracts/interfaces/IAVSDirectory.sol";
 import {IDelegationManager} from "../../contracts/core/eigenContracts/interfaces/IDelegationManager.sol";
 import {EIP1271SignatureUtils} from "../../contracts/core/eigenContracts/libraries/EIP1271SignatureUtils.sol";
-import "hardhat/console.sol";
+
 
 contract AVSDirectoryMock is IAVSDirectory {
      IDelegationManager public immutable delegation;
