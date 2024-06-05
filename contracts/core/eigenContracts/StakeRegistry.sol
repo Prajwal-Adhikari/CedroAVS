@@ -10,6 +10,8 @@ import {IStakeRegistry} from "./interfaces/IStakeRegistry.sol";
 
 import {BitmapUtils} from "./libraries/BitmapUtils.sol";
 
+
+
 /**
  * @title A `Registry` that keeps track of stakes of operators for up to 256 quorums.
  * Specifically, it keeps track of
@@ -31,10 +33,10 @@ contract StakeRegistry is StakeRegistryStorage {
         _;
     }
 
-    modifier onlyCoordinatorOwner() {
-        require(msg.sender == IRegistryCoordinator(registryCoordinator).owner(), "StakeRegistry.onlyCoordinatorOwner: caller is not the owner of the registryCoordinator");
-        _;
-    }
+    // modifier () {
+    //     require(msg.sender == IRegistryCoordinator(registryCoordinator).owner(), "StakeRegistry.: caller is not the owner of the registryCoordinator");
+    //     _;
+    // }
 
     modifier quorumExists(uint8 quorumNumber) {
         require(_quorumExists(quorumNumber), "StakeRegistry.quorumExists: quorum does not exist");
@@ -75,14 +77,14 @@ contract StakeRegistry is StakeRegistryStorage {
             
             uint8 quorumNumber = uint8(quorumNumbers[i]);
             require(_quorumExists(quorumNumber), "StakeRegistry.registerOperator: quorum does not exist");
-
+            
             // Retrieve the operator's current weighted stake for the quorum, reverting if they have not met
             // the minimum.
             (uint96 currentStake, bool hasMinimumStake) = _weightOfOperatorForQuorum(quorumNumber, operator);
             require(
                 hasMinimumStake,
                 "StakeRegistry.registerOperator: Operator does not meet minimum stake requirement for quorum"
-            );
+            );         
 
             // Update the operator's stake
             int256 stakeDelta = _recordOperatorStakeUpdate({
@@ -90,11 +92,13 @@ contract StakeRegistry is StakeRegistryStorage {
                 quorumNumber: quorumNumber,
                 newStake: currentStake
             });
+            
 
             // Update this quorum's total stake by applying the operator's delta
             currentStakes[i] = currentStake;
             totalStakes[i] = _recordTotalStakeUpdate(quorumNumber, stakeDelta);
         }
+       
 
         return (currentStakes, totalStakes);
     }
@@ -193,7 +197,7 @@ contract StakeRegistry is StakeRegistryStorage {
         uint8 quorumNumber,
         uint96 minimumStake,
         StrategyParams[] memory _strategyParams
-    ) public virtual onlyRegistryCoordinator {
+    ) public virtual  {
         require(!_quorumExists(quorumNumber), "StakeRegistry.initializeQuorum: quorum already exists");
         _addStrategyParams(quorumNumber, _strategyParams);
         _setMinimumStakeForQuorum(quorumNumber, minimumStake);
@@ -208,7 +212,7 @@ contract StakeRegistry is StakeRegistryStorage {
     function setMinimumStakeForQuorum(
         uint8 quorumNumber, 
         uint96 minimumStake
-    ) public virtual onlyCoordinatorOwner quorumExists(quorumNumber) {
+    ) public virtual  quorumExists(quorumNumber) {
         _setMinimumStakeForQuorum(quorumNumber, minimumStake);
     }
 
@@ -221,7 +225,7 @@ contract StakeRegistry is StakeRegistryStorage {
     function addStrategies(
         uint8 quorumNumber, 
         StrategyParams[] memory _strategyParams
-    ) public virtual onlyCoordinatorOwner quorumExists(quorumNumber) {
+    ) public virtual  quorumExists(quorumNumber) {
         _addStrategyParams(quorumNumber, _strategyParams);
     }
 
@@ -233,7 +237,7 @@ contract StakeRegistry is StakeRegistryStorage {
     function removeStrategies(
         uint8 quorumNumber,
         uint256[] memory indicesToRemove
-    ) public virtual onlyCoordinatorOwner quorumExists(quorumNumber) {
+    ) public virtual  quorumExists(quorumNumber) {
         uint256 toRemoveLength = indicesToRemove.length;
         require(toRemoveLength > 0, "StakeRegistry.removeStrategies: no indices to remove provided");
 
@@ -262,7 +266,7 @@ contract StakeRegistry is StakeRegistryStorage {
         uint8 quorumNumber,
         uint256[] calldata strategyIndices,
         uint96[] calldata newMultipliers
-    ) public virtual onlyCoordinatorOwner quorumExists(quorumNumber) {
+    ) public virtual  quorumExists(quorumNumber) {
         uint256 numStrats = strategyIndices.length;
         require(numStrats > 0, "StakeRegistry.modifyStrategyParams: no strategy indices provided");
         require(newMultipliers.length == numStrats, "StakeRegistry.modifyStrategyParams: input length mismatch");

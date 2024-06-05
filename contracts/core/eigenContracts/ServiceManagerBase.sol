@@ -18,11 +18,11 @@ import {BitmapUtils} from "./libraries/BitmapUtils.sol";
  * This contract can be inherited from or simply used as a point-of-reference.
  * @author Layr Labs, Inc.
  */
-abstract contract ServiceManagerBase is IServiceManager, OwnableUpgradeable {
+abstract contract ServiceManagerBase is IServiceManager, ContextUpgradeable {
     using BitmapUtils for *;
-    address roleManagerAddress;
+    address public roleManagerAddress;
 
-    IAVSDirectory internal _avsDirectory;
+    IAVSDirectory public _avsDirectory;
     IPaymentCoordinator internal _paymentCoordinator;
     IRegistryCoordinator internal _registryCoordinator;
     IStakeRegistry internal _stakeRegistry;
@@ -44,23 +44,20 @@ abstract contract ServiceManagerBase is IServiceManager, OwnableUpgradeable {
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(
-        IAVSDirectory __avsDirectory,
-        IPaymentCoordinator ___paymentCoordinator,
-        IStakeRegistry __stakeRegistry,
-        address _roleManager
-    ) {
-        _avsDirectory = __avsDirectory;
-        _paymentCoordinator = ___paymentCoordinator;
-        _stakeRegistry = __stakeRegistry;
-        roleManagerAddress = _roleManager;
+    constructor() {
         _disableInitializers();
     }
 
     function __ServiceManagerBase_init(
-        address initialOwner
+        IAVSDirectory __avsDirectory,
+        IPaymentCoordinator ___paymentCoordinator,
+        IStakeRegistry __stakeRegistry,
+        address _roleManager
     ) internal virtual onlyInitializing {
-        _transferOwnership(initialOwner);
+        _avsDirectory = __avsDirectory;
+        _paymentCoordinator = ___paymentCoordinator;
+        _stakeRegistry = __stakeRegistry;
+        roleManagerAddress = _roleManager;
     }
 
     function setRegistryCoordinator(
@@ -69,14 +66,23 @@ abstract contract ServiceManagerBase is IServiceManager, OwnableUpgradeable {
         _registryCoordinator = __registryCoordinator;
     }
 
+     /**
+     * @notice Configures role manager address
+     * This function can only be accessed by the account with role DEFAULT_ADMIN_ROLE.
+     * @param _roleManagerAddress - address of the roleManager contract.
+     **/
+    function setRoleManagerAddress(
+        address _roleManagerAddress
+    ) external onlyRoles(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
+        roleManagerAddress = _roleManagerAddress;
+    }
+
     /**
      * @notice Updates the metadata URI for the AVS
      * @param _metadataURI is the metadata URI for the AVS
      * @dev only callable by the owner
      */
-    function updateAVSMetadataURI(
-        string memory _metadataURI
-    ) public virtual onlyOwner {
+    function updateAVSMetadataURI(string memory _metadataURI) public virtual {
         _avsDirectory.updateAVSMetadataURI(_metadataURI);
     }
 
@@ -95,7 +101,7 @@ abstract contract ServiceManagerBase is IServiceManager, OwnableUpgradeable {
      */
     function payForRange(
         IPaymentCoordinator.RangePayment[] calldata rangePayments
-    ) public virtual onlyOwner {
+    ) public virtual {
         for (uint256 i = 0; i < rangePayments.length; ++i) {
             // transfer token to ServiceManager and approve PaymentCoordinator to transfer again
             // in payForRange() call
