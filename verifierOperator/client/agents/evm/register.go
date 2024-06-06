@@ -1,10 +1,8 @@
 package evm
 
-import (
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/relay"
-)
+import "github.com/Cedro-Finance/CedroAVS/verifierOperator/operator"
 
 func init() {
-	relay.RegisteredClients["ethereum"] = NewClient
-	relay.RegisteredClients["avalanche"] = NewClient
+	operator.RegisteredClients["ethereum"] = NewClient
+	operator.RegisteredClients["avalanche"] = NewClient
 }

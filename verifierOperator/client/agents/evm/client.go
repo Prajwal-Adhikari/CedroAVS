@@ -6,12 +6,12 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/Cedro-Finance/CedroAVS/core/logger"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/agents"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/agents/evm/abi"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/avs"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/common"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/logger"
 	ether "github.com/ethereum/go-ethereum"
 
 	// ethAbi "github.com/ethereum/go-ethereum/accounts/abi"

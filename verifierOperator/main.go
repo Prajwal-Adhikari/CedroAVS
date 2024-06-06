@@ -2,16 +2,18 @@ package main
 
 import (
 	"context"
+	"fmt"
 	// "fmt"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/operator"
 )
 
 func main() {
-	configFile, err := config.LoadConfig("config.yaml")
+	configFile, err := config.LoadConfig("verifierOperator/config.yaml")
 
 	if err != nil {
-		panic("Failed loading config")
+		fmt.Print(err)
+		panic("Failed loading config",)
 	}
 	_ = configFile
 

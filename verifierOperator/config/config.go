@@ -67,6 +67,7 @@ type Config struct {
 	Production    bool
 	AVS           AVSConfig
 
+	KeyStore             *KeyStore
 	GRpcAggregatorIpAddr string
 	Agents               []ChainConfig
 }
@@ -97,7 +98,7 @@ func LoadConfig(path string) (*Config, error) {
 		panic("could not unmarshal config")
 	}
 
-	blsKeypair, err := bls.NewKeyPairFromString(configRaw.BlsPrivateKeyStorePath)
+	blsKeypair, err := bls.NewKeyPairFromString("2523408640174661621672680781521680564539321153090028238087879155142149870407")
 
 	if err != nil {
 		return nil, err
@@ -128,5 +129,6 @@ func LoadConfig(path string) (*Config, error) {
 		BlsPrivateKey:        blsKeypair,
 		Agents:               configRaw.Chains,
 		GRpcAggregatorIpAddr: configRaw.GRpcAggregatorIPAddr,
+		KeyStore: configRaw.KeyStore,
 	}, nil
 }

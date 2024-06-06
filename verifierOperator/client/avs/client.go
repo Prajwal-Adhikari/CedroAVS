@@ -6,8 +6,9 @@ import (
 
 	// "fmt"
 	"math/big"
+
+	// "github.com/Cedro-Finance/CedroAVS/core/logger"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/logger"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/eth"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	ether "github.com/ethereum/go-ethereum"
@@ -39,7 +40,7 @@ func (avs *AVSClient) GetFinalizedBlock(ctx context.Context) (uint64, error) {
 	currentBlock, err := avs.GetCurrentBlock(ctx)
 
 	if err != nil {
-		logger.GetLogger().Error("Error while getting block information")
+		avs.logger.Error("Error while getting block information")
 
 		return 0, err
 	}
@@ -108,6 +109,8 @@ type AVSClient struct {
 
 	avsReader *AvsReader
 	avsWriter *AvsWriter
+
+	logger logging.Logger
 }
 
 func NewAVSClient(cfg *config.AVSConfig, logger logging.Logger) *AVSClient {
@@ -134,6 +137,7 @@ func NewAVSClient(cfg *config.AVSConfig, logger logging.Logger) *AVSClient {
 		blockFinality:    cfg.BlockFinality,
 
 		avsReader: avsReader,
+		logger: logger,
 	}
 }
 
@@ -162,62 +166,62 @@ func (c *AVSClient) PollEvents(ctx context.Context, ch chan<- *Request) {
 		case <-ticker.C:
 		}
 
-	L1:
-		for {
-			finalizedBlock, err := c.GetFinalizedBlock(ctx)
+	// L1:
+	// 	for {
+	// 		finalizedBlock, err := c.GetFinalizedBlock(ctx)
 
-			if err != nil {
-				//handle error properly
-				break L1
-			}
+	// 		if err != nil {
+	// 			//handle error properly
+	// 			break L1
+	// 		}
 
-			if finalizedBlock < c.nextBlockHeight {
-				diff := c.nextBlockHeight - finalizedBlock
-				time.Sleep((time.Duration(diff) * c.blockTime))
-			}
+	// 		if finalizedBlock < c.nextBlockHeight {
+	// 			diff := c.nextBlockHeight - finalizedBlock
+	// 			time.Sleep((time.Duration(diff) * c.blockTime))
+	// 		}
 
-			currentReqId, err := c.GetRequestId()
+	// 		currentReqId, err := c.GetRequestId()
 
-			if err != nil {
-				break L1
-			}
+	// 		if err != nil {
+	// 			break L1
+	// 		}
 
-			for startHeight := c.nextBlockHeight; startHeight <= finalizedBlock; startHeight += defaultHeightDifferenceForFilterLogs + 1 {
-				endHeight := startHeight + defaultHeightDifferenceForFilterLogs
+	// 		for startHeight := c.nextBlockHeight; startHeight <= finalizedBlock; startHeight += defaultHeightDifferenceForFilterLogs + 1 {
+	// 			endHeight := startHeight + defaultHeightDifferenceForFilterLogs
 
-				if endHeight > finalizedBlock {
-					endHeight = finalizedBlock
-				}
+	// 			if endHeight > finalizedBlock {
+	// 				endHeight = finalizedBlock
+	// 			}
 
-				logs, err := c.FilterLogs(ctx, startHeight, endHeight, c.RegistryCoordinatorAddr, ethCommon.Hash{}) //TODO: get topics from config
+	// 			logs, err := c.FilterLogs(ctx, startHeight, endHeight, c.RegistryCoordinatorAddr, ethCommon.Hash{}) //TODO: get topics from config
 
-				if err != nil {
-					//Implement Logger
-					logger.GetLogger().Error("")
-					break L1
-				}
+	// 			if err != nil {
+	// 				//Implement Logger
+	// 				logger.GetLogger().Error("")
+	// 				break L1
+	// 			}
 
-				for _, log := range logs {
-					parsed, err := c.ParseGetBalanceLog(log)
+	// 			for _, log := range logs {
+	// 				parsed, err := c.ParseGetBalanceLog(log)
 
-					if err != nil {
-						break L1
-					}
+	// 				if err != nil {
+	// 					break L1
+	// 				}
 
-					if currentReqId == parsed.ReqId {
-						ch <- &Request{
-							ReqId:  parsed.ReqId,
-							Height: parsed.ReqId,
-						}
+	// 				if currentReqId == parsed.ReqId {
+	// 					ch <- &Request{
+	// 						ReqId:  parsed.ReqId,
+	// 						Height: parsed.ReqId,
+	// 					}
 
-						//TODO: Will there be condition when reqId 2 arrives before settling reqId 1?
-						c.currentRequestId += 1
-					}
-				}
+	// 					//TODO: Will there be condition when reqId 2 arrives before settling reqId 1?
+	// 					c.currentRequestId += 1
+	// 				}
+	// 			}
 
-				c.nextBlockHeight = endHeight + 1
-			}
-		}
+	// 			c.nextBlockHeight = endHeight + 1
+	// 		}
+	// 	}
 
 	}
 }

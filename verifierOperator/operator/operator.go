@@ -11,7 +11,6 @@ import (
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/common"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/keys"
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/logger"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/eth"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/wallet"
@@ -23,6 +22,8 @@ import (
 
 	bls "github.com/Layr-Labs/eigensdk-go/crypto/bls"
 	sdklogging "github.com/Layr-Labs/eigensdk-go/logging"
+
+	"github.com/Cedro-Finance/CedroAVS/core/logger"
 )
 
 var RegisteredClients map[string]func(config.ChainConfig) common.IClient
@@ -143,10 +144,6 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 
 	avsClient := avs.NewAVSClient(&cfg.AVS, logger)
 
-	if err != nil {
-		return nil, err
-	}
-
 	ethRpcClient, err := eth.NewClient(cfg.AVS.EthRpcUrl)
 
 	if err != nil {
@@ -155,7 +152,7 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 
 	//Operator Key Management
 
-	operatorAddress, err := sdkEcdsa.GetAddressFromKeyStoreFile("")
+	operatorAddress, err := sdkEcdsa.GetAddressFromKeyStoreFile(cfg.KeyStore.Path)
 
 	if err != nil {
 		panic(err)
@@ -165,14 +162,15 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 
 	if !ok {
 		logger.Warnf("OPERATOR_ECDSA_KEY_PASSWORD env var not set")
+		ecdsaKeypassword = cfg.KeyStore.Password
 	}
 
 	signerConfig := signerv2.Config{
-		KeystorePath: "",
+		KeystorePath: cfg.KeyStore.Path,
 		Password:     ecdsaKeypassword,
 	}
 
-	signerV2, _, err := signerv2.SignerFromConfig(signerConfig, big.NewInt(1))
+	signerV2, _, err := signerv2.SignerFromConfig(signerConfig, big.NewInt(11155111))
 
 	if err != nil {
 		panic(err)
@@ -196,10 +194,21 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 		EthHttpUrl:                 cfg.AVS.EthRpcUrl,
 		RegistryCoordinatorAddr:    cfg.AVS.RegistryCoordinatorAddr.String(),
 		OperatorStateRetrieverAddr: cfg.AVS.OperatorStateRetrieverAddr.String(),
+		EthWsUrl:                   cfg.AVS.EthRpcUrl,
 		AvsName:                    "CedroAVS",
+		PromMetricsIpPortAddress:   "Cedro",
 	}
 
+
 	sdkClients, err := clients.BuildAll(chainioConfig, privateKey, logger)
+
+	if err != nil {
+		logger.Error("Error while bulding operator configs")
+
+		fmt.Print(err)
+
+		return nil, err
+	}
 
 	operatorId, err := sdkClients.AvsRegistryChainReader.GetOperatorId(&bind.CallOpts{}, operatorAddress)
 
