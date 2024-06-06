@@ -32,9 +32,10 @@ type Operator struct {
 	keystore   *keys.KeyStore
 	blsKeyPair *bls.KeyPair
 
-	operatorId sdktypes.OperatorId
-	txMgr      txmgr.TxManager
-	logger     sdklogging.Logger
+	operatorId                sdktypes.OperatorId
+	txMgr                     txmgr.TxManager
+	logger                    sdklogging.Logger
+	gRPCAggreagatorIpPortAddr string
 }
 
 func (r *Operator) mockAgentsForAgents(_ string) map[string]common.IClient {
@@ -208,12 +209,13 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 	}
 
 	return &Operator{
-		avs:        avsClient,
-		blsKeyPair: cfg.BlsPrivateKey,
-		keystore:   &keys.KeyStore{},
-		operatorId: operatorId,
-		txMgr:      txMgr,
-		logger:     logger,
+		avs:                       avsClient,
+		blsKeyPair:                cfg.BlsPrivateKey,
+		keystore:                  &keys.KeyStore{},
+		operatorId:                operatorId,
+		txMgr:                     txMgr,
+		logger:                    logger,
+		gRPCAggreagatorIpPortAddr: cfg.GRpcAggregatorIpAddr,
 	}, nil
 
 }
@@ -228,18 +230,14 @@ func StartRelay(ctx context.Context, cfg *config.Config) {
 
 	op.logger.Infof("Starting Operator")
 
-	balanceReqCh := make(chan *avs.Request) //Chanel to accept request from AVS contract
-	// deviationReqCh := make(chan *avs.Request) //Chanel to accept request from offline trigger
+	// balanceReqCh := make(chan *avs.Request) //Chanel to accept request from AVS contract
+	// // deviationReqCh := make(chan *avs.Request) //Chanel to accept request from offline trigger
 
-	regAgents := make(map[string]common.IClient)
-	for _, cfg := range cfg.Agents {
-		regAgents[cfg.Name] = RegisteredClients[cfg.Name](cfg)
-	}
+	// regAgents := make(map[string]common.IClient)
+	// for _, cfg := range cfg.Agents {
+	// 	regAgents[cfg.Name] = RegisteredClients[cfg.Name](cfg)
+	// }
 
-	go op.avs.PollEvents(ctx, balanceReqCh)
-	go op.GetChainBalances(ctx, balanceReqCh)
-
-	go op.UpdateChainBalances(ctx, balanceReqCh)
-	go op.AggregateAndSend(ctx, balanceCh)
-
+	// go op.avs.PollEvents(ctx, balanceReqCh)
+	// go op.GetChainBalances(ctx, balanceReqCh)
 }

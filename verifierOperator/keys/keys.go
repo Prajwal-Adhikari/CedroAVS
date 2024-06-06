@@ -6,7 +6,6 @@ import (
 
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/herumi/bls-go-binary/bls"
 )
 
 type ECSDAKeyStore struct {
@@ -14,13 +13,13 @@ type ECSDAKeyStore struct {
 	PrivateKey *ecdsa.PrivateKey
 }
 
-type BLSKeyStore struct {
-	PublicKey  *bls.PublicKey
-	PrivateKey *bls.SecretKey
-}
+// type BLSKeyStore struct {
+// 	PublicKey  *bls.PublicKey
+// 	PrivateKey *bls.SecretKey
+// }
 
 type KeyStore struct {
-	BlsKeyStore   *BLSKeyStore
+	// BlsKeyStore   *BLSKeyStore
 	ECSDAKeyStore *ECSDAKeyStore
 }
 

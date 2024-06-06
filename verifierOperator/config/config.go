@@ -49,6 +49,8 @@ type ConfigRaw struct {
 	Mode                   string        `yaml:"mode"`
 	KeyStore               *KeyStore     `yaml:"keystore"`
 	BlsPrivateKeyStorePath string        `yaml:"bls_private_key_store_path"`
+
+	GRpcAggregatorIPAddr string `yaml:gRpc_aggregator_addr`
 }
 
 type AVSConfig struct {
@@ -65,7 +67,8 @@ type Config struct {
 	Production    bool
 	AVS           AVSConfig
 
-	Agents []ChainConfig
+	GRpcAggregatorIpAddr string
+	Agents               []ChainConfig
 }
 
 var config *Config
@@ -122,7 +125,8 @@ func LoadConfig(path string) (*Config, error) {
 			StartHeight:                configRaw.AVS.StartHeight,
 			BlockFinality:              configRaw.AVS.BlockFinality,
 		},
-		BlsPrivateKey: blsKeypair,
-		Agents:        configRaw.Chains,
+		BlsPrivateKey:        blsKeypair,
+		Agents:               configRaw.Chains,
+		GRpcAggregatorIpAddr: configRaw.GRpcAggregatorIPAddr,
 	}, nil
 }

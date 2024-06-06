@@ -13,7 +13,7 @@ func main() {
 			Name: "register-operator-with-eigenlayer",
 			Aliases: []string{"regEl"},
 			Usage: "Registers Verifier operator with EigenLayer",
-			Action: acti,
+			// Action: acti,
 		},
 	}
 }
