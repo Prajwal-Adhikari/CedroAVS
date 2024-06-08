@@ -39,6 +39,10 @@ func NewAvsReader(c *config.AVSConfig, ethClient eth.Client, logger logging.Logg
 
 	avsRegistryReader, err := sdkavsregistry.BuildAvsRegistryChainReader(regrAddr, osAddr, ethClient, logger)
 
+	if err != nil {
+		return nil, err
+	}
+
 	return &AvsReader{
 		AvsServiceBindings: avsManagerBindings,
 		AvsRegistryReader:  avsRegistryReader,

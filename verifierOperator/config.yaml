@@ -20,9 +20,10 @@ keystore:
 
 avs:
   name: cedro-avs
-  eth_rpc_url: https://rpc-sepolia.rockx.com
-  operatorStateRetriever: "0xE936CF12bB31f6166881a3D37a52434e0A1dae0d"
-  registryCoordinator: "0xE936CF12bB31f6166881a3D37a52434e0A1dae0d"
+  eth_rpc_url: https://ethereum-holesky-rpc.publicnode.com
+  eth_ws_url: https://ethereum-holesky-rpc.publicnode.com
+  operatorStateRetriever: "0xBE1c904525910fdB49dB33b4960DF9aC9f603dC7"
+  registryCoordinator: "0x1eA7D160d325B289bF981e0D7aB6Bf3261a0FFf2"
 
 log:
   encoding: console

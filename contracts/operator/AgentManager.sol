@@ -2,7 +2,6 @@
 pragma solidity 0.8.24;
 
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./interfaces/IRoute.sol";
@@ -17,8 +16,7 @@ string constant TAG = "AgentManager";
  **/
 contract AgentManager is
     Initializable,
-    ContextUpgradeable,
-    ReentrancyGuardUpgradeable
+    ContextUpgradeable
 {
     using SafeMathUpgradeable for uint256;
 

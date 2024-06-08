@@ -142,8 +142,6 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 		return nil, err
 	}
 
-	avsClient := avs.NewAVSClient(&cfg.AVS, logger)
-
 	ethRpcClient, err := eth.NewClient(cfg.AVS.EthRpcUrl)
 
 	if err != nil {
@@ -190,15 +188,16 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 
 	txMgr := txmgr.NewSimpleTxManager(txSender, ethRpcClient, logger, operatorAddress)
 
+	avsClient := avs.NewAVSClient(&cfg.AVS, logger, txMgr)
+
 	chainioConfig := clients.BuildAllConfig{
 		EthHttpUrl:                 cfg.AVS.EthRpcUrl,
-		RegistryCoordinatorAddr:    cfg.AVS.RegistryCoordinatorAddr.String(),
-		OperatorStateRetrieverAddr: cfg.AVS.OperatorStateRetrieverAddr.String(),
+		RegistryCoordinatorAddr:    cfg.AVS.RegistryCoordinatorAddr.Hex(),
+		OperatorStateRetrieverAddr: cfg.AVS.OperatorStateRetrieverAddr.Hex(),
 		EthWsUrl:                   cfg.AVS.EthRpcUrl,
 		AvsName:                    "CedroAVS",
 		PromMetricsIpPortAddress:   "Cedro",
 	}
-
 
 	sdkClients, err := clients.BuildAll(chainioConfig, privateKey, logger)
 
