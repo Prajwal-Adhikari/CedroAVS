@@ -7,7 +7,7 @@ import {IDelegationManager} from "../../contracts/core/eigenContracts/interfaces
 import {IStrategyManager} from "../../contracts/core/eigenContracts/interfaces/IStrategyManager.sol";
 import {IStrategy} from "../../contracts/core/eigenContracts/interfaces/IStrategy.sol";
 import {ISignatureUtils} from "../../contracts/core/eigenContracts/interfaces/ISignatureUtils.sol";
-import "hardhat/console.sol";
+
 
 contract DelegationMock is IDelegationManager {
     // @dev Chain ID at the time of contract deployment

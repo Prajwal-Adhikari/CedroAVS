@@ -11,7 +11,7 @@ import {IStakeRegistry} from "../../contracts/core/eigenContracts/interfaces/ISt
 import {BitmapUtils} from "../../contracts/core/eigenContracts/libraries/BitmapUtils.sol";
 import {DATA} from "../../contracts/core/libraries/Data.sol";
 import {OperatorStateRetriever} from "../../contracts/core/eigenContracts/OperatorStateRetriever.sol";
-import "hardhat/console.sol";
+
 
 contract BLSAvsMock is OperatorStateRetriever {
     using BN254 for BN254.G1Point;
@@ -174,16 +174,16 @@ contract BLSAvsMock is OperatorStateRetriever {
 
         return
             DATA.NonSignerStakesAndSignature({
-                // nonSignerQuorumBitmapIndices: checkSignaturesIndices
-                //     .nonSignerQuorumBitmapIndices,
-                nonSignerPubkeys: nonSignerPubkeys
-                // quorumApks: quorumApksData,
-                // apkG2: aggSignerApkG2,
-                // sigma: sigmaDetail,
-                // quorumApkIndices: checkSignaturesIndices.quorumApkIndices,
-                // totalStakeIndices: checkSignaturesIndices.totalStakeIndices,
-                // nonSignerStakeIndices: checkSignaturesIndices
-                //     .nonSignerStakeIndices
+                nonSignerQuorumBitmapIndices: checkSignaturesIndices
+                    .nonSignerQuorumBitmapIndices,
+                nonSignerPubkeys: nonSignerPubkeys,
+                quorumApks: quorumApksData,
+                apkG2: aggSignerApkG2,
+                sigma: sigmaDetail,
+                quorumApkIndices: checkSignaturesIndices.quorumApkIndices,
+                totalStakeIndices: checkSignaturesIndices.totalStakeIndices,
+                nonSignerStakeIndices: checkSignaturesIndices
+                    .nonSignerStakeIndices
             });
     }
 
