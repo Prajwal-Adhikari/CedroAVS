@@ -19,7 +19,6 @@ import {BN254} from "./libraries/BN254.sol";
 import {Pausable} from "./Pausable.sol";
 import {RegistryCoordinatorStorage} from "./RegistryCoordinatorStorage.sol";
 
-
 /**
  * @title A `RegistryCoordinator` that has three registries:
  *      1) a `StakeRegistry` that keeps track of operators' stakes
@@ -118,7 +117,7 @@ contract RegistryCoordinator is
             operatorId: operatorId,
             quorumNumbers: quorumNumbers,
             operatorSignature: operatorSignature
-        }).numOperatorsPerQuorum;    
+        }).numOperatorsPerQuorum;
 
         // For each quorum, validate that the new operator count does not exceed the maximum
         // (If it does, an operator needs to be replaced -- see `registerOperatorWithChurn`)
@@ -325,7 +324,6 @@ contract RegistryCoordinator is
         }
     }
 
-
     /*******************************************************************************
                             EXTERNAL FUNCTIONS - EJECTOR
     *******************************************************************************/
@@ -464,7 +462,6 @@ contract RegistryCoordinator is
             "RegistryCoordinator._registerOperator: operator already registered for some quorums being registered for"
         );
         uint192 newBitmap = uint192(currentBitmap.plus(quorumsToAdd));
-     
 
         // Check that the operator can reregister if ejected
         require(
@@ -478,7 +475,6 @@ contract RegistryCoordinator is
          * if we're `REGISTERED`, the operatorId and status are already correct.
          */
         _updateOperatorBitmap({operatorId: operatorId, newBitmap: newBitmap});
-          
 
         // If the operator wasn't registered for any quorums, update their status
         // and register them with this AVS in EigenLayer core (DelegationManager)
@@ -487,10 +483,6 @@ contract RegistryCoordinator is
                 operatorId: operatorId,
                 status: OperatorStatus.REGISTERED
             });
-
-          
-        
-    
 
             // Register the operator with the EigenLayer core contracts via this AVS's ServiceManager
             serviceManager.registerOperatorToAVS(operator, operatorSignature);
@@ -506,8 +498,6 @@ contract RegistryCoordinator is
             operatorId,
             quorumNumbers
         );
-        
-         
 
         return results;
     }
@@ -524,7 +514,7 @@ contract RegistryCoordinator is
         address operator,
         IBLSApkRegistry.PubkeyRegistrationParams calldata params
     ) internal returns (bytes32 operatorId) {
-        operatorId = blsApkRegistry.getOperatorId(operator);  
+        operatorId = blsApkRegistry.getOperatorId(operator);
         if (operatorId == 0) {
             operatorId = blsApkRegistry.registerBLSPublicKey(
                 operator,
