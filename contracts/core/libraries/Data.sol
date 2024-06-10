@@ -7,12 +7,14 @@ library DATA {
         address agentOperator;
         bytes quorumNumbers;
         bytes quorumThresholdPercentages;
-        uint32 referenceBlockNumber;
         uint32 requestId;
+        uint32 referenceBlockNumber;
         uint256 actualAmount;
         uint256 idealAmount;
     }
+
     struct FraudBalanceHeader {
+        address agentOperator;
         bytes quorumNumbers;
         bytes quorumThresholdPercentages;
         uint32 requestId;
@@ -26,13 +28,16 @@ library DATA {
         uint32 referenceRequestId;
         uint32 referenceBlockNumber;
     }
+
     struct ReducedFraudHeader {
         uint256 insufficientAmount;
         uint32 referenceBlockNumber;
     }
 
-    struct AgentChallengeEvidence {
+    struct OperatorChallengeEvidence {
         bytes32 messageHash;
+       // :TO DO
     }
+
 
 }

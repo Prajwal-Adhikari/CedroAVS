@@ -4,7 +4,6 @@ pragma solidity 0.8.24;
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-
 import {Pausable} from "./eigenContracts/Pausable.sol";
 import {IPauserRegistry} from "./eigenContracts/interfaces/IPauserRegistry.sol";
 import {ServiceManagerBase, IAVSDirectory, IPaymentCoordinator, IRegistryCoordinator, ISignatureUtils, IStakeRegistry} from "./eigenContracts/ServiceManagerBase.sol";
@@ -29,8 +28,6 @@ contract CedroServiceManager is
     //address of the rolemanager contract
 
     uint256 public roleManagerAddressOne;
-
-    mapping(address => bool) public operatorAllowlist;
 
     error OperatorRegistrationPaused(string contractTAG);
     error NotInAllowlist(string contractTAG);
@@ -173,7 +170,9 @@ contract CedroServiceManager is
             }
         }
 
-        uint32 requestIdMemory = requestId;
+        uint32 requestIdMemory = agentDeviationRequestId[
+            balanceHeader.agentOperator
+        ];
 
         // store deviation message hash
         bool success = _resolvedMessageHashes.add(reducedBalanceHeaderHash);
@@ -183,7 +182,9 @@ contract CedroServiceManager is
 
         emit AgentBalanceConfirmed();
 
-        requestId = requestIdMemory + 1;
+        agentDeviationRequestId[balanceHeader.agentOperator] =
+            requestIdMemory +
+            1;
     }
 
     // /**
@@ -245,7 +246,9 @@ contract CedroServiceManager is
             }
         }
 
-        uint32 requestIdMemory = requestId;
+        uint32 requestIdMemory = agentDeviationRequestId[
+            fraudBalanceHeader.agentOperator
+        ];
 
         // store deviation message hash
         bool success = _resolvedMessageHashes.add(reducedBalanceHeaderHash);
@@ -253,7 +256,9 @@ contract CedroServiceManager is
             revert MessageHashAlreadyAdded(TAG);
         }
 
-        requestId = requestIdMemory + 1;
+        agentDeviationRequestId[fraudBalanceHeader.agentOperator] =
+            requestIdMemory +
+            1;
 
         emit AgentFraudConfirmed();
     }
@@ -262,11 +267,11 @@ contract CedroServiceManager is
      * @notice Challenge Operator performance to process slashing
      * @param evidence - evidence of the fraud.
      **/
-    // function challengeOperators(
-    //     DATA.OperatorChallengeEvidence calldata evidence
-    // ) external {
-    // :TO DO :
-    // }
+    function challengeOperators(
+        DATA.OperatorChallengeEvidence calldata evidence
+    ) external {
+    // :TO DO
+    }
 
     //////////////////////////////////////////////////////////////////////////////
     //                              Contract Functions                             //
@@ -347,11 +352,6 @@ contract CedroServiceManager is
                 insufficientAmount: balanceHeader.insufficientAmount,
                 referenceBlockNumber: balanceHeader.referenceBlockNumber
             });
-    }
-
-    /// @notice Returns the current batchId
-    function taskNumber() external view returns (uint32) {
-        return requestId;
     }
 
     /// @notice Given a reference block number, returns the block until which operators must serve.
