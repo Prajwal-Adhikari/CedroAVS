@@ -15,8 +15,6 @@ import {IRoleManager} from "./interfaces/IRoleManager.sol";
 import {CedroServiceManagerStorage} from "./CedroServiceManagerStorage.sol";
 import {DATA} from "./libraries/Data.sol";
 
-
-
 string constant TAG = "CedroServiceManager";
 
 contract CedroServiceManager is
@@ -126,8 +124,7 @@ contract CedroServiceManager is
     function confirmAgentDeviation(
         DATA.DeviationBalanceHeader calldata balanceHeader,
         NonSignerStakesAndSignature memory nonSignerStakesAndSignature
-        ) external {
-    // ) external onlyRole(IRoleManager(roleManager).VERIFIER_ADMIN()) {
+    ) external {
         if (tx.origin != msg.sender) revert InvalidSender(TAG);
         if (balanceHeader.referenceBlockNumber >= block.number) {
             revert InvalidReferenceBlockNum(TAG);
@@ -189,10 +186,10 @@ contract CedroServiceManager is
         requestId = requestIdMemory + 1;
     }
 
-    /**
-     * @notice Challenge Agent performance to process bond slashing
-     * @param fraudBalanceHeader - evidence of fraud.
-     **/
+    // /**
+    //  * @notice Challenge Agent performance to process bond slashing
+    //  * @param fraudBalanceHeader - evidence of fraud.
+    //  **/
     function confirmAgentFraud(
         DATA.FraudBalanceHeader calldata fraudBalanceHeader,
         NonSignerStakesAndSignature memory nonSignerStakesAndSignature
@@ -256,9 +253,9 @@ contract CedroServiceManager is
             revert MessageHashAlreadyAdded(TAG);
         }
 
-        emit AgentFraudConfirmed();
-
         requestId = requestIdMemory + 1;
+
+        emit AgentFraudConfirmed();
     }
 
     /**
@@ -268,7 +265,7 @@ contract CedroServiceManager is
     // function challengeOperators(
     //     DATA.OperatorChallengeEvidence calldata evidence
     // ) external {
-        // :TO DO :
+    // :TO DO :
     // }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -296,9 +293,7 @@ contract CedroServiceManager is
         return keccak256(abi.encode(reduceFraudBalanceHeader(balanceHeader)));
     }
 
-    function addOperatorsToAllowlist(
-        address[] calldata operators
-    ) external  {
+    function addOperatorsToAllowlist(address[] calldata operators) external {
         for (uint256 i; i < operators.length; i++) {
             operatorAllowlist[operators[i]] = true;
         }
@@ -317,8 +312,6 @@ contract CedroServiceManager is
         }
     }
 
-   
-
     /**
      * @notice converts a balance header to a reduced balance header
      * @param balanceHeader the balance header to convert
@@ -331,6 +324,7 @@ contract CedroServiceManager is
             DATA.ReducedDeviationHeader({
                 actualAmount: balanceHeader.actualAmount,
                 idealAmount: balanceHeader.idealAmount,
+                referenceRequestId: balanceHeader.requestId,
                 referenceBlockNumber: balanceHeader.referenceBlockNumber
             });
     }
