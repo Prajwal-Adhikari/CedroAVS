@@ -8,10 +8,12 @@ import {IRegistryCoordinator} from "../../contracts/core/eigenContracts/interfac
 import {IDelegationManager} from "../../contracts/core/eigenContracts/interfaces/IDelegationManager.sol";
 import {IStrategy} from "../../contracts/core/eigenContracts/interfaces/IStrategy.sol";
 import {IStakeRegistry} from "../../contracts/core/eigenContracts/interfaces/IStakeRegistry.sol";
+import {IBLSSignatureChecker} from "../../contracts/core/eigenContracts/interfaces/IBLSSignatureChecker.sol";
 import {BitmapUtils} from "../../contracts/core/eigenContracts/libraries/BitmapUtils.sol";
 import {DATA} from "../../contracts/core/libraries/Data.sol";
 import {OperatorStateRetriever} from "../../contracts/core/eigenContracts/OperatorStateRetriever.sol";
 
+import "hardhat/console.sol";
 
 contract BLSAvsMock is OperatorStateRetriever {
     using BN254 for BN254.G1Point;
@@ -31,7 +33,7 @@ contract BLSAvsMock is OperatorStateRetriever {
 
     constructor(OperatorStateRetriever _operatorStateRetriever) {
         operatorStateRetriever = _operatorStateRetriever;
-        //  _setAggregatePublicKeysAndSignature();
+        _setAggregatePublicKeysAndSignature();
     }
 
     function _generateSignerAndNonSignerPrivateKeys(
@@ -111,7 +113,8 @@ contract BLSAvsMock is OperatorStateRetriever {
                 agentOperator: 0xDA29BB71669f46F2a779b4b62f03644A84eE3479,
                 quorumNumbers: quorumNumbersInput,
                 quorumThresholdPercentages: quorumThresholdPercentages,
-                referenceBlockNumber: 25,
+                referenceBlockNumber: 32,
+                requestId: 1,
                 actualAmount: 1350,
                 idealAmount: 1500
             });
@@ -137,11 +140,14 @@ contract BLSAvsMock is OperatorStateRetriever {
 
     function getNonSignerStakeAndSignature(
         IRegistryCoordinator registryCoordinator,
-        uint32 referenceBlockNumber, 
-        bytes calldata quorumNumbers, 
+        uint32 referenceBlockNumber,
+        bytes calldata quorumNumbers,
         bytes32[] calldata nonSignerOperatorIds
-    ) public view  returns (DATA.NonSignerStakesAndSignature memory) {
-       
+    )
+        public
+        view
+        returns (IBLSSignatureChecker.NonSignerStakesAndSignature memory)
+    {
         OperatorStateRetriever.CheckSignaturesIndices
             memory checkSignaturesIndices = operatorStateRetriever
                 .getCheckSignaturesIndices(
@@ -152,7 +158,10 @@ contract BLSAvsMock is OperatorStateRetriever {
                 );
 
         uint256[] memory privateKeys = new uint256[](1);
-        privateKeys[0] = 253;
+        uint256[] memory privateKeysMain = new uint256[](2);
+        privateKeys[0] = 655;
+        privateKeysMain[0] = 853;
+        privateKeysMain[1] = 655;
         BN254.G1Point[] memory nonSignerPubkeys = new BN254.G1Point[](
             privateKeys.length
         );
@@ -165,15 +174,22 @@ contract BLSAvsMock is OperatorStateRetriever {
         BN254.G1Point[] memory quorumApksData = new BN254.G1Point[](
             quorumNumbers.length
         );
+        console.log("Quoum lenght", quorumNumbers.length);
+
+        BN254.G1Point[] memory pubkeys = new BN254.G1Point[](2);
+        for (uint256 j = 0; j < quorumNumbers.length; j++) {
+            console.log("J value ", j);
+            pubkeys[j] = BN254.generatorG1().scalar_mul(privateKeysMain[j]);
+            quorumApksData[j] = BN254.plus(quorumApksData[j], (pubkeys[j]));
+        }
 
         //  return
         //     DATA.NonSignerStakesAndSignatureDemo({
         //         quorumApkIndices: 32,
         //         totalStakeIndices: 42
         //     });
-
         return
-            DATA.NonSignerStakesAndSignature({
+            IBLSSignatureChecker.NonSignerStakesAndSignature({
                 nonSignerQuorumBitmapIndices: checkSignaturesIndices
                     .nonSignerQuorumBitmapIndices,
                 nonSignerPubkeys: nonSignerPubkeys,
