@@ -152,8 +152,8 @@ describe("Cedro Service Manager Tests", function () {
       ]);
     });
 
-    it("Creating Quorum in AVS", async () => {
-      const numQuorumsToAdd = 2; // Example value
+    it.only("Creating Quorum in AVS", async () => {
+      const numQuorumsToAdd = 1; // Example value
 
       let minimumStakeForQuorum = new Array(numQuorumsToAdd);
 
@@ -171,15 +171,9 @@ describe("Cedro Service Manager Tests", function () {
         minimumStakeForQuorum[i] = BigInt(i + 1);
       }
 
-      const WEIGHTING_DIVISOR = 1e18;
+      const WEIGHTING_DIVISOR = 1e12;
       const quorumStrategiesConsideredAndMultipliers = [];
       for (let i = 0; i < numQuorumsToAdd; i++) {
-        const bigNumber = BigInt(i);
-
-        const hexString = bigNumber.toString();
-
-        const addressLikeString = "0x" + hexString;
-
         strategyId = operator1.address;
 
         // Here, you would typically call a method on the contract to add a strategy
@@ -189,13 +183,20 @@ describe("Cedro Service Manager Tests", function () {
         ];
 
         for (let i = 0; i < operatorSetParams.length; i++) {
-          registryCoordinator.createQuorum(
+          console.log("ewr");
+          await registryCoordinator.createQuorum(
             operatorSetParams[i],
             minimumStakeForQuorum[i],
             quorumStrategiesConsideredAndMultipliers[i]
           );
         }
       }
+      await ethers.provider.send("evm_increaseTime", [100]);
+      await ethers.provider.send("evm_mine");
+
+      console.log(await registryCoordinator.quorumCount());
+
+      console.log("params:",await stakeRegistry.strategyParamsByIndex(0,0));
     });
 
     it("Register operator and enroll in the quorum", async () => {
@@ -254,17 +255,19 @@ describe("Cedro Service Manager Tests", function () {
         );
       signature = signingKey.sign(digestHash);
       signatureConcat = ethers.Signature.from(signature).serialized;
-      let quorumNumbers = await blsAvsMock.converBitmapToBytesArray(1);
+      let quorumNumbers = await blsAvsMock.converBitmapToBytesArray(2);
+   
 
       blsPrivateKey = 853;
 
       let pubkeyRegistrationSignature = await blsAvsMock.signMessage(
-        blsPrivateKey,
+        blsPrivateKeyOne,
         operator1.address,
         registryCoordinator.target
       );
       // let pubkeyRegistrationSignature =[13540890549107538365317826005663225429149650894201009774295406557850371632651n,2966724547965158980192270741744292034179150792486555967152513253931665577541n]
-      // let pubkeyG1 = await blsAvsMock.getG1PubKey(blsPrivateKey);
+      // let pubkeyG1 = await blsAvsMock.getG1PubKey(blsPrivateKeyOne);
+      console.log("**Main Public key**", pubkeyG1);
       let pubkeyG1x =
         21008703310028844141620162130587521182514488709533704622337026710714836074802n;
       let pubkeyG1y =
@@ -314,9 +317,13 @@ describe("Cedro Service Manager Tests", function () {
       );
     });
 
-    it.only("Test the signature verification flow", async () => {
+    it("Test the signature verification flow", async () => {
       await delegationMock.setIsOperator(operator1.address, true);
       await cedroServiceManger.addOperatorsToAllowlist([operator1.address]);
+      await delegationMock.setIsOperator(operator2.address, true);
+      await cedroServiceManger.addOperatorsToAllowlist([operator2.address]);
+
+      console.log("Oper2 Address", operator2.address);
 
       const numQuorumsToAdd = 2; // Example value
 
@@ -332,7 +339,7 @@ describe("Cedro Service Manager Tests", function () {
         operatorSetParams[i] = [10, 15000, 150];
       }
 
-      const WEIGHTING_DIVISOR = 1e12;
+      const WEIGHTING_DIVISOR = 1e10;
       const quorumStrategiesConsideredAndMultipliers = [];
       for (let i = 0; i < numQuorumsToAdd; i++) {
         strategyId = operator1.address;
@@ -354,8 +361,15 @@ describe("Cedro Service Manager Tests", function () {
 
       privateKey =
         "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
+      privateKeyTwo =
+        "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a";
+
       wallet = new ethers.Wallet(privateKey);
       signingKey = new ethers.SigningKey(wallet.privateKey);
+
+      wallet2 = new ethers.Wallet(privateKeyTwo);
+      signingKey2 = new ethers.SigningKey(wallet2.privateKey);
+
       let salt = ethers.keccak256(
         ethers.solidityPackedKeccak256(["string"], ["default"])
       );
@@ -367,22 +381,52 @@ describe("Cedro Service Manager Tests", function () {
           salt,
           expiry
         );
+      let digestHashTwo =
+        await avsDirectoryMock.calculateOperatorAVSRegistrationDigestHash(
+          operator2.address,
+          cedroServiceManger.target,
+          salt,
+          expiry
+        );
       signature = signingKey.sign(digestHash);
       signatureConcat = ethers.Signature.from(signature).serialized;
-      let quorumNumbers = await blsAvsMock.converBitmapToBytesArray(1);
-      blsPrivateKey = 853;
 
-      let pubkeyRegistrationSignature = await blsAvsMock.signMessage(
-        blsPrivateKey,
-        operator1.address,
-        registryCoordinator.target
-      );
-      // let pubkeyRegistrationSignature =[13540890549107538365317826005663225429149650894201009774295406557850371632651n,2966724547965158980192270741744292034179150792486555967152513253931665577541n]
-      // let pubkeyG1 = await blsAvsMock.getG1PubKey(blsPrivateKey);
-      let pubkeyG1x =
+      signatureTwo = signingKey2.sign(digestHashTwo);
+      signatureConcatTwo = ethers.Signature.from(signatureTwo).serialized;
+
+      let quorumNumbers = await blsAvsMock.converBitmapToBytesArray(1);
+      console.log("quorum Length : ", quorumNumbers.length);
+
+      blsPrivateKeyOne = 853;
+      blsPrivateKeyTwo = 655;
+
+      // let pubkeyRegistrationSignature = await blsAvsMock.signMessage(
+      //   blsPrivateKeyTwo,
+      //   operator2.address,
+      //   registryCoordinator.target
+      // );
+      // let pubkeyG1 = await blsAvsMock.getG1PubKey(blsPrivateKeyTwo);
+      // console.log("**Main Public key**", pubkeyG1);
+      let pubkey1SigG1x =
+        17409514112937982184884384646770072864005066810947009403975675305346550516857n;
+      let pubkey1SigG1y =
+        16378308196958834164882488914719045785044027868371311005910777189078541893110n;
+
+      let pubkey1G1x =
         21008703310028844141620162130587521182514488709533704622337026710714836074802n;
-      let pubkeyG1y =
+      let pubkey1G1y =
         1145283673551783492487423178395020830991754869805176606412560778073024405948n;
+
+      let pubkey2SigG1x =
+        13312587445422295126177139014651984144514712086661404227691088207480792536745n;
+      let pubkey2SigG1y =
+        15363240117222918788648648388562209952076267180616555977408454637004630486090n;
+
+      let pubkey2G1x =
+        9424467304309542109140998916676104359278524971990760318275336488052797649388n;
+      let pubkey2G1y =
+        1778726798519900263032462255183166302989403596381730183535085586499987568162n;
+
       let pubkeyG2x = [
         12302775405227555806769733102102076488786351091672743244822361848998753983454n,
         12302775405227555806769733102102076488786351091672743244822361848998753983454n,
@@ -391,17 +435,16 @@ describe("Cedro Service Manager Tests", function () {
         12302775405227555806769733102102076488786351091672743244822361848998753983454n,
         12302775405227555806769733102102076488786351091672743244822361848998753983454n,
       ];
-      // let pubkeyG2 = await blsAvsMock.getG2PubKey();
 
-      pubkeyRegistrationParams = [
-        [pubkeyG1x, pubkeyG1y],
-        [pubkeyG1x, pubkeyG1y],
-        [pubkeyG2x, pubkeyG2y],
-      ];
       let operatorSignatureParams = [signatureConcat, salt, expiry];
-      await blsApkRegistryMock.setBLSPublicKey(operator1, [
-        pubkeyG1x,
-        pubkeyG1y,
+      let operatorSignatureParamsTwo = [signatureConcatTwo, salt, expiry];
+      await blsApkRegistryMock.setBLSPublicKey(operator1.address, [
+        pubkey1G1x,
+        pubkey1G1y,
+      ]);
+      await blsApkRegistryMock.setBLSPublicKey(operator2.address, [
+        pubkey2G1x,
+        pubkey2G1y,
       ]);
 
       let weight = ethers.parseEther("1.0");
@@ -416,15 +459,30 @@ describe("Cedro Service Manager Tests", function () {
         strategyDetails[0],
         actualWeight
       );
+      delegationMock.setOperatorShares(
+        operator2.address,
+        strategyDetails[0],
+        actualWeight
+      );
 
       await registryCoordinator.connect(operator1).registerOperator(
         quorumNumbers,
         [
-          [pubkeyG1x, pubkeyG1y],
-          [pubkeyG1x, pubkeyG1y],
+          [pubkey1SigG1x, pubkey1SigG1y],
+          [pubkey1G1x, pubkey1G1y],
           [pubkeyG2x, pubkeyG2y],
         ],
         operatorSignatureParams
+      );
+
+      await registryCoordinator.connect(operator2).registerOperator(
+        quorumNumbers,
+        [
+          [pubkey2SigG1x, pubkey2SigG1y],
+          [pubkey2G1x, pubkey2G1y],
+          [pubkeyG2x, pubkeyG2y],
+        ],
+        operatorSignatureParamsTwo
       );
       /* ==> De register Operator <== */
       // await registryCoordinator.connect(operator1).deregisterOperator(quorumNumbers);
@@ -434,7 +492,9 @@ describe("Cedro Service Manager Tests", function () {
       let numNonSigners = 0;
       let quorumBitmap = 1;
       let referenceBlockNumbers = 123;
-      let nonsigenrOperatorIds = await blsApkRegistryMock.getOperatorId(operator1.address);
+      let nonsigenrOperatorIds = await blsApkRegistryMock.getOperatorId(
+        operator2.address
+      );
       // console.log(bls);
       let deviationHeader = await blsAvsMock.getDeviationHeader();
       let deviationHeaderData = [
@@ -445,27 +505,73 @@ describe("Cedro Service Manager Tests", function () {
         deviationHeader[4],
         deviationHeader[5],
       ];
-      // let nonsignRequiredData = registryCoordinator.target;
+
       let NonSignerStakesAndSignature =
         await blsAvsMock.getNonSignerStakeAndSignature(
           registryCoordinator.target,
           referenceBlockNumbers,
           quorumNumbers,
-          [ nonsigenrOperatorIds]
+          [nonsigenrOperatorIds]
         );
-      // console.log("non signer Data :", NonSignerStakesAndSignature);
-      console.log(NonSignerStakesAndSignature[0][0].X);
-      let nonSignerQuorumBitmapIndicesData = [NonSignerStakesAndSignature[0][0].X,NonSignerStakesAndSignature[0][0].y];
-      // let nonSignerPubkeysData = NonSignerStakesAndSignature[1]
-      // let NonSignerStakeAndSignatureData = [
-      //   nonSignerQuorumBitmapIndicesData,
-      // ];
 
-      // console.log(await blsAvsMock.getDeviationHeader());
-      // console.log(await blsAvsMock.getNonSignerStakeAndSignature(registryCoordinator.target, referenceBlockNumber, quorumNumbers, bls));
+      let nonSignerQuorumBitmapIndicesData = [
+        NonSignerStakesAndSignature[0][0],
+      ];
 
-      // await cedroServiceManger.confirmAgentDeviation((await blsAvsMock.getDeviationHeader(), await blsAvsMock.getNonSignerStakeAndSignature(registryCoordinator.target,referenceBlockNumber,quorumNumbers,bls)));
-      // await cedroServiceManger.confirmAgentDeviation([[NonSignerStakesAndSignature[0][0]],]);
+      let nonSignerPubkeysData = [
+        [
+          NonSignerStakesAndSignature[1][0].X,
+          NonSignerStakesAndSignature[1][0].Y,
+        ],
+      ];
+      console.log("quorum apks:", NonSignerStakesAndSignature[2]);
+      let quorumApksData = [
+        [
+          NonSignerStakesAndSignature[2][0].X,
+          NonSignerStakesAndSignature[2][0].Y,
+        ]
+      ];
+      console.log("quorum apks Final:", quorumApksData);
+     
+
+      let apkG2Data = [
+        [
+          NonSignerStakesAndSignature[3].X[0],
+          NonSignerStakesAndSignature[3].X[1],
+        ],
+        [
+          NonSignerStakesAndSignature[3].Y[0],
+          NonSignerStakesAndSignature[3].Y[1],
+        ],
+      ];
+
+      let sigmaDetailsData = [
+        NonSignerStakesAndSignature[4].X,
+        NonSignerStakesAndSignature[4].Y,
+      ];
+
+      let quorumApkIndicesData = [NonSignerStakesAndSignature[5][0]];
+      console.log(" quorumApkIndicesData",NonSignerStakesAndSignature[5])
+
+      let totalStakeIndicesData = [NonSignerStakesAndSignature[6][0]];
+
+      let nonSignerStakeIndices = [[NonSignerStakesAndSignature[7][0][0]]];
+
+      let nonSignerStakeAndSignatureData = [
+        nonSignerQuorumBitmapIndicesData,
+        nonSignerPubkeysData,
+        quorumApksData,
+        apkG2Data,
+        sigmaDetailsData,
+        quorumApkIndicesData,
+        totalStakeIndicesData,
+        nonSignerStakeIndices,
+      ];
+      // console.log(NonSignerStakeAndSignatureData);
+      await cedroServiceManger.confirmAgentDeviation(
+        deviationHeaderData,
+        nonSignerStakeAndSignatureData
+      );
     });
   });
 });

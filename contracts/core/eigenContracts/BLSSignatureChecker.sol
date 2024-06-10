@@ -115,13 +115,8 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
         NonSignerStakesAndSignature memory params
     ) public view returns (QuorumStakeTotals memory, bytes32) {
         require(
-            quorumNumbers.length != 0,
-            "BLSSignatureChecker.checkSignatures: empty quorum input"
-        );
-
-        require(
-            (quorumNumbers.length == params.quorumApks.length) &&
-                (quorumNumbers.length == params.quorumApkIndices.length) &&
+            // (quorumNumbers.length == params.quorumApks.length) &&
+            (quorumNumbers.length == params.quorumApkIndices.length) &&
                 (quorumNumbers.length == params.totalStakeIndices.length) &&
                 (quorumNumbers.length == params.nonSignerStakeIndices.length),
             "BLSSignatureChecker.checkSignatures: input quorum length mismatch"
@@ -157,6 +152,7 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
         nonSigners.quorumBitmaps = new uint256[](
             params.nonSignerPubkeys.length
         );
+
         nonSigners.pubkeyHashes = new bytes32[](params.nonSignerPubkeys.length);
 
         {
