@@ -55,6 +55,10 @@ contract LzRoute is Initializable, LzApp {
         adapter = _adapter;
     }
 
+    function setGasUsage(uint256 _gasUsage) external {
+        gasUsage = _gasUsage;
+    }
+
     /**
      * @dev Receive a cross chain message sent from the branch of chain with chain id `_srcChainId`.
      *
@@ -70,22 +74,16 @@ contract LzRoute is Initializable, LzApp {
             id := mload(add(_payload, 32))
         }
         address agent = _bytesToAddress(id);
-        bytes32[] memory chains;
-        IAdapter(adapter).enrollAgents(
-            agentManager,
-            agent,
-            agentManager,
-            chains
-        );
+        IAdapter(adapter).enrollAgent(agentManager, agent, oracle);
     }
 
     function send(
         bytes memory payload,
         bytes32[] memory chainIDs,
+        uint256[] memory fees,
         address sender
     ) external payable {
         uint256 len = chainIDs.length;
-        uint256 value = msg.value; //TO DO: add respective value to diff chains
         for (uint256 i; i < len; ) {
             _lzSend(
                 chainID[chainIDs[i]],
@@ -93,7 +91,7 @@ contract LzRoute is Initializable, LzApp {
                 payable(sender),
                 address(this),
                 abi.encodePacked(uint16(1), gasUsage),
-                value
+                fees[i]
             );
             unchecked {
                 i++;
