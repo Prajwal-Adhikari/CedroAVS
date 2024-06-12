@@ -38,10 +38,10 @@ interface IAgentManager {
      * @param _token - address of the asset.
      * @param _enable - status of the pool.
      **/
-    function setPool(
-        bytes32 _id,
-        address _token,
-        bool _enable
+    function setPools(
+        bytes32[] memory _id,
+        address[] memory _token,
+        bool[] memory _enable
     ) external;
 
     /**
@@ -72,11 +72,10 @@ interface IAgentManager {
     function mapAgent(address _agent, address _agentPod) external;
 
     /**
-     * @notice Triggers a snapshot update event for the agent.
-     * This function can only be accessed by any user.
-     * @param _agent - address of the agent.
+     * @notice Invoked after receiving responses from operator for deviation check
+     * This function can only be accessed by CedroServiceManager
      **/
-    function updateSnapshot(address _agent) external;
+    function receivedResponse(address _agent) external;
 
     /**
      * @notice Slash an agent in case of major deviation in holdings

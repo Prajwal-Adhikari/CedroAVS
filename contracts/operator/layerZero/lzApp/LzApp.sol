@@ -29,7 +29,7 @@ contract LzApp is Initializable, OwnableUpgradeable, ILayerZeroReceiver {
     function __LzApp_init(address _endpoint, uint16 _localId) internal onlyInitializing {
         lzEndpoint = ILayerZeroEndpoint(_endpoint);
         localId = _localId;
-        __Ownable_init();
+        __Ownable_init(msg.sender);
     }
 
     function localReceive(uint16 _srcChainId, bytes memory _payload) public virtual override {

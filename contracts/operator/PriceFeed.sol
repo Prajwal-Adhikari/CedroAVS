@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 
 string constant TAG = "PriceFeed";
 
 contract PriceFeed is Initializable, ContextUpgradeable {
-    using SafeMathUpgradeable for uint256;
 
     address public roleManager;
     mapping(bytes32 => uint256) public prices;
@@ -103,8 +101,8 @@ contract PriceFeed is Initializable, ContextUpgradeable {
                 minPrice = _prices[i];
                 maxPrice = proposedPrices[_symbols[i]];
             }
-            deviation = ((maxPrice.sub(minPrice)).mul(1e18));
-            deviation = deviation.div(proposedPrices[_symbols[i]]);
+            deviation = ((maxPrice - (minPrice)) * (1e18));
+            deviation = deviation / (proposedPrices[_symbols[i]]);
             if (deviation > DEVIATION_THRESHOLD) {
                 proposedCount[_symbols[i]]++;
                 emit DeviationExceeded(

@@ -6,8 +6,7 @@ interface IRoute {
     function send(
         bytes memory payload,
         bytes32[] memory chainIDs,
+        uint256[] memory fees,
         address sender
     ) external payable;
-
-   
 }

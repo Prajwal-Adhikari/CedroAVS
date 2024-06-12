@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -21,7 +20,6 @@ string constant TAG = "AgentPod";
  **/
 contract AgentPod is Context, ReentrancyGuard {
     using ECDSA for bytes32;
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     address public oracle;
@@ -46,6 +44,28 @@ contract AgentPod is Context, ReentrancyGuard {
     mapping(address => uint256) public reward;
     bytes32[] public acceptedAssetList;
 
+    event Deposit(
+        uint256 txnID,
+        address depositor,
+        bytes32 asset,
+        uint256 amount,
+        uint256 timeInterval,
+        uint256 interestRate
+    );
+    event Claim(
+        uint256 txnId,
+        address depositor,
+        bytes32[] assets,
+        uint256[] amounts,
+        Data.STATUS status
+    );
+    event TransferAssetToPool(
+        uint256 txnId,
+        address depositor,
+        bytes32[] assets,
+        uint256[] amounts,
+        Data.STATUS status
+    );
     event SlashAgent(address _agent, uint256 _amountToSlash, bytes32 _chainID);
 
     error DepositNotMatured(uint256 _txnID, address _user);
@@ -103,6 +123,15 @@ contract AgentPod is Context, ReentrancyGuard {
      **/
     function setOppurtunity(address _oppurtunity) external {
         oppurtunity = _oppurtunity;
+    }
+
+    /**
+     * @notice Configures reward
+     * This function can only be accessed by the account with role MANAGER.
+     * @param _reward - amount in USD to be given as reward
+     **/
+    function setReward(uint256 _reward) external {
+        rewardAmount = _reward;
     }
 
     /**
@@ -190,9 +219,9 @@ contract AgentPod is Context, ReentrancyGuard {
         userData.asset = _asset;
         userData.amount = _amount;
 
-        userData.principalAmount = _amount
-            .mul(IOracle(oracle).getSinglePrice(_asset))
-            .div(1e18);
+        userData.principalAmount =
+            (_amount * (IOracle(oracle).getSinglePrice(_asset))) /
+            (1e18);
 
         userData.timeInterval = _timeInterval;
         userData.interestRate = _interestRate;
@@ -207,6 +236,14 @@ contract AgentPod is Context, ReentrancyGuard {
         ++txnIdCounter;
         signatureUsed[_signature] = true;
         _pay(poolInfo.token, _amount);
+        emit Deposit(
+            userData.txnID,
+            userData.user,
+            _asset,
+            _amount,
+            _timeInterval,
+            _interestRate
+        );
     }
 
     /**
@@ -260,49 +297,50 @@ contract AgentPod is Context, ReentrancyGuard {
 
         if (
             block.timestamp <
-            (userData.createdAt.add(userData.timeInterval.div(1e18)))
+            (userData.createdAt + (userData.timeInterval / (1e18)))
         ) revert DepositNotMatured(_txnId, userData.user);
 
-        uint256 amountToClaim = userData
-            .principalAmount
-            .mul(
-                (userData.timeInterval.div(SECONDS_IN_A_YEAR))
-                    .mul(userData.interestRate)
-                    .div(1e18)
-                    .add(1e18)
-            )
-            .div(1e18);
+        uint256 amountToClaim = (userData.principalAmount *
+            (
+                ((userData.timeInterval / SECONDS_IN_A_YEAR) *
+                    (userData.interestRate)) /
+            (1e18) +
+            (1e18))) / (1e18);
 
         uint256 totalBalance = poolBalanceOfAgentPod() +
             principalBalanceOfAgentPod();
 
         if (amountToClaim > totalBalance) {
-            emit SlashAgent(owner, amountToClaim.sub(totalBalance), chainID);
+            emit SlashAgent(owner, amountToClaim - (totalBalance), chainID);
             return;
         }
 
         if (amountToClaim > poolBalanceOfAgentPod()) {
             for (uint256 i; i < _assets.length; i++) {
-                uint256 deviation = (amountToClaim).sub(
-                    poolBalanceOfAgentPod()
-                );
-                amounts[i] = deviation.mul(_ratio[i]).div(
-                    IOracle(oracle).getSinglePrice(_assets[i])
-                );
+                uint256 deviation = (amountToClaim) - (poolBalanceOfAgentPod());
+                amounts[i] =
+                    (deviation * (_ratio[i])) /
+                    (IOracle(oracle).getSinglePrice(_assets[i]));
             }
 
             transferAssetToPool(_assets, amounts);
             reward[_msgSender()] += rewardAmount;
             totalReward += rewardAmount;
             userData.status = Data.STATUS.MATURED;
+            emit TransferAssetToPool(
+                _txnId,
+                userData.user,
+                _assets,
+                amounts,
+                userData.status
+            );
             return;
         }
 
         for (uint256 i; i < _assets.length; ) {
-            amounts[i] = amountToClaim
-                .add(reward[userData.user])
-                .mul(_ratio[i])
-                .div(IOracle(oracle).getSinglePrice(_assets[i]));
+            amounts[i] =
+                ((amountToClaim + reward[userData.user]) * (_ratio[i])) /
+                (IOracle(oracle).getSinglePrice(_assets[i]));
             Data.PoolInfo memory poolInfo = IAgentManager(agentManager).pools(
                 _assets[i]
             );
@@ -314,6 +352,7 @@ contract AgentPod is Context, ReentrancyGuard {
         reward[userData.user] = 0;
         IPool(pool).trasferAssetToDepositor(userData.user, tokens, amounts);
         userData.status = Data.STATUS.CLAIMED;
+        emit Claim(_txnId, userData.user, _assets, amounts, userData.status);
     }
 
     /**
@@ -361,10 +400,10 @@ contract AgentPod is Context, ReentrancyGuard {
             Data.PoolInfo memory poolInfo = IAgentManager(agentManager).pools(
                 acceptedAssetList[i]
             );
-            amountInUSD += IERC20(poolInfo.token)
-                .balanceOf(pool)
-                .mul(IOracle(oracle).getSinglePrice(acceptedAssetList[i]))
-                .div(1e18);
+            amountInUSD +=
+                (IERC20(poolInfo.token).balanceOf(pool) *
+                    (IOracle(oracle).getSinglePrice(acceptedAssetList[i]))) /
+                (1e18);
             unchecked {
                 i++;
             }
@@ -384,10 +423,10 @@ contract AgentPod is Context, ReentrancyGuard {
             Data.PoolInfo memory poolInfo = IAgentManager(agentManager).pools(
                 acceptedAssetList[1]
             );
-            amountInUSD = IERC20(poolInfo.token)
-                .balanceOf(address(this))
-                .mul(IOracle(oracle).getSinglePrice(acceptedAssetList[i]))
-                .div(1e18);
+            amountInUSD =
+                (IERC20(poolInfo.token).balanceOf(address(this)) *
+                    (IOracle(oracle).getSinglePrice(acceptedAssetList[i]))) /
+                (1e18);
             unchecked {
                 i++;
             }

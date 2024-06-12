@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./interfaces/IRoute.sol";
@@ -20,8 +19,6 @@ contract AgentManager is
     ContextUpgradeable,
     ReentrancyGuardUpgradeable
 {
-    using SafeMathUpgradeable for uint256;
-
     address public oracle;
     address public route;
     address public adapter;
@@ -37,8 +34,10 @@ contract AgentManager is
     mapping(address => mapping(uint256 => uint256)) public requestTimestamp;
     mapping(address => mapping(uint256 => bool)) public requestFulfilled;
 
-    event DeviationCheck(address agent, uint256 requestID, uint256 timestamp);
+    event DeviationCheck(address agent, uint256 requestID);
 
+    error InsufficientFees();
+    error ArgumentsMismatch(string contractTAG);
     error SlashingTimeLimitExceeded(address agent, uint256 requestID);
     error PreviousDeviationInProgress(address agent, uint256 requestID);
     error NotAnAgent(address agent);
@@ -94,15 +93,31 @@ contract AgentManager is
      * This function can only be accessed by the account with role Agent.
      * @param _chainIDs - ids of the chain where agent wants to create AgentPod contract
      **/
-    function enrollAgent(bytes32[] memory _chainIDs) external payable {
+    function enrollAgent(bytes32[] memory _chainIDs, uint256[] memory fees)
+        external
+        payable
+    {
         if (isAgent[_msgSender()]) revert AIAgentAlreadyExists(_msgSender());
+        uint256 totalFees;
+        for (uint256 i; i < fees.length; ) {
+            totalFees += fees[i];
+            unchecked {
+                i++;
+            }
+        }
+
+        if (msg.value < totalFees) revert InsufficientFees();
+        if (msg.value > totalFees)
+            payable(_msgSender()).transfer(msg.value - totalFees);
+
         agents.push(_msgSender());
         isAgent[_msgSender()] = true;
         IAdapter(adapter).enrollAgents{value: msg.value}(
             address(this),
             _msgSender(),
             oracle,
-            _chainIDs
+            _chainIDs,
+            fees
         );
     }
 
@@ -144,14 +159,22 @@ contract AgentManager is
      * @param _token - address of the asset.
      * @param _enable - status of the pool.
      **/
-    function setPool(
-        bytes32 _id,
-        address _token,
-        bool _enable
+    function setPools(
+        bytes32[] memory _id,
+        address[] memory _token,
+        bool[] memory _enable
     ) external {
-        Data.PoolInfo storage pool = pools[_id];
-        pool.enable = _enable;
-        pool.token = _token;
+        if (_token.length != _id.length || _token.length != _enable.length)
+            revert ArgumentsMismatch(TAG);
+        for (uint256 i; i < _token.length; ) {
+            Data.PoolInfo storage pool = pools[_id[i]];
+            pool.token = _token[i];
+            pool.enable = _enable[i];
+
+            unchecked {
+                i++;
+            }
+        }
     }
 
     /**
@@ -161,11 +184,14 @@ contract AgentManager is
     function slashAgent(address _agent) external {
         if (
             block.timestamp >
-            requestTimestamp[_agent][requestID[_agent]].add(
-                slashingTimeThreshold
-            )
+            requestTimestamp[_agent][requestID[_agent]] +
+                (slashingTimeThreshold)
         ) revert SlashingTimeLimitExceeded(_agent, requestID[_agent]);
         // TODO: Transfer slashAmount to AgentPod contract from AgentManager
+    }
+
+    function receivedResponse(address _agent) external {
+        requestFulfilled[_agent][requestID[_agent]] = true;
     }
 
     /**
@@ -179,7 +205,7 @@ contract AgentManager is
         ) revert PreviousDeviationInProgress(_agent, requestID[_agent]);
         ++requestID[_agent];
         requestTimestamp[_agent][requestID[_agent]] = block.timestamp;
-        emit DeviationCheck(_agent, requestID[_agent], block.timestamp);
+        emit DeviationCheck(_agent, requestID[_agent]);
     }
 
     /**
