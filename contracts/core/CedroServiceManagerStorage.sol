@@ -10,6 +10,9 @@ contract CedroServiceManagerStorage {
     /// @notice Minimal quorum threshold percentage
     uint8 public quorumThresholdPercentage;
 
+    ///@notice Pause status of the system
+    bool pausedStatus;
+
     /// @notice The list of allowed ope
     mapping(address => bool) public operatorAllowlist;
 

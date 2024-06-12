@@ -35,6 +35,7 @@ contract CedroServiceManager is
     error InvalidSender(string ContractTAG);
     error InvalidQuorumParam(string ContractTAG);
     error InvalidReferenceBlockNum(string ContractTAG);
+    error InvalidRequestId(string ContractTAG);
     error InvalidQuorumThresholdPercentage(string ContractTAG);
     error InsufficientThresholdPercentages(string ContractTAG);
     error InsufficientThreshold(string ContractTAG);
@@ -44,11 +45,12 @@ contract CedroServiceManager is
     event AgentBalanceConfirmed();
     event AgentFraudConfirmed();
 
+
     /**
-     * @dev Modifier that checks if operator is whitelisted
+     * @dev Modifier that checks if system is paused or not.
      **/
-    modifier onlyWhitelistedOperator() {
-        require(operatorAllowlist[msg.sender], "Operator is not whitelisted");
+    modifier Ispaused() {
+        require(!pausedStatus, "AVS System is paused");
         _;
     }
 
@@ -84,10 +86,7 @@ contract CedroServiceManager is
     function registerOperatorToAVS(
         address operator,
         ISignatureUtils.SignatureWithSaltAndExpiry memory operatorSignature
-    ) external override(ServiceManagerBase) {
-        if (!operatorAllowlist[operator]) {
-            revert NotInAllowlist(TAG);
-        }
+    ) external override(ServiceManagerBase) {   
         _avsDirectory.registerOperatorToAVS(operator, operatorSignature);
         emit OperatorRegistered(operator);
     }
@@ -121,11 +120,20 @@ contract CedroServiceManager is
     function confirmAgentDeviation(
         DATA.DeviationBalanceHeader calldata balanceHeader,
         NonSignerStakesAndSignature memory nonSignerStakesAndSignature
-    ) external {
+    )   external {
         if (tx.origin != msg.sender) revert InvalidSender(TAG);
+
         if (balanceHeader.referenceBlockNumber >= block.number) {
             revert InvalidReferenceBlockNum(TAG);
         }
+
+        if (
+            balanceHeader.requestId <=
+            agentDeviationRequestId[balanceHeader.agentOperator]
+        ) {
+            revert InvalidRequestId(TAG);
+        }
+
         if (
             balanceHeader.quorumNumbers.length !=
             balanceHeader.quorumThresholdPercentages.length
@@ -170,10 +178,6 @@ contract CedroServiceManager is
             }
         }
 
-        uint32 requestIdMemory = agentDeviationRequestId[
-            balanceHeader.agentOperator
-        ];
-
         // store deviation message hash
         bool success = _resolvedMessageHashes.add(reducedBalanceHeaderHash);
         if (!success) {
@@ -182,15 +186,14 @@ contract CedroServiceManager is
 
         emit AgentBalanceConfirmed();
 
-        agentDeviationRequestId[balanceHeader.agentOperator] =
-            requestIdMemory +
-            1;
+        agentDeviationRequestId[balanceHeader.agentOperator] = balanceHeader
+            .requestId;
     }
 
-    // /**
-    //  * @notice Challenge Agent performance to process bond slashing
-    //  * @param fraudBalanceHeader - evidence of fraud.
-    //  **/
+    /**
+     * @notice Challenge Agent performance to process bond slashing
+     * @param fraudBalanceHeader - evidence of fraud.
+     **/
     function confirmAgentFraud(
         DATA.FraudBalanceHeader calldata fraudBalanceHeader,
         NonSignerStakesAndSignature memory nonSignerStakesAndSignature
@@ -199,6 +202,13 @@ contract CedroServiceManager is
 
         if (fraudBalanceHeader.referenceBlockNumber >= block.number) {
             revert InvalidReferenceBlockNum(TAG);
+        }
+
+        if (
+            fraudBalanceHeader.requestId <=
+            agentFraudRequestId[fraudBalanceHeader.agentOperator]
+        ) {
+            revert InvalidRequestId(TAG);
         }
 
         if (
@@ -270,7 +280,7 @@ contract CedroServiceManager is
     function challengeOperators(
         DATA.OperatorChallengeEvidence calldata evidence
     ) external {
-    // :TO DO
+        // :TO DO
     }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -298,23 +308,11 @@ contract CedroServiceManager is
         return keccak256(abi.encode(reduceFraudBalanceHeader(balanceHeader)));
     }
 
-    function addOperatorsToAllowlist(address[] calldata operators) external {
-        for (uint256 i; i < operators.length; i++) {
-            operatorAllowlist[operators[i]] = true;
-        }
-    }
 
-    /**
-     * @notice Removes operators from whitelist
-     * This function can only be accessed by account with role AVS_ADMIN.
-     * @param operators - list of operators to remove from whitelist
-     **/
-    function removeOperatorsFromAllowlist(
-        address[] calldata operators
+    function setPauseStatus(
+        bool status
     ) external onlyRole(IRoleManager(roleManager).AVS_ADMIN()) {
-        for (uint256 i; i < operators.length; i++) {
-            delete operatorAllowlist[operators[i]];
-        }
+        pausedStatus = status;
     }
 
     /**
