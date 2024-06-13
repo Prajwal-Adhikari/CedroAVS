@@ -6,7 +6,7 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Pausable} from "./eigenContracts/Pausable.sol";
 import {IPauserRegistry} from "./eigenContracts/interfaces/IPauserRegistry.sol";
-import {ServiceManagerBase, IAVSDirectory, IPaymentCoordinator, IRegistryCoordinator, ISignatureUtils, IStakeRegistry} from "./eigenContracts/ServiceManagerBase.sol";
+import {ServiceManagerBase, IAVSDirectory, IRewardsCoordinator, IRegistryCoordinator, ISignatureUtils, IStakeRegistry} from "./eigenContracts/ServiceManagerBase.sol";
 import {BLSSignatureChecker} from "./eigenContracts/BLSSignatureChecker.sol";
 import {IServiceManager} from "./eigenContracts/interfaces/IServiceManager.sol";
 
@@ -30,7 +30,6 @@ contract CedroServiceManager is
     uint256 public roleManagerAddressOne;
 
     error OperatorRegistrationPaused(string contractTAG);
-    error NotInAllowlist(string contractTAG);
     error MessageHashAlreadyAdded(string contractTAG);
     error InvalidSender(string ContractTAG);
     error InvalidQuorumParam(string ContractTAG);
@@ -44,7 +43,6 @@ contract CedroServiceManager is
     event OperatorDeRegistered(address indexed operator);
     event AgentBalanceConfirmed();
     event AgentFraudConfirmed();
-
 
     /**
      * @dev Modifier that checks if system is paused or not.
@@ -62,7 +60,7 @@ contract CedroServiceManager is
     function initialize(
         address _roleManager,
         IAVSDirectory __avsDirectory,
-        IPaymentCoordinator ___paymentCoordinator,
+        IRewardsCoordinator ___paymentCoordinator,
         IStakeRegistry __stakeRegistry
     ) public initializer {
         _BLSSignatureChecker_init(_roleManager);
@@ -86,7 +84,7 @@ contract CedroServiceManager is
     function registerOperatorToAVS(
         address operator,
         ISignatureUtils.SignatureWithSaltAndExpiry memory operatorSignature
-    ) external override(ServiceManagerBase) {   
+    ) external override(ServiceManagerBase) {
         _avsDirectory.registerOperatorToAVS(operator, operatorSignature);
         emit OperatorRegistered(operator);
     }
@@ -120,7 +118,7 @@ contract CedroServiceManager is
     function confirmAgentDeviation(
         DATA.DeviationBalanceHeader calldata balanceHeader,
         NonSignerStakesAndSignature memory nonSignerStakesAndSignature
-    )   external {
+    ) external {
         if (tx.origin != msg.sender) revert InvalidSender(TAG);
 
         if (balanceHeader.referenceBlockNumber >= block.number) {
@@ -307,7 +305,6 @@ contract CedroServiceManager is
     ) internal pure returns (bytes32) {
         return keccak256(abi.encode(reduceFraudBalanceHeader(balanceHeader)));
     }
-
 
     function setPauseStatus(
         bool status
