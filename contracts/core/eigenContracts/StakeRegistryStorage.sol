@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.12;
 
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 import {IDelegationManager} from "./interfaces/IDelegationManager.sol";
 import {IStrategyManager, IStrategy} from "./interfaces/IStrategyManager.sol";
-
 import {IRegistryCoordinator} from "./interfaces/IRegistryCoordinator.sol";
 import {IStakeRegistry} from "./interfaces/IStakeRegistry.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title Storage variables for the `StakeRegistry` contract.
  * @author Layr Labs, Inc.
  * @notice This storage contract is separate from the logic to simplify the upgrade process.
  */
-abstract contract StakeRegistryStorage is IStakeRegistry, Ownable {
+abstract contract StakeRegistryStorage is IStakeRegistry, OwnableUpgradeable {
     /// @notice Constant used as a divisor in calculating weights.
     uint256 public constant WEIGHTING_DIVISOR = 1e18;
     /// @notice Maximum length of dynamic arrays in the `strategyParams` mapping.
@@ -22,7 +22,7 @@ abstract contract StakeRegistryStorage is IStakeRegistry, Ownable {
     uint256 internal constant MAX_BIPS = 10000;
 
     /// @notice The address of the Delegation contract for EigenLayer.
-    IDelegationManager public immutable delegation;
+    IDelegationManager public delegation;
 
     /// @notice the coordinator contract that this registry is associated with
     address public registryCoordinator;
@@ -45,16 +45,23 @@ abstract contract StakeRegistryStorage is IStakeRegistry, Ownable {
     mapping(uint8 => StrategyParams[]) public strategyParams;
     mapping(uint8 => IStrategy[]) public strategiesPerQuorum;
 
-    constructor(
-        address initialOwner,
+     /// @custom:oz-upgrades-unsafe-allow constructor
+     constructor() {
+        // disable initializers so that the implementation contract cannot be initialized
+        _disableInitializers();
+    }
+
+    function _stakeRegistryStorage_init(
+        address ownerAddress,
         IDelegationManager _delegationManager
-    ) Ownable(initialOwner) {
+    ) internal initializer {
         delegation = _delegationManager;
+        __Ownable_init(ownerAddress);
     }
 
     function setRegisterCoordinator(
         IRegistryCoordinator _registryCoordinator
-    ) external onlyOwner{
+    ) external onlyOwner {
         registryCoordinator = address(_registryCoordinator);
     }
 

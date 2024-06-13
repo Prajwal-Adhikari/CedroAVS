@@ -4,17 +4,17 @@ pragma solidity ^0.8.12;
 import {IBLSApkRegistry} from "./interfaces/IBLSApkRegistry.sol";
 import {IRegistryCoordinator} from "./interfaces/IRegistryCoordinator.sol";
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {BN254} from "./libraries/BN254.sol";
 
-abstract contract BLSApkRegistryStorage is Initializable, IBLSApkRegistry,Ownable {
+abstract contract BLSApkRegistryStorage is IBLSApkRegistry, OwnableUpgradeable {
     /// @notice the hash of the zero pubkey aka BN254.G1Point(0,0)
-    bytes32 internal constant ZERO_PK_HASH = hex"ad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5";
+    bytes32 internal constant ZERO_PK_HASH =
+        hex"ad3228b676f7d3cd4284a5443f17f1962b36e491b30a40b2405849e597ba5fb5";
 
     /// @notice the registry coordinator contract
-    address public  registryCoordinator;
+    address public registryCoordinator;
 
     // storage for individual pubkeys
     /// @notice maps operator address to pubkey hash
@@ -30,14 +30,21 @@ abstract contract BLSApkRegistryStorage is Initializable, IBLSApkRegistry,Ownabl
     /// @notice maps quorumNumber => current aggregate pubkey of quorum
     mapping(uint8 => BN254.G1Point) public currentApk;
 
-    constructor(address initialOwner) Ownable(initialOwner) {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
         // disable initializers so that the implementation contract cannot be initialized
         _disableInitializers();
     }
 
-      function setRegisterCoordinator(
+    function _BLSApkRegistryStorage_init(
+        address ownerAddress
+    ) internal initializer {
+        __Ownable_init(ownerAddress);
+    }
+
+    function setRegisterCoordinator(
         IRegistryCoordinator _registryCoordinator
-    ) external onlyOwner{
+    ) external onlyOwner {
         registryCoordinator = address(_registryCoordinator);
     }
 

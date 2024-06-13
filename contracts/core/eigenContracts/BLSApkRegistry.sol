@@ -2,11 +2,9 @@
 pragma solidity ^0.8.12;
 
 import {BLSApkRegistryStorage} from "./BLSApkRegistryStorage.sol";
-
 import {IRegistryCoordinator} from "./interfaces/IRegistryCoordinator.sol";
 
 import {BN254} from "./libraries/BN254.sol";
-
 
 contract BLSApkRegistry is BLSApkRegistryStorage {
     using BN254 for BN254.G1Point;
@@ -20,8 +18,16 @@ contract BLSApkRegistry is BLSApkRegistryStorage {
         _;
     }
 
-    /// @notice sets the (immutable) `registryCoordinator` address
-    constructor(address initialOwner) BLSApkRegistryStorage(initialOwner) {
+     /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        // disable initializers so that the implementation contract cannot be initialized
+        _disableInitializers();
+    }
+
+    function initialize(
+        address ownerAddress
+    ) external initializer {
+        _BLSApkRegistryStorage_init(ownerAddress);
     }
 
     /*******************************************************************************
@@ -116,23 +122,22 @@ contract BLSApkRegistry is BLSApkRegistryStorage {
         address operator,
         PubkeyRegistrationParams calldata params,
         BN254.G1Point calldata pubkeyRegistrationMessageHash
-    ) external onlyRegistryCoordinator returns (bytes32 operatorId) {  
+    ) external onlyRegistryCoordinator returns (bytes32 operatorId) {
         bytes32 pubkeyHash = BN254.hashG1Point(params.pubkeyG1);
         require(
             pubkeyHash != ZERO_PK_HASH,
             "BLSApkRegistry.registerBLSPublicKey: cannot register zero pubkey"
         );
-    
-     require(
+
+        require(
             operatorToPubkeyHash[operator] == bytes32(0),
             "BLSApkRegistry.registerBLSPublicKey: operator already registered pubkey"
         );
-       
+
         require(
             pubkeyHashToOperator[pubkeyHash] == address(0),
             "BLSApkRegistry.registerBLSPublicKey: public key already registered"
         );
-        
 
         // gamma = h(sigma, P, P', H(m))
         uint256 gamma = uint256(
@@ -150,8 +155,6 @@ contract BLSApkRegistry is BLSApkRegistryStorage {
             )
         ) % BN254.FR_MODULUS;
 
-       
-
         // e(sigma + P * gamma, [-1]_2) = e(H(m) + [1]_1 * gamma, P')
         require(
             BN254.pairing(
@@ -166,7 +169,6 @@ contract BLSApkRegistry is BLSApkRegistryStorage {
             ),
             "BLSApkRegistry.registerBLSPublicKey: either the G1 signature is wrong, or G1 and G2 private key do not match"
         );
-       
 
         operatorToPubkey[operator] = params.pubkeyG1;
         operatorToPubkeyHash[operator] = pubkeyHash;

@@ -2,7 +2,6 @@
 pragma solidity ^0.8.12;
 
 import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {IPauserRegistry} from "./interfaces/IPauserRegistry.sol";
 import {ISignatureUtils} from "./interfaces/ISignatureUtils.sol";
@@ -30,7 +29,6 @@ import {RegistryCoordinatorStorage} from "./RegistryCoordinatorStorage.sol";
 contract RegistryCoordinator is
     EIP712Upgradeable,
     RegistryCoordinatorStorage,
-    OwnableUpgradeable,
     ISignatureUtils
 {
     using BitmapUtils for *;
@@ -65,6 +63,7 @@ contract RegistryCoordinator is
      * Config for initial quorums (see `createQuorum`):
      */
     function initialize(
+        address ownerAddress,
         address _churnApprover,
         address _ejector,
         IServiceManager _serviceManager,
@@ -73,13 +72,13 @@ contract RegistryCoordinator is
         IIndexRegistry _indexRegistry
     ) external initializer {
         _RegistryCoordinatorStorage_init(
+            ownerAddress,
             _serviceManager,
             _stakeRegistry,
             _blsApkRegistry,
             _indexRegistry
         );
         __EIP712_init("AVSRegistryCoordinator", "v0.0.1");
-        // _initializePauser(_pauserRegistry, _initialPausedStatus);
         _setChurnApprover(_churnApprover);
         _setEjector(_ejector);
     }
@@ -1023,15 +1022,5 @@ contract RegistryCoordinator is
                     )
                 )
             );
-    }
-
-    /// @dev need to override function here since its defined in both these contracts
-    function owner()
-        public
-        view
-        override(OwnableUpgradeable, IRegistryCoordinator)
-        returns (address)
-    {
-        return OwnableUpgradeable.owner();
     }
 }

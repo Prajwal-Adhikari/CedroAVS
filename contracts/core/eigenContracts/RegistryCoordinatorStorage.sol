@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.12;
 
-import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {IBLSApkRegistry} from "./interfaces/IBLSApkRegistry.sol";
 import {IStakeRegistry} from "./interfaces/IStakeRegistry.sol";
@@ -12,7 +12,7 @@ import {IRegistryCoordinator} from "./interfaces/IRegistryCoordinator.sol";
 
 abstract contract RegistryCoordinatorStorage is
     IRegistryCoordinator,
-    ContextUpgradeable
+    OwnableUpgradeable
 {
     /*******************************************************************************
                                CONSTANTS AND IMMUTABLES 
@@ -93,6 +93,7 @@ abstract contract RegistryCoordinatorStorage is
     }
 
     function _RegistryCoordinatorStorage_init(
+        address ownerAddress,
         IServiceManager _serviceManager,
         IStakeRegistry _stakeRegistry,
         IBLSApkRegistry _blsApkRegistry,
@@ -102,6 +103,7 @@ abstract contract RegistryCoordinatorStorage is
         stakeRegistry = _stakeRegistry;
         blsApkRegistry = _blsApkRegistry;
         indexRegistry = _indexRegistry;
+        __Ownable_init(ownerAddress);
     }
 
     /**
@@ -113,6 +115,16 @@ abstract contract RegistryCoordinatorStorage is
         address _roleManagerAddress
     ) external onlyRole(IRoleManager(roleManagerAddress).DEFAULT_ADMIN_ROLE()) {
         roleManagerAddress = _roleManagerAddress;
+    }
+
+    /// @dev need to override function here since its defined in both these contracts
+    function owner()
+        public
+        view
+        override(OwnableUpgradeable, IRegistryCoordinator)
+        returns (address)
+    {
+        return OwnableUpgradeable.owner();
     }
 
     // storage gap for upgradeability
