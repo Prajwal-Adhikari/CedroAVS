@@ -13,9 +13,6 @@ contract CedroServiceManagerStorage {
     ///@notice Pause status of the system
     bool pausedStatus;
 
-    /// @notice The list of allowed ope
-    mapping(address => bool) public operatorAllowlist;
-
     /// @notice The current requestid of the  agent deviation check, specific to agent operator
     mapping(address => uint32) public agentDeviationRequestId;
 

@@ -6,12 +6,14 @@ import {IRoleManager} from "../interfaces/IRoleManager.sol";
 import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import {ISignatureUtils} from "./interfaces/ISignatureUtils.sol";
 import {IAVSDirectory} from "./interfaces/IAVSDirectory.sol";
-import {IPaymentCoordinator} from "./interfaces/IRewardsCoordinator.sol";
+import {IRewardsCoordinator} from "./interfaces/IRewardsCoordinator.sol";
 
 import {IServiceManager} from "./interfaces/IServiceManager.sol";
 import {IRegistryCoordinator} from "./interfaces/IRegistryCoordinator.sol";
 import {IStakeRegistry} from "./interfaces/IStakeRegistry.sol";
 import {BitmapUtils} from "./libraries/BitmapUtils.sol";
+
+string constant TAG = "ServiceManagerBase";
 
 /**
  * @title Minimal implementation of a ServiceManager-type contract.
@@ -21,9 +23,15 @@ import {BitmapUtils} from "./libraries/BitmapUtils.sol";
 abstract contract ServiceManagerBase is IServiceManager, ContextUpgradeable {
     using BitmapUtils for *;
     address public roleManagerAddress;
+    address public rewardsInitiator;
+
+    /// @notice The list of allowed operaors
+    mapping(address => bool) public operatorAllowlist;
+
+    error NotInAllowlist(string contractTAG);
 
     IAVSDirectory public _avsDirectory;
-    IPaymentCoordinator internal _paymentCoordinator;
+    IRewardsCoordinator internal _rewardsCoordinator;
     IRegistryCoordinator internal _registryCoordinator;
     IStakeRegistry internal _stakeRegistry;
 
@@ -36,11 +44,20 @@ abstract contract ServiceManagerBase is IServiceManager, ContextUpgradeable {
         _;
     }
 
-      /**
+    /**
      * @dev Modifier that checks if operator is whitelisted
      **/
     modifier onlyWhitelistedOperator() {
         require(operatorAllowlist[msg.sender], "Operator is not whitelisted");
+        _;
+    }
+
+    /// @notice only rewardsInitiator can call createAVSRewardsSubmission
+    modifier onlyRewardsInitiator() {
+        require(
+            msg.sender == rewardsInitiator,
+            "ServiceManagerBase.onlyRewardsInitiator: caller is not the rewards initiator"
+        );
         _;
     }
 
@@ -59,12 +76,12 @@ abstract contract ServiceManagerBase is IServiceManager, ContextUpgradeable {
 
     function __ServiceManagerBase_init(
         IAVSDirectory __avsDirectory,
-        IPaymentCoordinator ___paymentCoordinator,
+        IRewardsCoordinator __rewardsCoordinator,
         IStakeRegistry __stakeRegistry,
         address _roleManager
     ) internal virtual onlyInitializing {
         _avsDirectory = __avsDirectory;
-        _paymentCoordinator = ___paymentCoordinator;
+        _rewardsCoordinator = __rewardsCoordinator;
         _stakeRegistry = __stakeRegistry;
         roleManagerAddress = _roleManager;
     }
@@ -139,7 +156,7 @@ abstract contract ServiceManagerBase is IServiceManager, ContextUpgradeable {
         address operator,
         ISignatureUtils.SignatureWithSaltAndExpiry memory operatorSignature
     ) external virtual onlyRegistryCoordinator {
-         if (!operatorAllowlist[operator]) {
+        if (!operatorAllowlist[operator]) {
             revert NotInAllowlist(TAG);
         }
         _avsDirectory.registerOperatorToAVS(operator, operatorSignature);
@@ -152,10 +169,15 @@ abstract contract ServiceManagerBase is IServiceManager, ContextUpgradeable {
     function deregisterOperatorFromAVS(
         address operator
     ) external virtual onlyRegistryCoordinator {
-         if (!operatorAllowlist[operator]) {
+        if (!operatorAllowlist[operator]) {
             revert NotInAllowlist(TAG);
         }
         _avsDirectory.deregisterOperatorFromAVS(operator);
+    }
+
+     function setRewardsInitiator(address newRewardsInitiator) internal {
+        emit RewardsInitiatorUpdated(rewardsInitiator, newRewardsInitiator);
+        rewardsInitiator = newRewardsInitiator;
     }
 
     /**

@@ -3,9 +3,9 @@ pragma solidity ^0.8.12;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {IPaymentCoordinator} from "../../contracts/core/eigenContracts/interfaces/IPaymentCoordinator.sol";
+import {IRewardsCoordinator} from "../../contracts/core/eigenContracts/interfaces/IRewardsCoordinator.sol";
 
-contract PaymentCoordinatorMock is IPaymentCoordinator {
+abstract contract RewardsCoordinatorMock is IRewardsCoordinator {
     /// @notice The address of the entity that can update the contract with new merkle roots
     function paymentUpdater() external view returns (address) {}
 
@@ -51,7 +51,7 @@ contract PaymentCoordinatorMock is IPaymentCoordinator {
 
     /// @notice returns 'true' if the claim would currently pass the check in `processClaims`
     /// but will revert if not valid
-    function checkClaim(PaymentMerkleClaim calldata claim) external view returns (bool) {}
+    function checkClaim(RewardsMerkleClaim calldata claim) external view returns (bool) {}
 
     /// @notice The timestamp until which payments have been calculated
     function currPaymentCalculationEndTimestamp() external view returns (uint32) {}
@@ -72,14 +72,14 @@ contract PaymentCoordinatorMock is IPaymentCoordinator {
      * @dev This function will revert if the `rangePayment` is malformed,
      * e.g. if the `strategies` and `weights` arrays are of non-equal lengths
      */
-    function payForRange(RangePayment[] calldata rangePayments) external {}
+    // function payForRange(RangePayment[] calldata rangePayments) external {}
 
     /**
      * @notice similar to `payForRange` except the payment is split amongst *all* stakers
      * rather than just those delegated to operators who are registered to a single avs and is
      * a permissioned call based on isPayAllForRangeSubmitter mapping.
      */
-    function payAllForRange(RangePayment[] calldata rangePayment) external {}
+    // function payAllForRange(RangePayment[] calldata rangePayment) external {}
 
     /**
      * @notice Claim payments against a given root (read from distributionRoots[claim.rootIndex]).
@@ -93,7 +93,7 @@ contract PaymentCoordinatorMock is IPaymentCoordinator {
      * if claimerFor[claim.earner] is address(0) then only the earner can claim, otherwise only
      * claimerFor[claim.earner] can claim the payments.
      */
-    function processClaim(PaymentMerkleClaim calldata claim, address recipient) external {}
+    function processClaim(RewardsMerkleClaim calldata claim, address recipient) external {}
 
     /**
      * @notice Creates a new distribution root. activatedAt is set to block.timestamp + activationDelay
