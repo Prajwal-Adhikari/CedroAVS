@@ -1,0 +1,277 @@
+// SPDX-License-Identifier: BUSL-1.1
+pragma solidity ^0.8.12;
+
+import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {IRoleManager} from "../interfaces/IRoleManager.sol";
+import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import {ISignatureUtils} from "./interfaces/ISignatureUtils.sol";
+import {IAVSDirectory} from "./interfaces/IAVSDirectory.sol";
+import {IRewardsCoordinator} from "./interfaces/IRewardsCoordinator.sol";
+
+import {IServiceManager} from "./interfaces/IServiceManager.sol";
+import {IRegistryCoordinator} from "./interfaces/IRegistryCoordinator.sol";
+import {IStakeRegistry} from "./interfaces/IStakeRegistry.sol";
+import {BitmapUtils} from "./libraries/BitmapUtils.sol";
+
+string constant TAG = "ServiceManagerBase";
+
+/**
+ * @title Minimal implementation of a ServiceManager-type contract.
+ * This contract can be inherited from or simply used as a point-of-reference.
+ * @author Layr Labs, Inc.
+ */
+abstract contract ServiceManagerBase is IServiceManager, ContextUpgradeable {
+    using BitmapUtils for *;
+    address public roleManagerAddress;
+    address public rewardsInitiator;
+
+    /// @notice The list of allowed operaors
+    mapping(address => bool) public operatorAllowlist;
+
+    error NotInAllowlist(string contractTAG);
+
+    IAVSDirectory public _avsDirectory;
+    IRewardsCoordinator internal _rewardsCoordinator;
+    IRegistryCoordinator internal _registryCoordinator;
+    IStakeRegistry internal _stakeRegistry;
+
+    /// @notice when applied to a function, only allows the RegistryCoordinator to call it
+    modifier onlyRegistryCoordinator() {
+        require(
+            msg.sender == address(_registryCoordinator),
+            "ServiceManagerBase.onlyRegistryCoordinator: caller is not the registry coordinator"
+        );
+        _;
+    }
+
+    /**
+     * @dev Modifier that checks if operator is whitelisted
+     **/
+    modifier onlyWhitelistedOperator() {
+        require(operatorAllowlist[msg.sender], "Operator is not whitelisted");
+        _;
+    }
+
+    /// @notice only rewardsInitiator can call createAVSRewardsSubmission
+    modifier onlyRewardsInitiator() {
+        require(
+            msg.sender == rewardsInitiator,
+            "ServiceManagerBase.onlyRewardsInitiator: caller is not the rewards initiator"
+        );
+        _;
+    }
+
+    /**
+     * @dev Modifier that checks if caller has a specific role.
+     **/
+    modifier onlyRoles(bytes32 role) {
+        IRoleManager(roleManagerAddress).checkRole(role, _msgSender());
+        _;
+    }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function __ServiceManagerBase_init(
+        IAVSDirectory __avsDirectory,
+        IRewardsCoordinator __rewardsCoordinator,
+        IStakeRegistry __stakeRegistry,
+        address _roleManager
+    ) internal virtual onlyInitializing {
+        _avsDirectory = __avsDirectory;
+        _rewardsCoordinator = __rewardsCoordinator;
+        _stakeRegistry = __stakeRegistry;
+        roleManagerAddress = _roleManager;
+    }
+
+    function setRegistryCoordinator(
+        IRegistryCoordinator __registryCoordinator
+    ) external {
+        _registryCoordinator = __registryCoordinator;
+    }
+
+    /**
+     * @notice Configures role manager address
+     * This function can only be accessed by the account with role DEFAULT_ADMIN_ROLE.
+     * @param _roleManagerAddress - address of the roleManager contract.
+     **/
+    function setRoleManagerAddress(
+        address _roleManagerAddress
+    ) external onlyRoles(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
+        roleManagerAddress = _roleManagerAddress;
+    }
+
+    /**
+     * @notice Updates the metadata URI for the AVS
+     * @param _metadataURI is the metadata URI for the AVS
+     * @dev only callable by the owner
+     */
+    function updateAVSMetadataURI(string memory _metadataURI) public virtual {
+        _avsDirectory.updateAVSMetadataURI(_metadataURI);
+    }
+
+    /**
+     * @notice Creates a new rewards submission to the EigenLayer RewardsCoordinator contract, to be split amongst the
+     * set of stakers delegated to operators who are registered to this `avs`
+     * @param rewardsSubmissions The rewards submissions being created
+     * @dev Only callabe by the permissioned rewardsInitiator address
+     * @dev The duration of the `rewardsSubmission` cannot exceed `MAX_REWARDS_DURATION`
+     * @dev The tokens are sent to the `RewardsCoordinator` contract
+     * @dev Strategies must be in ascending order of addresses to check for duplicates
+     * @dev This function will revert if the `rewardsSubmission` is malformed,
+     * e.g. if the `strategies` and `weights` arrays are of non-equal lengths
+     */
+    function createAVSRewardsSubmission(
+        IRewardsCoordinator.RewardsSubmission[] calldata rewardsSubmissions
+    ) public virtual onlyRewardsInitiator {
+        for (uint256 i = 0; i < rewardsSubmissions.length; ++i) {
+            // transfer token to ServiceManager and approve RewardsCoordinator to transfer again
+            // in createAVSRewardsSubmission() call
+            rewardsSubmissions[i].token.transferFrom(
+                msg.sender,
+                address(this),
+                rewardsSubmissions[i].amount
+            );
+            uint256 allowance = rewardsSubmissions[i].token.allowance(
+                address(this),
+                address(_rewardsCoordinator)
+            );
+            rewardsSubmissions[i].token.approve(
+                address(_rewardsCoordinator),
+                rewardsSubmissions[i].amount + allowance
+            );
+        }
+
+        _rewardsCoordinator.createAVSRewardsSubmission(rewardsSubmissions);
+    }
+
+    /**
+     * @notice Forwards a call to EigenLayer's AVSDirectory contract to confirm operator registration with the AVS
+     * @param operator The address of the operator to register.
+     * @param operatorSignature The signature, salt, and expiry of the operator's signature.
+     */
+    function registerOperatorToAVS(
+        address operator,
+        ISignatureUtils.SignatureWithSaltAndExpiry memory operatorSignature
+    ) external virtual onlyRegistryCoordinator {
+        if (!operatorAllowlist[operator]) {
+            revert NotInAllowlist(TAG);
+        }
+        _avsDirectory.registerOperatorToAVS(operator, operatorSignature);
+    }
+
+    /**
+     * @notice Forwards a call to EigenLayer's AVSDirectory contract to confirm operator deregistration from the AVS
+     * @param operator The address of the operator to deregister.
+     */
+    function deregisterOperatorFromAVS(
+        address operator
+    ) external virtual onlyRegistryCoordinator {
+        if (!operatorAllowlist[operator]) {
+            revert NotInAllowlist(TAG);
+        }
+        _avsDirectory.deregisterOperatorFromAVS(operator);
+    }
+
+     function setRewardsInitiator(address newRewardsInitiator) internal {
+        emit RewardsInitiatorUpdated(rewardsInitiator, newRewardsInitiator);
+        rewardsInitiator = newRewardsInitiator;
+    }
+
+    /**
+     * @notice Returns the list of strategies that the AVS supports for restaking
+     * @dev This function is intended to be called off-chain
+     * @dev No guarantee is made on uniqueness of each element in the returned array.
+     *      The off-chain service should do that validation separately
+     */
+    function getRestakeableStrategies()
+        external
+        view
+        returns (address[] memory)
+    {
+        uint256 quorumCount = _registryCoordinator.quorumCount();
+
+        if (quorumCount == 0) {
+            return new address[](0);
+        }
+
+        uint256 strategyCount;
+        for (uint256 i = 0; i < quorumCount; i++) {
+            strategyCount += _stakeRegistry.strategyParamsLength(uint8(i));
+        }
+
+        address[] memory restakedStrategies = new address[](strategyCount);
+        uint256 index = 0;
+        for (uint256 i = 0; i < _registryCoordinator.quorumCount(); i++) {
+            uint256 strategyParamsLength = _stakeRegistry.strategyParamsLength(
+                uint8(i)
+            );
+            for (uint256 j = 0; j < strategyParamsLength; j++) {
+                restakedStrategies[index] = address(
+                    _stakeRegistry.strategyParamsByIndex(uint8(i), j).strategy
+                );
+                index++;
+            }
+        }
+        return restakedStrategies;
+    }
+
+    /**
+     * @notice Returns the list of strategies that the operator has potentially restaked on the AVS
+     * @param operator The address of the operator to get restaked strategies for
+     * @dev This function is intended to be called off-chain
+     * @dev No guarantee is made on whether the operator has shares for a strategy in a quorum or uniqueness
+     *      of each element in the returned array. The off-chain service should do that validation separately
+     */
+    function getOperatorRestakedStrategies(
+        address operator
+    ) external view returns (address[] memory) {
+        bytes32 operatorId = _registryCoordinator.getOperatorId(operator);
+        uint192 operatorBitmap = _registryCoordinator.getCurrentQuorumBitmap(
+            operatorId
+        );
+
+        if (operatorBitmap == 0 || _registryCoordinator.quorumCount() == 0) {
+            return new address[](0);
+        }
+
+        // Get number of strategies for each quorum in operator bitmap
+        bytes memory operatorRestakedQuorums = BitmapUtils.bitmapToBytesArray(
+            operatorBitmap
+        );
+        uint256 strategyCount;
+        for (uint256 i = 0; i < operatorRestakedQuorums.length; i++) {
+            strategyCount += _stakeRegistry.strategyParamsLength(
+                uint8(operatorRestakedQuorums[i])
+            );
+        }
+
+        // Get strategies for each quorum in operator bitmap
+        address[] memory restakedStrategies = new address[](strategyCount);
+        uint256 index = 0;
+        for (uint256 i = 0; i < operatorRestakedQuorums.length; i++) {
+            uint8 quorum = uint8(operatorRestakedQuorums[i]);
+            uint256 strategyParamsLength = _stakeRegistry.strategyParamsLength(
+                quorum
+            );
+            for (uint256 j = 0; j < strategyParamsLength; j++) {
+                restakedStrategies[index] = address(
+                    _stakeRegistry.strategyParamsByIndex(quorum, j).strategy
+                );
+                index++;
+            }
+        }
+        return restakedStrategies;
+    }
+
+    /// @notice Returns the EigenLayer AVSDirectory contract.
+    function avsDirectory() external view override returns (address) {
+        return address(_avsDirectory);
+    }
+
+    // storage gap for upgradeability
+    // slither-disable-next-line shadowing-state
+    uint256[50] private __GAP;
+}
