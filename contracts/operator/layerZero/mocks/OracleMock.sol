@@ -4,6 +4,10 @@ pragma solidity 0.8.24;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract OracleMock is Ownable {
+
+    constructor() Ownable(_msgSender()) {
+        
+    }
     event SetPrice(bytes32 symbol, uint price);
 
     mapping(bytes32 => uint) public prices;
