@@ -180,6 +180,19 @@ abstract contract ServiceManagerBase is IServiceManager, ContextUpgradeable {
         rewardsInitiator = newRewardsInitiator;
     }
 
+      /**
+     * @notice Whitelists operators
+     * This function can only be accessed by account with role AVS_ADMIN.
+     * @param operators - list of operators to whitelist
+     **/
+    function addOperatorsToAllowlist(
+        address[] calldata operators
+    ) external  {
+        for (uint256 i; i < operators.length; i++) {
+            operatorAllowlist[operators[i]] = true;
+        }
+    }
+
     /**
      * @notice Returns the list of strategies that the AVS supports for restaking
      * @dev This function is intended to be called off-chain

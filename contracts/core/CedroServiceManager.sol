@@ -72,39 +72,6 @@ contract CedroServiceManager is
         );
     }
 
-    //////////////////////////////////////////////////////////////////////////////
-    //                          Operator Registration                           //
-    //////////////////////////////////////////////////////////////////////////////
-
-    /**
-     * @notice Register an operator with the AVS. Forwards call to EigenLayer' AVSDirectory.
-     * @param operator The address of the operator to register.
-     * @param operatorSignature The signature, salt, and expiry of the operator's signature.
-     */
-    function registerOperatorToAVS(
-        address operator,
-        ISignatureUtils.SignatureWithSaltAndExpiry memory operatorSignature
-    ) external override(ServiceManagerBase) {
-        _avsDirectory.registerOperatorToAVS(operator, operatorSignature);
-        emit OperatorRegistered(operator);
-    }
-
-    /**
-     * @notice Deregister an operator from the AVS. Forwards a call to EigenLayer's AVSDirectory.
-     */
-    function deregisterOperatorFromAVS(
-        address operator
-    )
-        external
-        override(ServiceManagerBase)
-        onlyRole(IRoleManager(roleManager).REGISTRYCOORDINATOR_ADMIN())
-    {
-        if (!operatorAllowlist[operator]) {
-            revert NotInAllowlist(TAG);
-        }
-        _avsDirectory.deregisterOperatorFromAVS(operator);
-        emit OperatorDeRegistered(operator);
-    }
 
     //////////////////////////////////////////////////////////////////////////////
     //                          Operatoion Verifications                          //
