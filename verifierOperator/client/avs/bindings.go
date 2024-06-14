@@ -14,6 +14,8 @@ type AVSManagerBinding struct {
 	ethClient           eth.Client
 }
 
+
+
 func NewAvsManagerBindings(registryAddr, operatorStateAddr common.Address, ethClient eth.Client) (*AVSManagerBinding, error) {
 	contractRegistryCordinator, err := regcoord.NewContractRegistryCoordinator(registryAddr, ethClient)
 
@@ -39,3 +41,4 @@ func NewAvsManagerBindings(registryAddr, operatorStateAddr common.Address, ethCl
 		ethClient:           ethClient,
 	}, nil
 }
+

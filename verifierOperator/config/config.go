@@ -25,12 +25,16 @@ type LoggerConfig struct {
 	OutputPath string `yaml:"-"` // calculated based on OutputDir
 }
 
+type EthConfigRaw struct {
+	RpcUrl        string `yaml:"rpc_url"`
+	StartHeight   uint64 `yaml:"start_height"`
+	BlockFinality uint64 `yaml:"block_finality"`
+	BlockTime     uint64 `yaml:"block_time"`
+}
+
 type AVSConfigRaw struct {
 	RegistryCoordinatorAddr    string `yaml:"registryCoordinator"`
 	OperatorStateRetrieverAddr string `yaml:"operatorStateRetriever"`
-	EthRpcUrl                  string `yaml:"eth_rpc_url"`
-	StartHeight                uint64 `yaml:"start_height"`
-	BlockFinality              uint64 `yaml:"block_finality"`
 }
 
 type ChainConfig struct {
@@ -43,33 +47,43 @@ type ChainConfig struct {
 }
 
 type ConfigRaw struct {
-	Chains                 []ChainConfig `yaml:"chains"`
-	AVS                    AVSConfigRaw  `yaml:"avs"`
-	LogConfig              *LoggerConfig `yaml:"log"`
-	Mode                   string        `yaml:"mode"`
-	KeyStore               *KeyStore     `yaml:"keystore"`
-	BlsPrivateKeyStorePath string        `yaml:"bls_private_key_store_path"`
-
-	GRpcAggregatorIPAddr string `yaml:gRpc_aggregator_addr`
+	Chains                   []ChainConfig `yaml:"chains"`
+	AVS                      AVSConfigRaw  `yaml:"avs"`
+	EthConfig                EthConfigRaw  `yaml:"ethereum"`
+	LogConfig                *LoggerConfig `yaml:"log"`
+	Mode                     string        `yaml:"mode"`
+	KeyStore                 *KeyStore     `yaml:"keystore"`
+	BlsPrivateKeyStorePath   string        `yaml:"bls_private_key_store_path"`
+	GRpcAggregatorIPAddr     string        `yaml:"gRpc_aggregator_addr"`
+	AgentManager             string        `yaml:"agent_manager"`
+	AgentManagerStartHeight  uint64        `yaml:"agent_manager_start_height"`
+	AgentManagerPollDuration uint64        `yaml:"agent_manager_poll_duration"`
 }
 
 type AVSConfig struct {
 	RegistryCoordinatorAddr    common.Address
 	OperatorStateRetrieverAddr common.Address
-	EthRpcUrl                  string
-	StartHeight                uint64
-	BlockFinality              uint64
+}
+
+type EthConfig struct {
+	RpcUrl        string
+	StartHeight   uint64
+	BlockFinality uint64
+	BlockTime     uint64
+	EthClient     eth.Client
 }
 
 type Config struct {
-	BlsPrivateKey *bls.KeyPair
-	EthClient     eth.Client
-	Production    bool
-	AVS           AVSConfig
-
-	KeyStore             *KeyStore
-	GRpcAggregatorIpAddr string
-	Agents               []ChainConfig
+	BlsPrivateKey            *bls.KeyPair
+	Production               bool
+	AVS                      AVSConfig
+	KeyStore                 *KeyStore
+	GRpcAggregatorIpAddr     string
+	Agents                   []ChainConfig
+	AgentManagerAddr         common.Address
+	EthConfig                EthConfig
+	AgentManagerStartHeight  uint64
+	AgentManagerPollDuration uint64
 }
 
 var config *Config
@@ -107,7 +121,7 @@ func LoadConfig(path string) (*Config, error) {
 	ethRpcUrl, ok := os.LookupEnv("ETH_RPC_URL")
 
 	if ok && ethRpcUrl != "" {
-		configRaw.AVS.EthRpcUrl = ethRpcUrl
+		configRaw.EthConfig.RpcUrl = ethRpcUrl
 	}
 
 	avsRegistryCoordinatorAddress, rcOk := os.LookupEnv("AVS_REGISTRY_COORDINATOR_ADDRESS")
@@ -122,13 +136,18 @@ func LoadConfig(path string) (*Config, error) {
 		AVS: AVSConfig{
 			RegistryCoordinatorAddr:    common.HexToAddress(configRaw.AVS.RegistryCoordinatorAddr),
 			OperatorStateRetrieverAddr: common.HexToAddress(configRaw.AVS.OperatorStateRetrieverAddr),
-			EthRpcUrl:                  configRaw.AVS.EthRpcUrl,
-			StartHeight:                configRaw.AVS.StartHeight,
-			BlockFinality:              configRaw.AVS.BlockFinality,
 		},
-		BlsPrivateKey:        blsKeypair,
-		Agents:               configRaw.Chains,
-		GRpcAggregatorIpAddr: configRaw.GRpcAggregatorIPAddr,
-		KeyStore: configRaw.KeyStore,
+		BlsPrivateKey:            blsKeypair,
+		Agents:                   configRaw.Chains,
+		GRpcAggregatorIpAddr:     configRaw.GRpcAggregatorIPAddr,
+		KeyStore:                 configRaw.KeyStore,
+		AgentManagerAddr:         common.HexToAddress(configRaw.AgentManager),
+		AgentManagerStartHeight:  configRaw.AgentManagerStartHeight,
+		AgentManagerPollDuration: configRaw.AgentManagerPollDuration,
+		EthConfig: EthConfig{
+			RpcUrl:        configRaw.EthConfig.RpcUrl,
+			BlockFinality: configRaw.EthConfig.BlockFinality,
+			BlockTime:     configRaw.EthConfig.BlockTime,
+		},
 	}, nil
 }

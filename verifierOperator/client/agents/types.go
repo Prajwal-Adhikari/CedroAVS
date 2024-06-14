@@ -7,25 +7,18 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-type BalanceResponse struct {
-	//ReqID is the identifier for the each request from AVS to get the balance
-	ReqId *big.Int
-	//Total Balance is the
-	TotalBalance *big.Int
-}
-
 type AggregateBalanceResponse struct {
 	//ReqId is the identifier for each request from AVS to get the balance
 	ReqId *big.Int
 
 	//Total Balance accumulated from each agent contract for given agent
-	ActualBalance uint
+	ActualBalance *big.Int
 
 	//Total Balance that a agent should have in given timestamp
 	IdealBalance *big.Int
 
 	//A blocknumber on which check event is emitted
-	ReferenceBlockNumber *big.Int
+	ReferenceBlockNumber uint64
 }
 
 func (a *AggregateBalanceResponse) EncodeSignHash() ([]byte, error) {
@@ -46,7 +39,7 @@ func (a *AggregateBalanceResponse) EncodeSignHash() ([]byte, error) {
 
 		{
 			Name: "referenceBlockNumber",
-			Type: "uint32",
+			Type: "uint64",
 		},
 	})
 

@@ -48,7 +48,6 @@ func NewAggregatorGRpcClient(config config.Config, operatorId sdktypes.OperatorI
 	}, nil
 }
 
-
 func (cl *AggregatorGRpcClient) InitOperatorToAggregator() error {
 	conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
@@ -57,8 +56,6 @@ func (cl *AggregatorGRpcClient) InitOperatorToAggregator() error {
 	}
 
 	n := aggregator.NewAggregatorClient(conn)
-
-
 
 	nodeCtx, cancel := context.WithTimeout(context.Background(), cl.timeout)
 
@@ -86,4 +83,55 @@ func (cl *AggregatorGRpcClient) InitOperatorToAggregator() error {
 	return nil
 }
 
+func (cl *AggregatorGRpcClient) CreateBalanceTaskToAggregator(balanceHash [32]byte) error {
+	// conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
+	// if err != nil {
+	// 	return fmt.Errorf("dial initOperatorToAggregator connection failed: %v", err.Error())
+	// }
+
+	// n := aggregator.NewAggregatorClient(conn)
+
+	// nodeCtx, cancel := context.WithTimeout(context.Background(), cl.timeout)
+
+	// defer cancel()
+
+	// request := &aggregator.CreateTaskRequest{
+	// 	BalanceHash: balanceHash[:],
+
+	// }
+
+	// cl.logger.Info("CreateAlertTask to aggregator", "req", fmt.Sprintf("%#v", request))
+
+	// reply, err := n.CreateTask(nodeCtx, request)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("call CreateAlertTask failed: %v", err.Error())
+	// }
+
+	// info, err := message.NewAlertTaskInfo(reply.GetInfo())
+	// if err != nil {
+	// 	return nil, fmt.Errorf("call CreateAlertTask failed by decode alert info: %v", err.Error())
+	// }
+
+	return nil
+}
+
+func (cl *AggregatorGRpcClient) SendSignedTaskResponse() error {
+	conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+	if err != nil {
+		return fmt.Errorf("dial initOperatorToAggregator connection failed: %v", err.Error())
+	}
+
+	n := aggregator.NewAggregatorClient(conn)
+
+	nodeCtx, cancel := context.WithTimeout(context.Background(), cl.timeout)
+
+	defer cancel()
+
+	
+
+	fmt.Print(n, nodeCtx)
+
+	return nil
+}

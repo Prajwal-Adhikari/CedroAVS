@@ -1,21 +1,28 @@
 chains:
   - name: avalanche
     chain: evm
-    contract_address: contract_address_ava_evm
-    node_url: node_Url
-    block_finality: 10
+    node_url: https://ethereum-holesky-rpc.publicnode.com
+    block_finality: 1
     block_time: 12
 
   - name: ethereum
     chain: evm 
-    contract_address: contract_address_eth_evm
-    node_url: node_url
-    block_finality: 10
+    node_url: https://ethereum-holesky-rpc.publicnode.com
+    block_finality: 1
     block_time: 12
 
 keystore: 
   path: /Users/rabindraregmi/Library/Ethereum/keystore/UTC--2024-06-06T14-28-12.121486000Z--e241c99948ec98c155eaf072b47da3c4ed208f83
   password: test123
+
+ethereum:
+  rpc_url: https://ethereum-holesky-rpc.publicnode.com
+  block_finality : 1
+  block_time: 12
+
+agent_manager: "0x260AE5D6aC7E18C6753d4a9A332af7ABb4cE8542"
+agent_manager_poll_duration: 10
+agent_manager_start_height: 1705774
 
 
 avs:

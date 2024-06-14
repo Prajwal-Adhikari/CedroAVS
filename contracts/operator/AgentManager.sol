@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "./interfaces/IRoute.sol";
@@ -18,7 +17,6 @@ contract AgentManager is
     Initializable,
     ContextUpgradeable
 {
-    using SafeMathUpgradeable for uint256;
 
     address public oracle;
     address public route;
@@ -48,7 +46,7 @@ contract AgentManager is
     }
 
     function initialize() public initializer {
-        __ReentrancyGuard_init();
+
     }
 
     /**

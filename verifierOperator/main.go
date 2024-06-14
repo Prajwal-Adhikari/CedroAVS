@@ -6,10 +6,13 @@ import (
 	// "fmt"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/operator"
+
+	_ "github.com/Cedro-Finance/CedroAVS/verifierOperator/client/agents/evm"
+
 )
 
 func main() {
-	configFile, err := config.LoadConfig("verifierOperator/config.yaml")
+	configFile, err := config.LoadConfig("config.yaml")
 
 	if err != nil {
 		fmt.Print(err)

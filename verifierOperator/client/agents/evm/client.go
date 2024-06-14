@@ -7,65 +7,50 @@ import (
 	"time"
 
 	"github.com/Cedro-Finance/CedroAVS/core/logger"
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/agents"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/agents/evm/abi"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/avs"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/common"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
+	"github.com/Layr-Labs/eigensdk-go/logging"
 	ether "github.com/ethereum/go-ethereum"
 
 	// ethAbi "github.com/ethereum/go-ethereum/accounts/abi"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
-const (
-	defaultStartBlock                    = 1234
-	defaultHeightDifferenceForFilterLogs = 100
-	defaultRequestId                     = 1
-	defaultPollDuration                  = defaultHeightDifferenceForFilterLogs * 2 / 3 * time.Second
-
-	maxRetry      = 10
-	retryInterval = 10 * time.Second
-)
-
-func NewClient(config config.ChainConfig) common.IClient {
+func NewClient(config config.ChainConfig, logger logging.Logger) common.IAgentPodClient {
 	rpc, err := rpc.Dial(config.NodeUrl)
 
 	if err != nil {
-		logger.GetLogger().Error("failed to create rpc client")
+		logger.Error("failed to create rpc client")
 		return nil
 	}
 
 	ethClient := ethclient.NewClient(rpc)
 
 	return &Client{
-		name:            config.Name,
-		chain:           config.Chain,
-		contractAddress: ethCommon.HexToAddress(config.ContactAddress),
-		eth:             ethClient,
-		startBlock:      100,
-		nextBlockHeight: 100,
-		pollDuration:    time.Second * 100,
-		blockFinality:   config.BlockFinality,
-		blockTime:       time.Duration(config.BlockTime) * time.Second,
+		name:          config.Name,
+		chain:         config.Chain,
+		eth:           ethClient,
+		blockFinality: config.BlockFinality,
+		blockTime:     time.Duration(config.BlockTime) * time.Second,
+		logger:        logger,
 	}
 }
 
 type Client struct {
-	name            string
-	chain           string
-	contractAddress ethCommon.Address
-
-	eth             *ethclient.Client
-	pollDuration    time.Duration
-	startBlock      uint64
-	nextBlockHeight uint64
-	blockFinality   uint64
-	blockTime       time.Duration //in second
+	name          string
+	chain         string
+	eth           *ethclient.Client
+	blockFinality uint64
+	blockTime     time.Duration //in second
+	logger        logging.Logger
+	agent         *abi.AgentPod
 }
 
 func (c *Client) GetCurrentBlock(ctx context.Context) (uint64, error) {
@@ -109,15 +94,29 @@ func (c *Client) FilterLogs(
 	return logs, err
 }
 
-func (c *Client) NewAgentContract() *abi.Agent {
-	agent, err := abi.NewAgent(c.contractAddress, c.eth)
+func (c *Client) NewAgentContract(addr ethCommon.Address) *abi.AgentPod {
+	agent, err := abi.NewAgentPod(addr, c.eth)
 
 	if err != nil {
 		fmt.Println("Contract not initialized")
 		panic(err)
 	}
 
+	c.agent = agent
+
 	return agent
+}
+
+func (c *Client) InitializeAgentPod(addr ethCommon.Address) {
+	agent, err := abi.NewAgentPod(addr, c.eth)
+
+	if err != nil {
+		c.logger.Errorf("Error while initializing contract", "err", err)
+
+		return
+	}
+
+	c.agent = agent
 }
 
 func (c *Client) GetBlockFromTimestamp(ctx context.Context, timestamp uint64) (uint64, error) {
@@ -136,7 +135,7 @@ func (c *Client) GetBlockFromTimestamp(ctx context.Context, timestamp uint64) (u
 		return 0, err
 	}
 
-	timediff :=  block.Time() - timestamp
+	timediff := block.Time() - timestamp
 
 	blockDiff := timediff / uint64(c.blockTime)
 
@@ -145,8 +144,10 @@ func (c *Client) GetBlockFromTimestamp(ctx context.Context, timestamp uint64) (u
 	return finalBlock, err
 }
 
-func (c *Client) GetBalance(ctx context.Context, reqEvent *avs.Request, balanceChan chan<- *agents.BalanceResponse) {
-	// agent := c.NewAgentContract()
+func (c *Client) GetBalance(ctx context.Context, reqEvent *avs.Request, balanceChan chan<- *big.Int) {
+	if c.agent == nil {
+		fmt.Print("Agent not initialized")
+	}
 
 	finalizedBlock, err := c.GetFinalizedBlock(ctx)
 
@@ -154,7 +155,7 @@ func (c *Client) GetBalance(ctx context.Context, reqEvent *avs.Request, balanceC
 		logger.GetLogger().Error("Error while getting finalized block")
 	}
 
-	blockByTimestamp, err := c.GetBlockFromTimestamp(ctx, 0)
+	blockByTimestamp, err := c.GetBlockFromTimestamp(ctx, reqEvent.Timestamp)
 
 	if err != nil {
 		logger.GetLogger().Error("Error whole geting block from timestamp")
@@ -164,96 +165,13 @@ func (c *Client) GetBalance(ctx context.Context, reqEvent *avs.Request, balanceC
 		time.Sleep(time.Duration(blockByTimestamp-finalizedBlock) * c.blockTime)
 	}
 
+	balance, err := c.agent.GetBalanceOfAgent(&bind.CallOpts{
+		BlockNumber: big.NewInt(int64(blockByTimestamp)),
+	})
 
-	
+	if err != nil {
+		fmt.Println("Errro while getting balance")
+	}
 
-
-	
-
-	// Fetch the balance in given Blockheight
-
-	//After getting the balance, then add it to balanceCHan Channel
-
-	// dur := c.pollDuration
-
-	// if dur == 0 {
-	// 	dur = defaultPollDuration
-	// }
-
-	// ticker := time.NewTicker(dur)
-	// defer ticker.Stop()
-
-	// for {
-	// 	select {
-	// 	case <-ctx.Done():
-	// 		return
-
-	// 	case <-ticker.C:
-
-	// 	}
-
-	// }
+	balanceChan <- balance
 }
-
-// snapshots the balace of lp in the respective chain
-// sendtx method
-// func (c *Client) UpdateBalance(ctx context.Context, rxId *big.Int, address ethCommon.Address) *types.Transaction {
-
-// 	ks := keys.LoadKeys(config.GetConfig().KeyStore)
-
-// 	retries := 0
-
-// 	var transaction *types.Transaction
-
-// 	for retries <= maxRetry {
-// 		// time.Sleep(retryInterval)
-// 		// var err2 error
-
-// 		agent := c.NewAgentContract()
-// 		gasPrice, err := c.SuggestGasPrice(ctx)
-
-// 		if err != nil {
-// 			logger.GetLogger().Error("Error getting gas price")
-// 			// errors.Join(err)
-// 			continue
-// 		}
-
-// 		auth, err := bind.NewKeyedTransactorWithChainID(ks.ECSDAKeyStore.PrivateKey, big.NewInt(10))
-
-// 		if err != nil {
-// 			logger.GetLogger().Error("Error getting private key")
-// 			continue
-// 		}
-
-// 		nonce, err := c.eth.PendingNonceAt(ctx, crypto.PubkeyToAddress(*ks.ECSDAKeyStore.PublicKey))
-
-// 		if err != nil {
-// 			logger.GetLogger().Error("Error getting Nonce")
-// 			continue
-// 		}
-
-// 		// agAbi, _ := abi.AgentMetaData.GetAbi()
-
-// 		// ethAbi.ABI.Pack(*agAbi, "", rxId);
-
-// 		auth.GasPrice = gasPrice
-// 		auth.Nonce = big.NewInt(int64(nonce))
-// 		auth.GasLimit = uint64(600000) //TODO: Replace with actual value
-
-// 		res, err := agent.UpdateBalance(auth, rxId, rxId)
-
-// 		if err != nil {
-// 			logger.GetLogger().Error("Error while transacting")
-// 			retries++
-// 			continue
-// 		}
-
-// 		transaction = res
-// 	}
-
-// 	// if (retries == maxRetry && transaction == nil) {
-// 	// 	// operator no need to loop now.
-// 	// }
-
-// 	return transaction
-// }

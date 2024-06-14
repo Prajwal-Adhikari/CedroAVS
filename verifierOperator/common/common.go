@@ -2,12 +2,13 @@ package common
 
 import (
 	"context"
+	"math/big"
 
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/agents"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/avs"
+	"github.com/ethereum/go-ethereum/common"
 )
 
-type IClient interface {
-	GetBalance(context.Context, *avs.Request, chan<- *agents.BalanceResponse)
+type IAgentPodClient interface {
+	InitializeAgentPod(addr common.Address)
+	GetBalance(context.Context, *avs.Request, chan<- *big.Int)
 }
-
