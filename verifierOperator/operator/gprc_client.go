@@ -62,7 +62,6 @@ func (cl *AggregatorGRpcClient) InitOperatorToAggregator() error {
 	defer cancel()
 
 	request := &aggregator.InitOperatorRequest{
-		ChainId:                    2,
 		OperatorId:                 cl.operatorId[:],
 		OperatorAddress:            cl.operatorAddr.Hex(),
 		OperatorStateRetrieverAddr: cl.config.AVS.OperatorStateRetrieverAddr.Hex(),

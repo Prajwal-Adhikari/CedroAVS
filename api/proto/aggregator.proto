@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "github.com/Cedro-Finance/CedroAVS";
+option go_package = "./main";
 package aggregator;
 
 // The Aggregator is for collection the bls signatures from operator and
@@ -15,8 +15,6 @@ service Aggregator {
 }
 
 message InitOperatorRequest {
-	// The layer2 chain id for operator to use
-	uint32 chain_id = 1;
 	// The operator 's id
 	bytes operator_id = 2;
 	// The operator 's ecdsa address
@@ -35,8 +33,10 @@ message InitOperatorResponse {
 }
 
 message CreateTaskRequest {
-	// The hash of balance
-	bytes balance_hash = 1;
+	// The requestId of the deviation check
+	bytes req_id = 1;
+
+	
 }
 
 message CreateTaskResponse {
@@ -46,11 +46,11 @@ message CreateTaskResponse {
 
 message SignedTaskRespRequest {
 	// The alert
-	BalanceTaskInfo balance = 1;
+	BalanceTaskInfo balanceHeader = 1;
 	// The operator's BLS signature signed on the keccak256 hash
 	bytes operator_request_signature = 2;
 		// The operator 's id
-		bytes operator_id = 3;
+	bytes operator_id = 3;
 }
 
 message SignedTaskRespResponse {
@@ -62,13 +62,17 @@ message SignedTaskRespResponse {
 
 message BalanceTaskInfo {
 	// The hash of alert
-	bytes balance_hash = 1;
+
+    bytes actual_balance = 1;
+    bytes ideal_balance = 2;
+    bytes req_id = 3;
+     
 	// QuorumNumbers of task
-	bytes quorum_numbers = 2;
+	bytes quorum_numbers = 4;
 	// QuorumThresholdPercentages of task
-	bytes quorum_threshold_percentages = 3;
+	bytes quorum_threshold_percentages = 5;
 	// TaskIndex
-	uint32 task_index = 4;
+	uint32 task_index = 6;
 	// ReferenceBlockNumber
-	uint64 reference_block_number = 5;
+	uint64 reference_block_number = 7;
 }

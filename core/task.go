@@ -2,10 +2,10 @@ package core
 
 import (
 	"encoding/hex"
-	"fmt"
+	// "fmt"
 	"log/slog"
 
-	aggregator "github.com/Cedro-Finance/CedroAVS/api/grpc"
+	// aggregator "github.com/Cedro-Finance/CedroAVS/api/grpc"
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
 )
 
@@ -35,21 +35,21 @@ type BalanceTaskInfo struct {
 }
 
 
-func NewBalanceTaskInfo(req *aggregator.BalanceTaskInfo) (*BalanceTaskInfo, error) {
-	alertHash := req.GetBalanceHash()
-	if len(alertHash) != 32 {
-		return nil, fmt.Errorf("balanceHash len should be 32")
-	}
+// func NewBalanceTaskInfo(req *aggregator.BalanceTaskInfo) (*BalanceTaskInfo, error) {
+// 	alertHash := req.GetBalanceHash()
+// 	if len(alertHash) != 32 {
+// 		return nil, fmt.Errorf("balanceHash len should be 32")
+// 	}
 
-	res := &BalanceTaskInfo{
-		QuorumNumbers:              ConvertQuorumNumbersFromBytes(req.GetQuorumNumbers()),
-		QuorumThresholdPercentages: ConvertQuorumThresholdPercentagesFromBytes(req.GetQuorumThresholdPercentages()),
-		TaskIndex:                  TaskIndex(req.GetTaskIndex()),
-		ReferenceBlockNumber:       req.GetReferenceBlockNumber(),
-		RequestId: 100,
-	}
+// 	res := &BalanceTaskInfo{
+// 		QuorumNumbers:              ConvertQuorumNumbersFromBytes(req.GetQuorumNumbers()),
+// 		QuorumThresholdPercentages: ConvertQuorumThresholdPercentagesFromBytes(req.GetQuorumThresholdPercentages()),
+// 		TaskIndex:                  TaskIndex(req.GetTaskIndex()),
+// 		ReferenceBlockNumber:       req.GetReferenceBlockNumber(),
+// 		RequestId: 100,
+// 	}
 
-	// copy(res.RequestId[:], alertHash[:32])
+// 	// copy(res.RequestId[:], alertHash[:32])
 
-	return res, nil
-}
+// 	return res, nil
+// }
