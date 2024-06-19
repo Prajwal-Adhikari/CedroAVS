@@ -1,12 +1,12 @@
 package avs
 
 import (
-	// "github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
+	// "github.com/Cedro-Finance/CedroAVS/verifier/config"
 	"context"
 
 	"github.com/Cedro-Finance/CedroAVS/core"
 	"github.com/Cedro-Finance/CedroAVS/core/config"
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/avs/abi"
+	"github.com/Cedro-Finance/CedroAVS/verifier/client/avs/abi"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/avsregistry"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/eth"
 	"github.com/Layr-Labs/eigensdk-go/logging"

@@ -1,0 +1,38 @@
+chains:
+  - name: avalanche
+    chain: evm
+    node_url: https://ethereum-holesky-rpc.publicnode.com
+    block_finality: 1
+    block_time: 12
+
+  - name: ethereum
+    chain: evm 
+    node_url: https://ethereum-holesky-rpc.publicnode.com
+    block_finality: 1
+    block_time: 12
+
+keystore: 
+  path: /Users/rabindraregmi/.eigenlayer/operator_keys/cedroavs.ecdsa.key.json
+  password: Cedrolabs@123
+
+ethereum:
+  rpc_url: https://ethereum-holesky-rpc.publicnode.com
+  ws_url: wss://ethereum-holesky-rpc.publicnode.com
+  block_finality : 1
+  block_time: 12
+
+agent_manager: "0x260AE5D6aC7E18C6753d4a9A332af7ABb4cE8542"
+agent_manager_poll_duration: 10
+agent_manager_start_height: 1705774
+
+
+avs:
+  name: cedro-avs
+  operatorStateRetriever: "0x2d3B83D211537eC6D9c1063a7935e595625fE6DE"
+  registryCoordinator: "0xEa20Cd6F0c8a8D2649bcBA30298cdDD3a6d15d09"
+
+log:
+  encoding: console
+  output_dir: /path/to/log/dir
+
+mode: dev # dev/prod

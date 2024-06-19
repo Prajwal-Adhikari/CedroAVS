@@ -16,7 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"golang.org/x/crypto/sha3"
 
-	servicemanager "github.com/Cedro-Finance/CedroAVS/verifierOperator/client/avs/abi"
+	servicemanager "github.com/Cedro-Finance/CedroAVS/verifier/client/avs/abi"
 )
 
 type Bytes32 [32]byte

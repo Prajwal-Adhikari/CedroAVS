@@ -9,14 +9,14 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceRoot}/verifierOperator"
+            "program": "${workspaceRoot}/verifier"
         },
         {
             "name": "Launch Verifier CLI",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceRoot}/verifierOperator/cli",
+            "program": "${workspaceRoot}/verifier/cli",
             "args": ["regEl"]
         },
         {
@@ -24,7 +24,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceRoot}/aggregatorService",
+            "program": "${workspaceRoot}/aggregator",
         }
     ]
 }

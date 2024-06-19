@@ -3,7 +3,7 @@ package core
 import (
 	"math/big"
 
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/avs/abi"
+	"github.com/Cedro-Finance/CedroAVS/verifier/client/avs/abi"
 	"github.com/Layr-Labs/eigensdk-go/crypto/bls"
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
 )
