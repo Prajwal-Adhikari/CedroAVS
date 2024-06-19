@@ -26,7 +26,7 @@ ethereum:
 
 agent_manager: "0x260AE5D6aC7E18C6753d4a9A332af7ABb4cE8542"
 agent_manager_poll_duration: 10
-agent_manager_start_height: 1705774
+agent_manager_start_height: 1767324
 
 
 avs:

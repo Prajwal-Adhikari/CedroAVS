@@ -198,6 +198,7 @@ func (r *Operator) ProcessDeviationCheckRequest(ctx context.Context, eventCh <-c
 		reqInfo.IdealBalance = totalIdealBalance
 		reqInfo.ReferenceBlockNumber = reqEvent.ReferenceBlockNumber
 		reqInfo.ReqId = reqEvent.ReqId
+		reqInfo.AgentAddress = reqEvent.AgentAddress
 
 		// balResponse := &agents.AggregateBalanceResponse{
 		// 	ReqId:                reqEvent.ReqId,
@@ -214,6 +215,10 @@ func (r *Operator) ProcessDeviationCheckRequest(ctx context.Context, eventCh <-c
 func (r *Operator) SignAndSendBalanceResponse(ctx context.Context, balHeader *core.BalanceTaskInfo) {
 
 	hash, err := balHeader.GetBalanceHeaderHash()
+
+	r.logger.Info("BalancehEadr", "bal", balHeader)
+
+	fmt.Println(hash)
 
 	if err != nil {
 		logger.GetLogger().Errorf("Error while hasing the message", "err", err)
@@ -278,7 +283,7 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 		Password:     ecdsaKeypassword,
 	}
 
-	signerV2, _, err := signerv2.SignerFromConfig(signerConfig, big.NewInt(11155111)) //Chain Id
+	signerV2, _, err := signerv2.SignerFromConfig(signerConfig, big.NewInt(17000)) //Chain Id
 
 	if err != nil {
 		panic(err)
@@ -332,12 +337,12 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 		logger.Error("cannot get agent manager", err)
 	}
 
-	// regAgents := make(map[string]common.IAgentPodClient)
-	// fmt.Println(RegisteredClients)
+	regAgents := make(map[string]common.IAgentPodClient)
+	fmt.Println(RegisteredClients)
 
-	// for _, cfg := range cfg.Agents {
-	// 	regAgents[cfg.Name] = RegisteredClients[cfg.Name](cfg, logger)
-	// }
+	for _, cfg := range cfg.Agents {
+		regAgents[cfg.Name] = RegisteredClients[cfg.Name](cfg, logger)
+	}
 
 	gRpc, err := NewAggregatorGRpcClient(cfg, operatorId, operatorAddress, logger)
 
@@ -355,7 +360,7 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 		logger:                    logger,
 		gRPCAggreagatorIpPortAddr: cfg.GRpcAggregatorIpAddr,
 		agentManager:              agentManager,
-		// chainAgents:               regAgents,
+		chainAgents:               regAgents,
 		gRpcClient:                gRpc,
 	}, nil
 

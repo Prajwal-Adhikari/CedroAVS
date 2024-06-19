@@ -46,7 +46,7 @@ func NewAggregatorGRpcClient(config config.Config, operatorId sdktypes.OperatorI
 		OperatorStateRetrieverAddr: config.AVS.OperatorStateRetrieverAddr,
 		RegistryCoodrinatorAddr:    config.AVS.RegistryCoordinatorAddr,
 		gRPCAggreagatorIpPortAddr:  "localhost:50051",
-		timeout:                    1 * time.Second,
+		timeout:                    1 * time.Minute,
 	}, nil
 }
 
@@ -131,7 +131,7 @@ func (cl *AggregatorGRpcClient) SendSignedTaskResponse(signedTaskResponse *core.
 
 	defer cancel()
 
-	fmt.Print(n, nodeCtx)
+	cl.logger.Debug("Sending Signed Task", "taskResponse", signedTaskResponse.Balance)
 
 	request := &aggregator.SignedTaskRespRequest{
 		OperatorId:               cl.operatorId[:],

@@ -113,7 +113,7 @@ func LoadConfig(path string) (*Config, error) {
 	}
 
 	
-
+	//TODO Hardcode removal
 	blsKeypair, err := bls.NewKeyPairFromString("2523408640174661621672680781521680564539321153090028238087879155142149870407")
 
 	if err != nil {
