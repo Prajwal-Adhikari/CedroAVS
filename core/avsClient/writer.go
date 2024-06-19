@@ -2,10 +2,15 @@ package avs
 
 import (
 	// "github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
+	"context"
+
+	"github.com/Cedro-Finance/CedroAVS/core"
+	"github.com/Cedro-Finance/CedroAVS/core/config"
+	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/avs/abi"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/avsregistry"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/eth"
 	"github.com/Layr-Labs/eigensdk-go/logging"
+	"github.com/ethereum/go-ethereum/core/types"
 
 	// "github.com/Layr-Labs/eigensdk-go/chainio/clients/eth"
 	"github.com/Layr-Labs/eigensdk-go/chainio/txmgr"
@@ -27,9 +32,9 @@ type AvsWriter struct {
 
 var _ IAvsWriter = (*AvsWriter)(nil)
 
-func NewAvsWriter(c *config.AVSConfig, txMgr txmgr.TxManager, ethClient eth.Client, logger logging.Logger) (*AvsWriter, error) {
-	regrAddr := c.RegistryCoordinatorAddr
-	osAddr := c.OperatorStateRetrieverAddr
+func NewAvsWriter(c *config.Config, txMgr txmgr.TxManager, ethClient eth.Client, logger logging.Logger) (*AvsWriter, error) {
+	regrAddr := c.AVS.RegistryCoordinatorAddr
+	osAddr := c.AVS.OperatorStateRetrieverAddr
 
 	avsManagerBindings, err := NewAvsManagerBindings(regrAddr, osAddr, ethClient)
 
@@ -50,4 +55,28 @@ func NewAvsWriter(c *config.AVSConfig, txMgr txmgr.TxManager, ethClient eth.Clie
 		TxMgr:               txMgr,
 	}, nil
 
+}
+
+func (w *AvsWriter) SendConfirmationBatch(ctx context.Context, balanceHeader *core.BalanceTaskInfo, nonSignerStakeSignature abi.IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Receipt, error) {
+	txOpts, err := w.TxMgr.GetNoSendTxOpts()
+	if err != nil {
+		w.logger.Errorf("Error getting tx opts")
+		return nil, err
+	}
+
+	parsedHeader := balanceHeader.ToCedroServiceManagerBalanceHeader()
+
+	w.logger.Info("Submitting Batch COnfirmation", "bal", parsedHeader)
+
+	tx, err := w.AvsContractBindings.ServiceManager.ConfirmAgentDeviation(txOpts, parsedHeader, nonSignerStakeSignature)
+	if err != nil {
+		w.logger.Error("Error submitting SubmitTaskResponse tx while calling respondToTask", "err", err)
+		return nil, err
+	}
+	receipt, err := w.TxMgr.Send(ctx, tx)
+	if err != nil {
+		w.logger.Errorf("Error submitting CreateNewTask tx")
+		return nil, err
+	}
+	return receipt, nil
 }

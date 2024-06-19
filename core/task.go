@@ -15,6 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"golang.org/x/crypto/sha3"
+
+	servicemanager "github.com/Cedro-Finance/CedroAVS/verifierOperator/client/avs/abi"
 )
 
 type Bytes32 [32]byte
@@ -43,15 +45,23 @@ type BalanceTaskInfo struct {
 }
 
 func NewBalanceTaskInfo(req *aggregator.BalanceTaskInfo) (*BalanceTaskInfo, error) {
-	z := new(big.Int)
+
+	actualBalance := new(big.Int)
+	idealBalance := new(big.Int)
+	reqId := new(big.Int)
+
+	actualBalance = actualBalance.SetBytes(req.GetActualBalance())
+	idealBalance = idealBalance.SetBytes(req.GetIdealBalance())
+	reqId = reqId.SetBytes(req.GetReqId())
+
 	res := &BalanceTaskInfo{
 		QuorumNumbers:              ConvertQuorumNumbersFromBytes(req.GetQuorumNumbers()),
 		QuorumThresholdPercentages: ConvertQuorumThresholdPercentagesFromBytes(req.GetQuorumThresholdPercentages()),
 		TaskIndex:                  req.GetTaskIndex(),
 		ReferenceBlockNumber:       req.GetReferenceBlockNumber(),
-		ActualBalance:              z.SetBytes(req.GetActualBalance()),
-		IdealBalance:               z.SetBytes(req.GetIdealBalance()),
-		ReqId:                      z.SetBytes(req.GetReqId()),
+		ActualBalance:              actualBalance,
+		IdealBalance:               idealBalance,
+		ReqId:                      reqId,
 		AgentAddress:               common.HexToAddress(req.GetAgentAddress()),
 	}
 
@@ -59,6 +69,7 @@ func NewBalanceTaskInfo(req *aggregator.BalanceTaskInfo) (*BalanceTaskInfo, erro
 }
 
 func (r BalanceTaskInfo) ToPbType() *aggregator.BalanceTaskInfo {
+
 	return &aggregator.BalanceTaskInfo{
 		QuorumNumbers:              r.QuorumNumbers.UnderlyingType(),
 		QuorumThresholdPercentages: r.QuorumThresholdPercentages.UnderlyingType(),
@@ -71,25 +82,40 @@ func (r BalanceTaskInfo) ToPbType() *aggregator.BalanceTaskInfo {
 	}
 }
 
+func (r BalanceTaskInfo) ToCedroServiceManagerBalanceHeader() servicemanager.DATADeviationBalanceHeader {
+	return servicemanager.DATADeviationBalanceHeader{
+		AgentAddress:               r.AgentAddress,
+		QuorumNumbers:              r.QuorumNumbers.UnderlyingType(),
+		QuorumThresholdPercentages: r.QuorumThresholdPercentages.UnderlyingType(),
+		ReferenceBlockNumber:       uint32(r.ReferenceBlockNumber),
+		ActualAmount:               r.ActualBalance,
+		IdealAmount:                r.IdealBalance,
+		RequestId:                  r.ReqId,
+	}
+}
+
 func (r *BalanceTaskInfo) EncodeSignHash() ([]byte, error) {
 
 	tp, err := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
 		{
-			Name: "reqId",
+			Name: "agentAddress",
+			Type: "address",
+		},
+		{
+			Name: "actualAmount",
 			Type: "uint256",
 		},
 		{
-			Name: "actualBalance",
+			Name: "idealAmount",
 			Type: "uint256",
 		},
 		{
-			Name: "idealBalance",
+			Name: "requestId",
 			Type: "uint256",
 		},
-
 		{
 			Name: "referenceBlockNumber",
-			Type: "uint64",
+			Type: "uint32",
 		},
 	})
 
@@ -98,15 +124,17 @@ func (r *BalanceTaskInfo) EncodeSignHash() ([]byte, error) {
 	}
 
 	s := struct {
-		ReqId                *big.Int
-		ActualBalance        *big.Int
-		IdealBalance         *big.Int
-		ReferenceBlockNumber uint64
+		AgentAddress         common.Address
+		RequestId            *big.Int
+		ActualAmount         *big.Int
+		IdealAmount          *big.Int
+		ReferenceBlockNumber uint32
 	}{
-		ReqId:                r.ReqId,
-		ActualBalance:        r.ActualBalance,
-		IdealBalance:         r.IdealBalance,
-		ReferenceBlockNumber: r.ReferenceBlockNumber,
+		AgentAddress:         r.AgentAddress,
+		ActualAmount:         r.ActualBalance,
+		IdealAmount:          r.IdealBalance,
+		RequestId:            r.ReqId,
+		ReferenceBlockNumber: uint32(r.ReferenceBlockNumber),
 	}
 
 	arguments := abi.Arguments{
@@ -289,10 +317,10 @@ func GetRequestHash(reqId *big.Int, agentAddr common.Address) ([]byte, error) {
 	}
 
 	s := struct {
-		ReqId *big.Int
+		ReqId        *big.Int
 		AgentAddress common.Address
 	}{
-		ReqId: reqId,
+		ReqId:        reqId,
 		AgentAddress: agentAddr,
 	}
 

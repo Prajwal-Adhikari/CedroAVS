@@ -1,12 +1,12 @@
 operator:
-    address: 0x35dff22f723eaa0bccc626ff3dee210136d62877
-    earnings_receiver_address: 0x35dff22f723eaa0bccc626ff3dee210136d62877
+    address: 0x394204E5ad767C87Ed47e12BFc1f09E6aC1f0FfD
+    earnings_receiver_address: 0x394204E5ad767C87Ed47e12BFc1f09E6aC1f0FfD
     delegation_approver_address: "0x0000000000000000000000000000000000000000"
     staker_opt_out_window_blocks: 0
-    metadata_url: ""
+    metadata_url: "https://www.jsonkeeper.com/b/A7KQ"
 el_delegation_manager_address: 0xA44151489861Fe9e3055d95adC98FbD462B948e7
 eth_rpc_url: https://ethereum-holesky-rpc.publicnode.com
-private_key_store_path: /Users/rabindraregmi/.eigenlayer/operator_keys/opEcdsa.ecdsa.key.json
+private_key_store_path: /Users/rabindraregmi/.eigenlayer/operator_keys/cedroavs.ecdsa.key.json
 signer_type: local_keystore
 chain_id: 17000
 fireblocks:
