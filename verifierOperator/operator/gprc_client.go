@@ -8,6 +8,8 @@ import (
 	"time"
 
 	aggregator "github.com/Cedro-Finance/CedroAVS/api/grpc"
+	"github.com/Cedro-Finance/CedroAVS/core"
+	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/avs"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
@@ -43,7 +45,7 @@ func NewAggregatorGRpcClient(config config.Config, operatorId sdktypes.OperatorI
 		operatorAddr:               opearatorAddr,
 		OperatorStateRetrieverAddr: config.AVS.OperatorStateRetrieverAddr,
 		RegistryCoodrinatorAddr:    config.AVS.RegistryCoordinatorAddr,
-		gRPCAggreagatorIpPortAddr:  "",
+		gRPCAggreagatorIpPortAddr:  "localhost:50051",
 		timeout:                    1 * time.Second,
 	}, nil
 }
@@ -82,40 +84,41 @@ func (cl *AggregatorGRpcClient) InitOperatorToAggregator() error {
 	return nil
 }
 
-func (cl *AggregatorGRpcClient) CreateBalanceTaskToAggregator(balanceHash [32]byte) error {
-	// conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+func (cl *AggregatorGRpcClient) CreateBalanceTaskToAggregator(req *avs.Request) (*core.BalanceTaskInfo, error) {
+	conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
-	// if err != nil {
-	// 	return fmt.Errorf("dial initOperatorToAggregator connection failed: %v", err.Error())
-	// }
+	if err != nil {
+		return nil, fmt.Errorf("dial initOperatorToAggregator connection failed: %v", err.Error())
+	}
 
-	// n := aggregator.NewAggregatorClient(conn)
+	n := aggregator.NewAggregatorClient(conn)
 
-	// nodeCtx, cancel := context.WithTimeout(context.Background(), cl.timeout)
+	nodeCtx, cancel := context.WithTimeout(context.Background(), cl.timeout)
 
-	// defer cancel()
+	defer cancel()
 
-	// request := &aggregator.CreateTaskRequest{
-	// 	BalanceHash: balanceHash[:],
+	request := &aggregator.CreateTaskRequest{
+		ReqId:                req.ReqId.Bytes(),
+		ReferenceBlockNumber: req.ReferenceBlockNumber,
+		AgentAddress:         req.AgentAddress.Hex(),
+	}
 
-	// }
+	cl.logger.Info("CreateAlertTask to aggregator", "req", fmt.Sprintf("%#v", request))
 
-	// cl.logger.Info("CreateAlertTask to aggregator", "req", fmt.Sprintf("%#v", request))
+	reply, err := n.CreateTask(nodeCtx, request)
+	if err != nil {
+		return nil, fmt.Errorf("call CreateAlertTask failed: %v", err.Error())
+	}
 
-	// reply, err := n.CreateTask(nodeCtx, request)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("call CreateAlertTask failed: %v", err.Error())
-	// }
+	info, err := core.NewBalanceTaskInfo(reply.GetInfo())
+	if err != nil {
+		return nil, fmt.Errorf("call CreateAlertTask failed by decode alert info: %v", err.Error())
+	}
 
-	// info, err := message.NewAlertTaskInfo(reply.GetInfo())
-	// if err != nil {
-	// 	return nil, fmt.Errorf("call CreateAlertTask failed by decode alert info: %v", err.Error())
-	// }
-
-	return nil
+	return info, nil
 }
 
-func (cl *AggregatorGRpcClient) SendSignedTaskResponse() error {
+func (cl *AggregatorGRpcClient) SendSignedTaskResponse(signedTaskResponse *core.SignedTaskRespRequest) error {
 	conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {
@@ -128,9 +131,29 @@ func (cl *AggregatorGRpcClient) SendSignedTaskResponse() error {
 
 	defer cancel()
 
-	
-
 	fmt.Print(n, nodeCtx)
+
+	request := &aggregator.SignedTaskRespRequest{
+		OperatorId:               cl.operatorId[:],
+		OperatorRequestSignature: signedTaskResponse.BlsSignature.Serialize(),
+		BalanceHeader:            signedTaskResponse.Balance.ToPbType(),
+	}
+
+	response, err := n.ProcessSignedTaskResponse(nodeCtx, request)
+
+	if err != nil {
+		fmt.Println("Failed")
+	}
+
+	fmt.Println(response)
+
+	// res := alert.AlertResponse{
+	// 	Code:      0,
+	// 	TaskIndex: signedTaskResponse.Alert.TaskIndex,
+	// }
+	// copy(res.TxHash[:], response.GetTxHash()[:32])
+
+	// resChan <- res
 
 	return nil
 }

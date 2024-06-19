@@ -11,7 +11,7 @@ import (
 
 func RegisterOperatorWithAvs(ctx *cli.Context) error {
 
-	configFile, err := config.LoadConfig("verifierOperator/config.yaml")
+	configFile, err := config.LoadConfig("config.yaml")
 
 	if err != nil {
 		fmt.Print(err)
@@ -25,6 +25,8 @@ func RegisterOperatorWithAvs(ctx *cli.Context) error {
 	if err != nil {
 		panic("Counldn't start operator")
 	}
+
+	
 
 	operatorEcdsaPrivate, err := ecdsa.ReadKey(configFile.KeyStore.Path, configFile.KeyStore.Password)
 

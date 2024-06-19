@@ -8,7 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/agents"
+	"github.com/Cedro-Finance/CedroAVS/core"
+	// "github.com/Cedro-Finance/CedroAVS/verifierOperator/client/agents"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/client/avs"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/common"
 	"github.com/Cedro-Finance/CedroAVS/verifierOperator/config"
@@ -43,6 +44,7 @@ type Operator struct {
 	txMgr                     txmgr.TxManager
 	logger                    sdklogging.Logger
 	gRPCAggreagatorIpPortAddr string
+	gRpcClient                *AggregatorGRpcClient
 
 	chainAgents map[string]common.IAgentPodClient
 }
@@ -125,40 +127,40 @@ func calculateDeviationPercentage(totalActualBalance, totalIdealBalance *big.Int
 	return deviationPercentage
 }
 
-func (r *Operator) ProcessOffchainDeviationCheckRequest(ctx context.Context, eventCh <-chan *avs.Request) {
-	for {
-		reqEvent := <-eventCh
+// func (r *Operator) ProcessOffchainDeviationCheckRequest(ctx context.Context, eventCh <-chan *avs.Request) {
+// 	for {
+// 		reqEvent := <-eventCh
 
-		//Now for every balance request event, there should be two jobs running in parallel
-		//Routine 1: Fetch the balances of agents in all the chains to get the actual Balance
-		//Routine 2: Fetch the total deposits & aprs of agents to get the ideal balance
+// 		//Now for every balance request event, there should be two jobs running in parallel
+// 		//Routine 1: Fetch the balances of agents in all the chains to get the actual Balance
+// 		//Routine 2: Fetch the total deposits & aprs of agents to get the ideal balance
 
-		idealBalCh := make(chan *big.Int)
-		actualBalCh := make(chan *big.Int)
+// 		idealBalCh := make(chan *big.Int)
+// 		actualBalCh := make(chan *big.Int)
 
-		go r.FetchAgentActualBalance(ctx, reqEvent, actualBalCh)
-		go r.FetchAgentIdealBalance(ctx, reqEvent, idealBalCh)
+// 		go r.FetchAgentActualBalance(ctx, reqEvent, actualBalCh)
+// 		go r.FetchAgentIdealBalance(ctx, reqEvent, idealBalCh)
 
-		totalIdealBalance := <-idealBalCh
-		totalActualBalance := <-actualBalCh
+// 		totalIdealBalance := <-idealBalCh
+// 		totalActualBalance := <-actualBalCh
 
-		// Find the deviation threshold
+// 		// Find the deviation threshold
 
-		deviation := calculateDeviationPercentage(totalActualBalance, totalIdealBalance)
+// 		deviation := calculateDeviationPercentage(totalActualBalance, totalIdealBalance)
 
-		if deviation.Cmp(big.NewFloat(10.0)) == 1 { // deviation is greater than threshold 10%
-			balResponse := &agents.AggregateBalanceResponse{
-				ReqId:                reqEvent.ReqId,
-				ActualBalance:        totalActualBalance,
-				IdealBalance:         totalIdealBalance,
-				ReferenceBlockNumber: reqEvent.ReferenceBlockNumber,
-			}
+// 		if deviation.Cmp(big.NewFloat(10.0)) == 1 { // deviation is greater than threshold 10%
+// 			balResponse := &agents.AggregateBalanceResponse{
+// 				ReqId:                reqEvent.ReqId,
+// 				ActualBalance:        totalActualBalance,
+// 				IdealBalance:         totalIdealBalance,
+// 				ReferenceBlockNumber: reqEvent.ReferenceBlockNumber,
+// 			}
 
-			go r.SignAndSendBalanceResponse(ctx, balResponse)
-		}
+// 			go r.SignAndSendBalanceResponse(ctx, balResponse)
+// 		}
 
-	}
-}
+// 	}
+// }
 
 func (r *Operator) ProcessDeviationCheckRequest(ctx context.Context, eventCh <-chan *avs.Request) {
 	for {
@@ -168,6 +170,14 @@ func (r *Operator) ProcessDeviationCheckRequest(ctx context.Context, eventCh <-c
 		//Now for every balance request event, there should be two jobs running in parallel
 		//Routine 1: Fetch the balances of agents in all the chains to get the actual Balance
 		//Routine 2: Fetch the total deposits & aprs of agents to get the ideal balance
+
+		reqInfo, err := r.gRpcClient.CreateBalanceTaskToAggregator(reqEvent)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		r.logger.Infof("Create Task successful", reqInfo)
 
 		idealBalCh := make(chan *big.Int)
 		actualBalCh := make(chan *big.Int)
@@ -184,21 +194,26 @@ func (r *Operator) ProcessDeviationCheckRequest(ctx context.Context, eventCh <-c
 			"totalBalance", totalActualBalance.String(),
 		)
 
-		balResponse := &agents.AggregateBalanceResponse{
-			ReqId:                reqEvent.ReqId,
-			ActualBalance:        totalActualBalance,
-			IdealBalance:         totalIdealBalance,
-			ReferenceBlockNumber: reqEvent.ReferenceBlockNumber,
-		}
+		reqInfo.ActualBalance = totalActualBalance
+		reqInfo.IdealBalance = totalIdealBalance
+		reqInfo.ReferenceBlockNumber = reqEvent.ReferenceBlockNumber
+		reqInfo.ReqId = reqEvent.ReqId
 
-		go r.SignAndSendBalanceResponse(ctx, balResponse)
+		// balResponse := &agents.AggregateBalanceResponse{
+		// 	ReqId:                reqEvent.ReqId,
+		// 	ActualBalance:        totalActualBalance,
+		// 	IdealBalance:         totalIdealBalance,
+		// 	ReferenceBlockNumber: reqEvent.ReferenceBlockNumber,
+		// }
+
+		go r.SignAndSendBalanceResponse(ctx, reqInfo)
 
 	}
 }
 
-func (r *Operator) SignAndSendBalanceResponse(ctx context.Context, aggr *agents.AggregateBalanceResponse) {
+func (r *Operator) SignAndSendBalanceResponse(ctx context.Context, balHeader *core.BalanceTaskInfo) {
 
-	hash, err := aggr.SignHash()
+	hash, err := balHeader.GetBalanceHeaderHash()
 
 	if err != nil {
 		logger.GetLogger().Errorf("Error while hasing the message", "err", err)
@@ -207,11 +222,19 @@ func (r *Operator) SignAndSendBalanceResponse(ctx context.Context, aggr *agents.
 
 	signature := r.blsKeyPair.SignMessage(hash)
 
-	fmt.Print(signature)
+	r.logger.Infof("Signed the message", "sign", signature)
 
-	//SIgn THE MESSAGE HERE IN WHAT FORMAT?
+	request := &core.SignedTaskRespRequest{
+		Balance:      *balHeader,
+		BlsSignature: *signature,
+		OperatorId:   r.operatorId,
+	}
 
-	//MAKE HTTP CALL TO THE AGGREGATOR SERVICE
+	err = r.gRpcClient.SendSignedTaskResponse(request)
+
+	if err != nil {
+		r.logger.Errorf("Error while sending Signed Task response")
+	}
 }
 
 func NewOperator(cfg config.Config) (*Operator, error) {
@@ -309,11 +332,18 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 		logger.Error("cannot get agent manager", err)
 	}
 
-	regAgents := make(map[string]common.IAgentPodClient)
-	fmt.Println(RegisteredClients)
+	// regAgents := make(map[string]common.IAgentPodClient)
+	// fmt.Println(RegisteredClients)
 
-	for _, cfg := range cfg.Agents {
-		regAgents[cfg.Name] = RegisteredClients[cfg.Name](cfg, logger)
+	// for _, cfg := range cfg.Agents {
+	// 	regAgents[cfg.Name] = RegisteredClients[cfg.Name](cfg, logger)
+	// }
+
+	gRpc, err := NewAggregatorGRpcClient(cfg, operatorId, operatorAddress, logger)
+
+	if err != nil {
+		logger.Errorf("Cannot initialize Aggregator Grpc client", "err", err)
+		return nil, err
 	}
 
 	return &Operator{
@@ -325,7 +355,8 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 		logger:                    logger,
 		gRPCAggreagatorIpPortAddr: cfg.GRpcAggregatorIpAddr,
 		agentManager:              agentManager,
-		chainAgents:               regAgents,
+		// chainAgents:               regAgents,
+		gRpcClient:                gRpc,
 	}, nil
 
 }
@@ -339,6 +370,17 @@ func StartRelay(ctx context.Context, cfg *config.Config) {
 	}
 
 	op.logger.Infof("Starting Operator")
+
+	// First initialize Operator to the Aggregator
+
+	op.logger.Infof("Init operator to aggregator.")
+	err = op.gRpcClient.InitOperatorToAggregator()
+	if err != nil {
+		op.logger.Errorf("Init operator to aggregator failed: %v", err)
+		panic(err)
+	}
+
+	op.logger.Infof("Init operator to aggregator succeed")
 
 	balanceReqCh := make(chan *avs.Request) //Chanel to accept request from AVS contract
 	// // deviationReqCh := make(chan *avs.Request) //Chanel to accept request from offline trigger

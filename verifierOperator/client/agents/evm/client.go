@@ -171,6 +171,11 @@ func (c *Client) GetBalance(ctx context.Context, reqEvent *avs.Request, balanceC
 
 	if err != nil {
 		fmt.Println("Errro while getting balance")
+
+	}
+
+	if balance == nil {
+		balance = big.NewInt(0)
 	}
 
 	balanceChan <- balance

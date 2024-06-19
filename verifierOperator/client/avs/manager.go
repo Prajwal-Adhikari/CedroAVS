@@ -60,8 +60,6 @@ func (ag *AgentManager) PollEvents(ctx context.Context, ch chan<- *Request) {
 		dur = defaultPollDuration
 	}
 
-	fmt.Println("Duration", dur)
-
 	ticker := time.NewTicker(dur)
 	defer ticker.Stop()
 

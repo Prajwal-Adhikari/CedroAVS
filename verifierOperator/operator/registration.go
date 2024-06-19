@@ -3,6 +3,7 @@ package operator
 import (
 	"context"
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -13,9 +14,13 @@ import (
 func (o *Operator) RegisterOperatorWithAVS(operatorEcdsaKeyPair *ecdsa.PrivateKey) error {
 
 	// hardcode these things for now
-	quorumNumbers := []byte{0}
+	quorumNumbers := []byte{1}
 	socket := ""
 
+
+
+	fmt.Println(core.ConvertToBN254G1Point(o.blsKeyPair.GetPubKeyG1()))
+	fmt.Println(core.ConvertToBN254G2Point(o.blsKeyPair.GetPubKeyG2()))
 	// Generate salt and expiry
 	privateKeyBytes := []byte(o.blsKeyPair.PrivKey.String())
 	salt := [32]byte{}
@@ -42,6 +47,8 @@ func (o *Operator) RegisterOperatorWithAVS(operatorEcdsaKeyPair *ecdsa.PrivateKe
 		"socket", socket,
 		"operatorToAvsRegistrationSigExpiry", operatorToAvsRegistrationSigExpiry,
 	)
+
+	fmt.Println(operatorToAvsRegistrationSigSalt, operatorToAvsRegistrationSigExpiry)
 
 	quorumNumbersToSDK := core.ConvertQuorumNumbersFromBytes(quorumNumbers)
 
