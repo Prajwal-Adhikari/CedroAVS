@@ -18,15 +18,13 @@ contract BLSApkRegistry is BLSApkRegistryStorage {
         _;
     }
 
-     /// @custom:oz-upgrades-unsafe-allow constructor
+    /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         // disable initializers so that the implementation contract cannot be initialized
         _disableInitializers();
     }
 
-    function initialize(
-        address ownerAddress
-    ) external initializer {
+    function initialize(address ownerAddress) external initializer {
         _BLSApkRegistryStorage_init(ownerAddress);
     }
 

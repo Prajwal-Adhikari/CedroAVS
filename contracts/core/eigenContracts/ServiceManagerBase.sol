@@ -31,8 +31,8 @@ abstract contract ServiceManagerBase is IServiceManager, ContextUpgradeable {
     error NotInAllowlist(string contractTAG);
 
     IAVSDirectory public _avsDirectory;
-    IRewardsCoordinator internal _rewardsCoordinator;
-    IRegistryCoordinator internal _registryCoordinator;
+    IRewardsCoordinator public _rewardsCoordinator;
+    IRegistryCoordinator public _registryCoordinator;
     IStakeRegistry internal _stakeRegistry;
 
     /// @notice when applied to a function, only allows the RegistryCoordinator to call it
@@ -84,23 +84,6 @@ abstract contract ServiceManagerBase is IServiceManager, ContextUpgradeable {
         _rewardsCoordinator = __rewardsCoordinator;
         _stakeRegistry = __stakeRegistry;
         roleManagerAddress = _roleManager;
-    }
-
-    function setRegistryCoordinator(
-        IRegistryCoordinator __registryCoordinator
-    ) external {
-        _registryCoordinator = __registryCoordinator;
-    }
-
-    /**
-     * @notice Configures role manager address
-     * This function can only be accessed by the account with role DEFAULT_ADMIN_ROLE.
-     * @param _roleManagerAddress - address of the roleManager contract.
-     **/
-    function setRoleManagerAddress(
-        address _roleManagerAddress
-    ) external onlyRoles(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
-        roleManagerAddress = _roleManagerAddress;
     }
 
     /**
@@ -187,7 +170,7 @@ abstract contract ServiceManagerBase is IServiceManager, ContextUpgradeable {
      **/
     function addOperatorsToAllowlist(
         address[] calldata operators
-    ) external  {
+    ) external {
         for (uint256 i; i < operators.length; i++) {
             operatorAllowlist[operators[i]] = true;
         }

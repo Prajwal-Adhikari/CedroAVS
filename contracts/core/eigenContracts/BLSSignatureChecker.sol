@@ -18,6 +18,7 @@ import {BN254} from "./libraries/BN254.sol";
  */
 contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
     using BN254 for BN254.G1Point;
+
     address public roleManager;
 
     // CONSTANTS & IMMUTABLES
@@ -32,40 +33,18 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
     /// @notice If true, check the staleness of the operator stakes and that its within the delegation withdrawalDelayBlocks window.
     bool public staleStakesForbidden;
 
-    // modifier onlyCoordinatorOwner() {
-    //     require(
-    //         msg.sender == registryCoordinator.owner(),
-    //         "BLSSignatureChecker.onlyCoordinatorOwner: caller is not the owner of the registryCoordinator"
-    //     );
-    //     _;
-    // }
-    /**
-     * @dev Modifier that checks if caller has a specific role.
-     **/
-    modifier onlyRole(bytes32 role) {
-        IRoleManager(roleManager).checkRole(role, _msgSender());
-        _;
-    }
-
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    function _BLSSignatureChecker_init(
-        address _roleManager
-    ) internal onlyInitializing {
-        roleManager = _roleManager;
-    }
+    function _BLSSignatureChecker_init() internal onlyInitializing {}
 
-    function setRegistryCoordinatorAddress(
-        IRegistryCoordinator _registryCoordinator
-    ) external {
-        registryCoordinator = _registryCoordinator;
-        stakeRegistry = _registryCoordinator.stakeRegistry();
-        blsApkRegistry = _registryCoordinator.blsApkRegistry();
-        delegation = stakeRegistry.delegation();
-    }
+    // function setRegistryCoordinatorAddress(
+    //     IRegistryCoordinator _registryCoordinator
+    // ) external{
+
+    // }
 
     /**
      * /**
@@ -158,6 +137,7 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
         {
             // Get a bitmap of the quorums signing the message, and validate that
             // quorumNumbers contains only unique, valid quorum numbers
+
             uint256 signingQuorumBitmap = BitmapUtils.orderedBytesArrayToBitmap(
                 quorumNumbers,
                 registryCoordinator.quorumCount()
@@ -252,7 +232,6 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
                     });
                 stakeTotals.signedStakeForQuorum[i] = stakeTotals
                     .totalStakeForQuorum[i];
-
                 // Keep track of the nonSigners index in the quorum
                 uint256 nonSignerForQuorumIndex = 0;
 
@@ -282,6 +261,7 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
                 }
             }
         }
+
         {
             // verify the signature
             (
@@ -350,17 +330,6 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
             apkG2,
             PAIRING_EQUALITY_CHECK_GAS
         );
-    }
-
-    /**
-     * @notice Configures role manager address
-     * This function can only be accessed by the account with role DEFAULT_ADMIN_ROLE.
-     * @param roleManagerAddress - address of the roleManager contract.
-     **/
-    function setRoleManager(
-        address roleManagerAddress
-    ) external onlyRole(IRoleManager(roleManager).DEFAULT_ADMIN_ROLE()) {
-        roleManager = roleManagerAddress;
     }
 
     function _setStaleStakesForbidden(bool value) internal {

@@ -9,7 +9,7 @@ import {IPauserRegistry} from "./eigenContracts/interfaces/IPauserRegistry.sol";
 import {ServiceManagerBase, IAVSDirectory, IRewardsCoordinator, IRegistryCoordinator, ISignatureUtils, IStakeRegistry} from "./eigenContracts/ServiceManagerBase.sol";
 import {BLSSignatureChecker} from "./eigenContracts/BLSSignatureChecker.sol";
 import {IServiceManager} from "./eigenContracts/interfaces/IServiceManager.sol";
-
+import {IAgentManager} from "../operator/interfaces/IAgentManager.sol";
 import {IRoleManager} from "./interfaces/IRoleManager.sol";
 import {CedroServiceManagerStorage} from "./CedroServiceManagerStorage.sol";
 import {DATA} from "./libraries/Data.sol";
@@ -29,6 +29,15 @@ contract CedroServiceManager is
 
     uint256 public roleManagerAddressOne;
 
+    //newone
+    /// @notice The current requestid of the  agent deviation check, specific to agent operator
+    mapping(address => uint256) public agentsDeviationRequestId;
+
+    /// @notice The current requestid of the  agent fraud check, specific to agent operator
+    mapping(address => uint256) public agentsFraudRequestId;
+
+    IAgentManager public agentManager;
+
     error OperatorRegistrationPaused(string contractTAG);
     error MessageHashAlreadyAdded(string contractTAG);
     error InvalidSender(string ContractTAG);
@@ -41,6 +50,7 @@ contract CedroServiceManager is
 
     event OperatorRegistered(address indexed operator);
     event OperatorDeRegistered(address indexed operator);
+    event QuorumThresholdPercentageChanged(uint256 thresholdpercentage);
     event AgentBalanceConfirmed();
     event AgentFraudConfirmed();
 
@@ -52,6 +62,14 @@ contract CedroServiceManager is
         _;
     }
 
+    /**
+     * @dev Modifier that checks if caller has a specific role.
+     **/
+    modifier onlyRole(bytes32 role) {
+        IRoleManager(roleManagerAddress).checkRole(role, _msgSender());
+        _;
+    }
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
@@ -60,18 +78,17 @@ contract CedroServiceManager is
     function initialize(
         address _roleManager,
         IAVSDirectory __avsDirectory,
-        IRewardsCoordinator ___paymentCoordinator,
+        IRewardsCoordinator ___rewardsCoordinator,
         IStakeRegistry __stakeRegistry
     ) public initializer {
-        _BLSSignatureChecker_init(_roleManager);
+        _BLSSignatureChecker_init();
         __ServiceManagerBase_init(
             __avsDirectory,
-            ___paymentCoordinator,
+            ___rewardsCoordinator,
             __stakeRegistry,
             _roleManager
         );
     }
-
 
     //////////////////////////////////////////////////////////////////////////////
     //                          Operatoion Verifications                          //
@@ -87,14 +104,13 @@ contract CedroServiceManager is
         NonSignerStakesAndSignature memory nonSignerStakesAndSignature
     ) external {
         if (tx.origin != msg.sender) revert InvalidSender(TAG);
-
         if (balanceHeader.referenceBlockNumber >= block.number) {
             revert InvalidReferenceBlockNum(TAG);
         }
 
         if (
             balanceHeader.requestId <=
-            agentDeviationRequestId[balanceHeader.agentOperator]
+            agentsDeviationRequestId[balanceHeader.agentAddress]
         ) {
             revert InvalidRequestId(TAG);
         }
@@ -149,10 +165,12 @@ contract CedroServiceManager is
             revert MessageHashAlreadyAdded(TAG);
         }
 
-        emit AgentBalanceConfirmed();
+        agentManager.receivedResponse(balanceHeader.agentAddress);
 
-        agentDeviationRequestId[balanceHeader.agentOperator] = balanceHeader
+        agentsDeviationRequestId[balanceHeader.agentAddress] = balanceHeader
             .requestId;
+
+        emit AgentBalanceConfirmed();
     }
 
     /**
@@ -171,7 +189,7 @@ contract CedroServiceManager is
 
         if (
             fraudBalanceHeader.requestId <=
-            agentFraudRequestId[fraudBalanceHeader.agentOperator]
+            agentsFraudRequestId[fraudBalanceHeader.agentAddress]
         ) {
             revert InvalidRequestId(TAG);
         }
@@ -221,8 +239,8 @@ contract CedroServiceManager is
             }
         }
 
-        uint32 requestIdMemory = agentDeviationRequestId[
-            fraudBalanceHeader.agentOperator
+        uint256 requestIdMemory = agentsDeviationRequestId[
+            fraudBalanceHeader.agentAddress
         ];
 
         // store deviation message hash
@@ -231,7 +249,7 @@ contract CedroServiceManager is
             revert MessageHashAlreadyAdded(TAG);
         }
 
-        agentDeviationRequestId[fraudBalanceHeader.agentOperator] =
+        agentsDeviationRequestId[fraudBalanceHeader.agentAddress] =
             requestIdMemory +
             1;
 
@@ -273,9 +291,35 @@ contract CedroServiceManager is
         return keccak256(abi.encode(reduceFraudBalanceHeader(balanceHeader)));
     }
 
+    function setRegistryCoordinatorAddress(
+        IRegistryCoordinator __registryCoordinator
+    ) external onlyRoles(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
+        registryCoordinator = __registryCoordinator;
+        _registryCoordinator = __registryCoordinator;
+        stakeRegistry = _registryCoordinator.stakeRegistry();
+        blsApkRegistry = _registryCoordinator.blsApkRegistry();
+        delegation = stakeRegistry.delegation();
+    }
+
+    function setQuorumThresholdPercentage(
+        uint8 thresholdPercentage
+    ) external onlyRoles(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
+        if (thresholdPercentage > 100) {
+            revert InvalidQuorumThresholdPercentage(TAG);
+        }
+        quorumThresholdPercentage = thresholdPercentage;
+        emit QuorumThresholdPercentageChanged(thresholdPercentage);
+    }
+
+    function setAgentManagerAddress(
+        IAgentManager _agentManagerAddress
+    ) external onlyRoles(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
+        agentManager = _agentManagerAddress;
+    }
+
     function setPauseStatus(
         bool status
-    ) external onlyRole(IRoleManager(roleManager).AVS_ADMIN()) {
+    ) external onlyRole(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
         pausedStatus = status;
     }
 
@@ -289,9 +333,10 @@ contract CedroServiceManager is
     ) internal pure returns (DATA.ReducedDeviationHeader memory) {
         return
             DATA.ReducedDeviationHeader({
+                agentAddress: balanceHeader.agentAddress,
                 actualAmount: balanceHeader.actualAmount,
                 idealAmount: balanceHeader.idealAmount,
-                referenceRequestId: balanceHeader.requestId,
+                requestId: balanceHeader.requestId,
                 referenceBlockNumber: balanceHeader.referenceBlockNumber
             });
     }
