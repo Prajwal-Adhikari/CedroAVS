@@ -10,13 +10,12 @@ import (
 
 	// aggregator "github.com/Cedro-Finance/CedroAVS/api/grpc"
 	aggregator "github.com/Cedro-Finance/CedroAVS/api/grpc"
+	cedroservicemanager "github.com/Cedro-Finance/CedroAVS/core/bindings/CedroServiceManager"
 	"github.com/Layr-Labs/eigensdk-go/crypto/bls"
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"golang.org/x/crypto/sha3"
-
-	servicemanager "github.com/Cedro-Finance/CedroAVS/verifier/client/avs/abi"
 )
 
 type Bytes32 [32]byte
@@ -82,8 +81,8 @@ func (r BalanceTaskInfo) ToPbType() *aggregator.BalanceTaskInfo {
 	}
 }
 
-func (r BalanceTaskInfo) ToCedroServiceManagerBalanceHeader() servicemanager.DATADeviationBalanceHeader {
-	return servicemanager.DATADeviationBalanceHeader{
+func (r BalanceTaskInfo) ToCedroServiceManagerBalanceHeader() cedroservicemanager.DATADeviationBalanceHeader {
+	return cedroservicemanager.DATADeviationBalanceHeader{
 		AgentAddress:               r.AgentAddress,
 		QuorumNumbers:              r.QuorumNumbers.UnderlyingType(),
 		QuorumThresholdPercentages: r.QuorumThresholdPercentages.UnderlyingType(),

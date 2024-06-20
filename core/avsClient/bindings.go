@@ -1,7 +1,7 @@
 package avs
 
 import (
-	"github.com/Cedro-Finance/CedroAVS/verifier/client/avs/abi"
+	cedroservicemanager "github.com/Cedro-Finance/CedroAVS/core/bindings/CedroServiceManager"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/eth"
 	regcoord "github.com/Layr-Labs/eigensdk-go/contracts/bindings/RegistryCoordinator"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -9,7 +9,7 @@ import (
 )
 
 type AVSManagerBinding struct {
-	ServiceManager      *abi.CedroServiceManager
+	ServiceManager      *cedroservicemanager.CedroServiceManager
 	RegistryCoordinator *regcoord.ContractRegistryCoordinator
 	ethClient           eth.Client
 }
@@ -27,7 +27,7 @@ func NewAvsManagerBindings(registryAddr, operatorStateAddr common.Address, ethCl
 		return nil, err
 	}
 
-	contractServiceManager, err := abi.NewCedroServiceManager(serviceManagerAddr, ethClient)
+	contractServiceManager, err := cedroservicemanager.NewCedroServiceManager(serviceManagerAddr, ethClient)
 
 	if err != nil {
 		return nil, err

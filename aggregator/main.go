@@ -2,11 +2,10 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"sync"
-
 	"github.com/Cedro-Finance/CedroAVS/aggregator/aggregator"
-	pb "github.com/Cedro-Finance/CedroAVS/api/grpc"
 	"github.com/Cedro-Finance/CedroAVS/core/config"
 )
 
@@ -19,13 +18,23 @@ import (
 
 type App struct{}
 
-type server struct {
-	pb.UnimplementedAggregatorServer
+var (
+	configFile string
+)
+
+func init() {
+	flag.StringVar(&configFile, "config", "", "config file")
 }
 
 func main() {
 
-	config, err := config.LoadConfig("config.yaml")
+	flag.Parse()
+
+	flagArgs := &config.FlagArgs{
+		ConfigFile: configFile,
+	}
+
+	config, err := config.LoadConfig(flagArgs.ConfigFile)
 
 	if err != nil {
 		log.Fatalf("Failed Loading Config %v", err)

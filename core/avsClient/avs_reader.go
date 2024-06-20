@@ -2,11 +2,9 @@ package avs
 
 import (
 	"context"
-	"encoding/hex"
-	"fmt"
-	"log"
 	"math/big"
 
+	"github.com/Cedro-Finance/CedroAVS/api/graphql"
 	"github.com/Cedro-Finance/CedroAVS/core/config"
 	sdkavsregistry "github.com/Layr-Labs/eigensdk-go/chainio/clients/avsregistry"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/eth"
@@ -14,9 +12,7 @@ import (
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
 	"github.com/Layr-Labs/eigensdk-go/utils"
-	"github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/shurcooL/graphql"
 )
 
 type IAVSReader interface {
@@ -32,21 +28,10 @@ type IAVSReader interface {
 type AvsReader struct {
 	sdkavsregistry.AvsRegistryReader
 	AvsServiceBindings *AVSManagerBinding
+	graphClient        *graphql.GraphQLClient
 }
 
-// Define the GraphQL query structure
-type OperatorQuery struct {
-	Operator struct {
-		Operator   graphql.String
-		PubkeyG1_X graphql.String   `graphql:"pubkeyG1_X"`
-		PubkeyG1_Y graphql.String   `graphql:"pubkeyG1_Y"`
-		PubkeyG2_X []graphql.String `graphql:"pubkeyG2_X"`
-		PubkeyG2_Y []graphql.String `graphql:"pubkeyG2_Y"`
-		ID         graphql.String   `graphql:"id"`
-	} `graphql:"operator(id: $id)"`
-}
-
-func NewAvsReader(c config.AVSConfig, ethClient eth.Client, logger logging.Logger) (*AvsReader, error) {
+func NewAvsReader(c config.AVSConfig, ethClient eth.Client, logger logging.Logger, graphClient *graphql.GraphQLClient) (*AvsReader, error) {
 	regrAddr := c.RegistryCoordinatorAddr
 	osAddr := c.OperatorStateRetrieverAddr
 
@@ -65,6 +50,7 @@ func NewAvsReader(c config.AVSConfig, ethClient eth.Client, logger logging.Logge
 	return &AvsReader{
 		AvsServiceBindings: avsManagerBindings,
 		AvsRegistryReader:  avsRegistryReader,
+		graphClient:        graphClient,
 	}, nil
 }
 
@@ -117,7 +103,7 @@ func (ar *AvsReader) GetOperatorsAvsStateAtBlock(ctx context.Context, quorumNumb
 
 	for quorumIdx, quorumNum := range quorumNumbers {
 		for _, operator := range operatorsStakesInQuorums[quorumIdx] {
-			info, err := ar.getOperatorInfo(ctx, operator.OperatorId)
+			info, err := ar.graphClient.GetOperatorInfo(ctx, operator.OperatorId)
 			if err != nil {
 				return nil, utils.WrapError("Failed to find pubkeys for operator while building operatorsAvsState", err)
 			}
@@ -166,78 +152,3 @@ func (ar *AvsReader) GetQuorumsAvsStateAtBlock(ctx context.Context, quorumNumber
 	return quorumsAvsState, nil
 }
 
-func (ar *AvsReader) getOperatorInfo(ctx context.Context, opId sdktypes.OperatorId) (sdktypes.OperatorInfo, error) {
-
-	fmt.Println("I am at graphql client")
-	fmt.Println(opId)
-
-	operatorId := hex.EncodeToString(opId[:])
-
-	fmt.Println(operatorId)
-	fmt.Println(fmt.Sprintf("0x%s", operatorId))
-
-	// Create a new GraphQL client with the specified endpoint
-	client := graphql.NewClient("https://api.studio.thegraph.com/query/41099/cedro-avs/v0.0.3h", nil)
-
-	// Define the query variables
-	vars := map[string]interface{}{
-		"id": graphql.String(fmt.Sprintf("0x%s", operatorId)),
-	}
-
-	// Create an instance of the query struct to hold the response data
-	var query OperatorQuery
-
-	// Execute the query
-	err := client.Query(ctx, &query, vars)
-	if err != nil {
-		log.Fatalf("failed to execute query: %v", err)
-	}
-
-	opInfo, err := convertIndexedOperatorInfoGqlToOperatorInfo(&query)
-
-	if err != nil {
-		log.Fatal("Errro converting gql result", err)
-	}
-
-	return *opInfo, nil
-}
-
-func convertIndexedOperatorInfoGqlToOperatorInfo(operator *OperatorQuery) (*sdktypes.OperatorInfo, error) {
-
-	pubkeyG1 := new(bn254.G1Affine)
-	_, err := pubkeyG1.X.SetString(string(operator.Operator.PubkeyG1_X))
-	if err != nil {
-		return nil, err
-	}
-	_, err = pubkeyG1.Y.SetString(string(operator.Operator.PubkeyG1_Y))
-	if err != nil {
-		return nil, err
-	}
-
-	pubkeyG2 := new(bn254.G2Affine)
-	_, err = pubkeyG2.X.A1.SetString(string(operator.Operator.PubkeyG2_X[0]))
-	if err != nil {
-		return nil, err
-	}
-	_, err = pubkeyG2.X.A0.SetString(string(operator.Operator.PubkeyG2_X[1]))
-	if err != nil {
-		return nil, err
-	}
-	_, err = pubkeyG2.Y.A1.SetString(string(operator.Operator.PubkeyG2_Y[0]))
-	if err != nil {
-		return nil, err
-	}
-	_, err = pubkeyG2.Y.A0.SetString(string(operator.Operator.PubkeyG2_Y[1]))
-	if err != nil {
-		return nil, err
-	}
-
-	return &sdktypes.OperatorInfo{
-		Socket: sdktypes.Socket(""),
-		Pubkeys: sdktypes.OperatorPubkeys{
-			G1Pubkey: &bls.G1Point{G1Affine: pubkeyG1},
-			G2Pubkey: &bls.G2Point{G2Affine: pubkeyG2},
-		},
-	}, nil
-
-}

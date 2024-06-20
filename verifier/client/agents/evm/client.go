@@ -6,8 +6,9 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/Cedro-Finance/CedroAVS/api/graphql"
+	agentpod "github.com/Cedro-Finance/CedroAVS/core/bindings/AgentPod"
 	"github.com/Cedro-Finance/CedroAVS/core/logger"
-	"github.com/Cedro-Finance/CedroAVS/verifier/client/agents/evm/abi"
 	"github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
 	"github.com/Cedro-Finance/CedroAVS/verifier/common"
 	"github.com/Cedro-Finance/CedroAVS/verifier/config"
@@ -33,6 +34,8 @@ func NewClient(config config.ChainConfig, logger logging.Logger) common.IAgentPo
 
 	ethClient := ethclient.NewClient(rpc)
 
+	gClient := graphql.NewGraphQLClient(config.GraphqlUrl, nil)
+
 	return &Client{
 		name:          config.Name,
 		chain:         config.Chain,
@@ -40,6 +43,7 @@ func NewClient(config config.ChainConfig, logger logging.Logger) common.IAgentPo
 		blockFinality: config.BlockFinality,
 		blockTime:     time.Duration(config.BlockTime) * time.Second,
 		logger:        logger,
+		GraphClient:   gClient,
 	}
 }
 
@@ -50,11 +54,16 @@ type Client struct {
 	blockFinality uint64
 	blockTime     time.Duration //in second
 	logger        logging.Logger
-	agent         *abi.AgentPod
+	agent         *agentpod.AgentPod
+	GraphClient   *graphql.GraphQLClient
 }
 
 func (c *Client) GetCurrentBlock(ctx context.Context) (uint64, error) {
 	return c.eth.BlockNumber(ctx)
+}
+
+func (c *Client)GetGraphClient() *graphql.GraphQLClient {
+	return c.GraphClient
 }
 
 func (c *Client) GetFinalizedBlock(ctx context.Context) (uint64, error) {
@@ -94,8 +103,8 @@ func (c *Client) FilterLogs(
 	return logs, err
 }
 
-func (c *Client) NewAgentContract(addr ethCommon.Address) *abi.AgentPod {
-	agent, err := abi.NewAgentPod(addr, c.eth)
+func (c *Client) NewAgentContract(addr ethCommon.Address) *agentpod.AgentPod {
+	agent, err := agentpod.NewAgentPod(addr, c.eth)
 
 	if err != nil {
 		fmt.Println("Contract not initialized")
@@ -108,7 +117,7 @@ func (c *Client) NewAgentContract(addr ethCommon.Address) *abi.AgentPod {
 }
 
 func (c *Client) InitializeAgentPod(addr ethCommon.Address) {
-	agent, err := abi.NewAgentPod(addr, c.eth)
+	agent, err := agentpod.NewAgentPod(addr, c.eth)
 
 	if err != nil {
 		c.logger.Errorf("Error while initializing contract", "err", err)

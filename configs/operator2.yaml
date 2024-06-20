@@ -1,0 +1,12 @@
+operator:
+    address: 0xab2b635f000d55e6b6cf3204e260c8ededf28b0b
+    earnings_receiver_address: 0xab2b635f000d55e6b6cf3204e260c8ededf28b0b
+    delegation_approver_address: "0x0000000000000000000000000000000000000000"
+    staker_opt_out_window_blocks: 0
+    metadata_url: "https://www.jsonkeeper.com/b/7NTZ"
+el_delegation_manager_address: 0xA44151489861Fe9e3055d95adC98FbD462B948e7
+eth_rpc_url: https://ethereum-holesky-rpc.publicnode.com
+private_key_store_path: /Users/rabindraregmi/.eigenlayer/operator_keys/cedroavs2.ecdsa.key.json
+signer_type: local_keystore
+chain_id: 17000
+

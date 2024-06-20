@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Cedro-Finance/CedroAVS/aggregator/rpc"
+	"github.com/Cedro-Finance/CedroAVS/api/graphql"
 	"github.com/Cedro-Finance/CedroAVS/core"
 	avs "github.com/Cedro-Finance/CedroAVS/core/avsClient"
 	"github.com/Cedro-Finance/CedroAVS/core/config"
@@ -39,6 +40,8 @@ type AggregatorService struct {
 
 	nextTaskIndex   types.TaskIndex
 	nextTaskIndexMu sync.RWMutex
+
+	graphClient *graphql.GraphQLClient
 }
 
 func NewAggregatorService(c *config.Config, logger logging.Logger) (*AggregatorService, error) {
@@ -50,7 +53,9 @@ func NewAggregatorService(c *config.Config, logger logging.Logger) (*AggregatorS
 		return nil, err
 	}
 
-	avsReader, err := avs.NewAvsReader(c.AVS, ethClient, logger)
+	graphClient := graphql.NewGraphQLClient(c.GraphQLUrl, logger)
+
+	avsReader, err := avs.NewAvsReader(c.AVS, ethClient, logger, graphClient)
 
 	if err != nil {
 		logger.Errorf("Error while creating Avs reader", "err", err)
@@ -91,6 +96,7 @@ func NewAggregatorService(c *config.Config, logger logging.Logger) (*AggregatorS
 		tasks:                 make(map[types.TaskIndex]*core.BalanceTaskInfo),
 		finishedTasks:         make(map[[32]byte]*FinishedTaskStatus),
 		cfg:                   c,
+		graphClient:           graphClient,
 	}, nil
 
 }
@@ -171,15 +177,6 @@ func (ags *AggregatorService) CreateTask(req *core.CreateTaskRequest) (*core.Cre
 	}
 	return &core.CreateTaskResponse{Info: *task}, nil
 }
-
-// func convertToFixedByteArray(b []byte) ([32]byte, error) {
-// 	if len(b) != 32 {
-// 		return [32]byte{}, fmt.Errorf("byte slice is not 32 bytes long")
-// 	}
-// 	var array [32]byte
-// 	copy(array[:], b)
-// 	return array, nil
-// }
 
 func (ags *AggregatorService) ProcessSignedTaskResponse(req *core.SignedTaskRespRequest) (*core.SignedTaskRespResponse, error) {
 	ags.logger.Info("New Signature Received from operator", "signature", req.BlsSignature.Serialize(), "operatorId", req.OperatorId, "balance", req.Balance)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/Cedro-Finance/CedroAVS/api/graphql"
 	"github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -11,4 +12,5 @@ import (
 type IAgentPodClient interface {
 	InitializeAgentPod(addr common.Address)
 	GetBalance(context.Context, *avs.Request, chan<- *big.Int)
+	GetGraphClient() *graphql.GraphQLClient
 }

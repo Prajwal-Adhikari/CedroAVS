@@ -167,8 +167,6 @@ func (b *BLSAggregatorService) singleTaskAggregatorGoroutineFunc(
 ) {
 	defer b.closeTaskGoroutine(taskIndex)
 
-	fmt.Println("Single Goroutine is initialized")
-
 	quorumThresholdPercentagesMap := make(map[types.QuorumNum]types.QuorumThresholdPercentage)
 	for i, quorumNumber := range quorumNumbers {
 		quorumThresholdPercentagesMap[quorumNumber] = quorumThresholdPercentages[i]

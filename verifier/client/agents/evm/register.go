@@ -5,6 +5,7 @@ import (
 )
 
 func init() {
-	operator.RegisteredClients["ethereum"] = NewClient
-	operator.RegisteredClients["avalanche"] = NewClient
+	operator.RegisteredClients["ETH"] = NewClient
+	// operator.RegisteredClients["binance"] = NewClient
+	// operator.RegisteredClients["sepolia"] = NewClient
 }

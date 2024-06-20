@@ -1,4 +1,4 @@
-package operator
+package rpc
 
 import (
 	// "fmt"
@@ -146,14 +146,6 @@ func (cl *AggregatorGRpcClient) SendSignedTaskResponse(signedTaskResponse *core.
 	}
 
 	fmt.Println(response)
-
-	// res := alert.AlertResponse{
-	// 	Code:      0,
-	// 	TaskIndex: signedTaskResponse.Alert.TaskIndex,
-	// }
-	// copy(res.TxHash[:], response.GetTxHash()[:32])
-
-	// resChan <- res
 
 	return nil
 }

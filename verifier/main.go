@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 
 	// "fmt"
@@ -11,8 +12,27 @@ import (
 	_ "github.com/Cedro-Finance/CedroAVS/verifier/client/agents/evm"
 )
 
+var (
+	configFile string
+)
+
+type FlagArgs struct {
+	ConfigFile string
+}
+
+func init() {
+	flag.StringVar(&configFile, "config", "", "config file")
+}
+
 func main() {
-	configFile, err := config.LoadConfig("config.yaml")
+
+	flag.Parse()
+
+	flagArgs := &FlagArgs{
+		ConfigFile: configFile,
+	}
+
+	configFile, err := config.LoadConfig(flagArgs.ConfigFile)
 
 	if err != nil {
 		fmt.Print(err)
@@ -22,5 +42,5 @@ func main() {
 
 	ctx := context.Background()
 
-	operator.StartRelay(ctx, configFile)
+	operator.Start(ctx, configFile)
 }

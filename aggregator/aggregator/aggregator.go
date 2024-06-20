@@ -10,9 +10,9 @@ import (
 	"github.com/Cedro-Finance/CedroAVS/aggregator/rpc"
 	"github.com/Cedro-Finance/CedroAVS/core"
 	avs "github.com/Cedro-Finance/CedroAVS/core/avsClient"
+	cedroservicemanager "github.com/Cedro-Finance/CedroAVS/core/bindings/CedroServiceManager"
 	"github.com/Cedro-Finance/CedroAVS/core/config"
 	"github.com/Cedro-Finance/CedroAVS/core/logger"
-	abi "github.com/Cedro-Finance/CedroAVS/verifier/client/avs/abi"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/eth"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/wallet"
 	"github.com/Layr-Labs/eigensdk-go/chainio/txmgr"
@@ -160,15 +160,15 @@ func (agg *Aggregator) sendAggregatedResponseToContract(blsAggServiceResp BLSAgg
 		// panicing to help with debugging (fail fast), but we shouldn't panic if we run this in production
 		panic(blsAggServiceResp.Err)
 	}
-	nonSignerPubkeys := []abi.BN254G1Point{}
+	nonSignerPubkeys := []cedroservicemanager.BN254G1Point{}
 	for _, nonSignerPubkey := range blsAggServiceResp.NonSignersPubkeysG1 {
 		nonSignerPubkeys = append(nonSignerPubkeys, core.ConvertToBN254G1Point(nonSignerPubkey))
 	}
-	quorumApks := []abi.BN254G1Point{}
+	quorumApks := []cedroservicemanager.BN254G1Point{}
 	for _, quorumApk := range blsAggServiceResp.QuorumApksG1 {
 		quorumApks = append(quorumApks, core.ConvertToBN254G1Point(quorumApk))
 	}
-	nonSignerStakesAndSignature := abi.IBLSSignatureCheckerNonSignerStakesAndSignature{
+	nonSignerStakesAndSignature := cedroservicemanager.IBLSSignatureCheckerNonSignerStakesAndSignature{
 		NonSignerPubkeys:             nonSignerPubkeys,
 		QuorumApks:                   quorumApks,
 		ApkG2:                        core.ConvertToBN254G2Point(blsAggServiceResp.SignersApkG2),

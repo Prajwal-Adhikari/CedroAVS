@@ -1,19 +1,37 @@
 chains:
-  - name: avalanche
-    chain: evm
+  - name: ethereum
+    chain: evm 
+    chain_id: ETH
     node_url: https://ethereum-holesky-rpc.publicnode.com
     block_finality: 1
     block_time: 12
+    graphql_url: https://api.studio.thegraph.com/query/41099/cedro-avs/v0.0.4k
 
-  - name: ethereum
+
+  - name: ethereum-sepolia
+    chain_id: SEP
     chain: evm 
     node_url: https://ethereum-holesky-rpc.publicnode.com
     block_finality: 1
     block_time: 12
+    graphql_url: https://api.studio.thegraph.com/query/41099/avs-sepolia/v0.0.4j
+
+  
+  - name: binance
+    chain_id: evm
+    chainId: BNB
+    node_url: https://ethereum-holesky-rpc.publicnode.com
+    block_finality: 1
+    block_time: 12
+    graphql_url: https://api.studio.thegraph.com/query/41099/avs-bsc/v0.0.4j
+  
+
 
 keystore:
-  path: /Users/rabindraregmi/.eigenlayer/operator_keys/cedroavs.ecdsa.key.json
+  path: /Users/rabindraregmi/.eigenlayer/operator_keys/cedroavs2.ecdsa.key.json
   password: Cedrolabs@123
+  bls_path: /Users/rabindraregmi/.eigenlayer/operator_keys/cedroavs2.bls.key.json
+  bls_password: Cedrolabs@123
 
 # keystore: 
 #   path: /Users/rabindraregmi/Library/Ethereum/keystore/UTC--2024-06-06T14-28-12.121486000Z--e241c99948ec98c155eaf072b47da3c4ed208f83
@@ -24,9 +42,10 @@ ethereum:
   block_finality : 1
   block_time: 12
 
-agent_manager: "0x260AE5D6aC7E18C6753d4a9A332af7ABb4cE8542"
+agent_manager: "0xD0621425d41cb00989d44D84FE10eF35FB0D879B"
 agent_manager_poll_duration: 10
-agent_manager_start_height: 1705774
+agent_manager_start_height: 1774858
+graphql_url: https://api.studio.thegraph.com/query/41099/cedro-avs/v0.0.4k
 
 
 avs:

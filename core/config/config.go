@@ -59,6 +59,7 @@ type ConfigRaw struct {
 	AgentManager             string        `yaml:"agent_manager"`
 	AgentManagerStartHeight  uint64        `yaml:"agent_manager_start_height"`
 	AgentManagerPollDuration uint64        `yaml:"agent_manager_poll_duration"`
+	GraphAPIURL              string        `yaml:"graphql_url"`
 }
 
 type AVSConfig struct {
@@ -86,6 +87,7 @@ type Config struct {
 	EthConfig                EthConfig
 	AgentManagerStartHeight  uint64
 	AgentManagerPollDuration uint64
+	GraphQLUrl               string
 }
 
 var config *Config
@@ -93,6 +95,9 @@ var config *Config
 type KeyStore struct {
 	Path     string `yaml:"path"`
 	Password string `yaml:"password"`
+
+	BlsPath     string `yaml:"bls_path"`
+	BlsPassword string `yaml:"bls_password"`
 }
 
 func GetConfig() *Config {
@@ -114,7 +119,8 @@ func LoadConfig(path string) (*Config, error) {
 		panic("could not unmarshal config")
 	}
 
-	blsKeypair, err := bls.NewKeyPairFromString("2523408640174661621672680781521680564539321153090028238087879155142149870407")
+
+	blsKeypair, err := bls.ReadPrivateKeyFromFile(configRaw.KeyStore.BlsPath, configRaw.KeyStore.BlsPassword)
 
 	if err != nil {
 		return nil, err
@@ -146,6 +152,7 @@ func LoadConfig(path string) (*Config, error) {
 		AgentManagerAddr:         common.HexToAddress(configRaw.AgentManager),
 		AgentManagerStartHeight:  configRaw.AgentManagerStartHeight,
 		AgentManagerPollDuration: configRaw.AgentManagerPollDuration,
+		GraphQLUrl:               configRaw.GraphAPIURL,
 		EthConfig: EthConfig{
 			RpcUrl:        configRaw.EthConfig.RpcUrl,
 			BlockFinality: configRaw.EthConfig.BlockFinality,
@@ -153,4 +160,8 @@ func LoadConfig(path string) (*Config, error) {
 			WsUrl:         configRaw.EthConfig.WsUrl,
 		},
 	}, nil
+}
+
+type FlagArgs struct {
+	ConfigFile string
 }

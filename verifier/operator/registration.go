@@ -8,16 +8,15 @@ import (
 	"time"
 
 	"github.com/Cedro-Finance/CedroAVS/core"
+	contractRegistryCoordinator "github.com/Layr-Labs/eigensdk-go/contracts/bindings/RegistryCoordinator"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func (o *Operator) RegisterOperatorWithAVS(operatorEcdsaKeyPair *ecdsa.PrivateKey) error {
 
 	// hardcode these things for now
-	quorumNumbers := []byte{1}
+	quorumNumbers := []byte{0}
 	socket := ""
-
-
 
 	fmt.Println(core.ConvertToBN254G1Point(o.blsKeyPair.GetPubKeyG1()))
 	fmt.Println(core.ConvertToBN254G2Point(o.blsKeyPair.GetPubKeyG2()))
@@ -62,6 +61,28 @@ func (o *Operator) RegisterOperatorWithAVS(operatorEcdsaKeyPair *ecdsa.PrivateKe
 		return err
 	}
 	o.logger.Infof("Registered operator with avs registry coordinator.")
+
+	return nil
+}
+
+func (o *Operator) DeregisterOperatorWithAVS(operatorEcdsaKeypair *ecdsa.PrivateKey) error {
+	quorumNumbers := []byte{0}
+
+	o.logger.Info(
+		"DeregisterOperatorInQuorumWithAVSRegistryCoordinator",
+		"quorumNumbers", quorumNumbers[0],
+	)
+
+	quorumNumbersToSDK := core.ConvertQuorumNumbersFromBytes(quorumNumbers)
+
+	_, err := o.avs.AvsWriter.DeregisterOperator(
+		context.Background(), quorumNumbersToSDK, contractRegistryCoordinator.BN254G1Point{},
+	)
+	if err != nil {
+		o.logger.Error("Unable to register operator with avs registry coordinator", err)
+		return err
+	}
+	o.logger.Infof("Deregistered operator with avs registry coordinator.")
 
 	return nil
 }

@@ -6,12 +6,24 @@ import (
 	"math/big"
 	"time"
 
-	abi "github.com/Cedro-Finance/CedroAVS/verifier/client/avs/abi"
+	agentmanager "github.com/Cedro-Finance/CedroAVS/core/bindings/AgentManager"
+	cedroservicemanager "github.com/Cedro-Finance/CedroAVS/core/bindings/CedroServiceManager"
 	"github.com/Cedro-Finance/CedroAVS/verifier/config"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/eth"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+)
+
+const (
+	defaultBlockTime = time.Duration(12) * time.Second
+
+	defaultStartBlock                    = 1705750
+	defaultHeightDifferenceForFilterLogs = 100
+	defaultRequestId                     = 1
+
+	defaultPollDuration = 5 * time.Second
 )
 
 type AgentManager struct {
@@ -26,12 +38,12 @@ type AgentManager struct {
 
 	Logger logging.Logger
 
-	Contract *abi.AgentManager
+	Contract *agentmanager.AgentManager
 }
 
 func NewAgentManager(cfg *config.Config, logger logging.Logger, ethClient eth.Client) (*AgentManager, error) {
 
-	contract, err := abi.NewAgentManager(cfg.AgentManagerAddr, ethClient)
+	contract, err := agentmanager.NewAgentManager(cfg.AgentManagerAddr, ethClient)
 
 	fmt.Println(cfg.AgentManagerAddr)
 
@@ -53,8 +65,10 @@ func NewAgentManager(cfg *config.Config, logger logging.Logger, ethClient eth.Cl
 
 }
 
-func (ag *AgentManager) PollEvents(ctx context.Context, ch chan<- *Request) {
+func (ag *AgentManager) PollEvents(ctx context.Context, ch chan<- *Request, serviceManager *cedroservicemanager.CedroServiceManager) {
 	dur := ag.PollDuration
+
+	fmt.Println(dur)
 
 	if dur == 0 {
 		dur = defaultPollDuration
@@ -73,11 +87,10 @@ func (ag *AgentManager) PollEvents(ctx context.Context, ch chan<- *Request) {
 		}
 
 	L1:
-
 		for {
 			currentBlock, err := ag.Eth.BlockNumber(ctx)
 
-			fmt.Println(currentBlock)
+			fmt.Println(currentBlock, ag.NextBlockHeight)
 
 			if err != nil {
 				ag.Logger.Error("Error while getting current block", "err", err)
@@ -85,11 +98,14 @@ func (ag *AgentManager) PollEvents(ctx context.Context, ch chan<- *Request) {
 				break L1
 			}
 
+			if currentBlock%100 == 0 {
+				ag.Logger.Info("Polling Block", "blockk", currentBlock)
+			}
+
 			finalizedBlock := currentBlock - ag.BlockFinality
 
 			if finalizedBlock < ag.NextBlockHeight {
 				diff := ag.NextBlockHeight - finalizedBlock
-
 				time.Sleep((time.Duration(diff) * ag.BlockTime))
 			}
 
@@ -103,7 +119,7 @@ func (ag *AgentManager) PollEvents(ctx context.Context, ch chan<- *Request) {
 				logs, err := ag.Eth.FilterLogs(ctx, ethereum.FilterQuery{
 					FromBlock: big.NewInt(int64(startHeight)),
 					ToBlock:   big.NewInt(int64(endHeight)),
-					Topics:    [][]common.Hash{{common.HexToHash("0xa08d0dfd9bd009969096b75b05bd74056e062358eac1eb43af41815db2bd1b77")}},
+					Topics:    [][]common.Hash{{common.HexToHash("0xf1f6ae32e492ed94fefcd957830c206af14cae19c30c54be0814d27e8cdb5ac2")}},
 					Addresses: []common.Address{ag.Address},
 				})
 
@@ -116,20 +132,34 @@ func (ag *AgentManager) PollEvents(ctx context.Context, ch chan<- *Request) {
 					parsed, err := ag.Contract.ParseDeviationCheck(log)
 
 					if err != nil {
+						ag.Logger.Error("Error while parsing deviation event", "err", err)
 						break L1
 					}
 
 					blockInfo, err := ag.Eth.BlockByHash(ctx, log.BlockHash)
 
 					if err != nil {
+						ag.Logger.Error("Error while getting block inforamtion", "err", err)
 						break L1
 					}
 
-					ag.Logger.Infof("Deviation Request Received",
+					ag.Logger.Info("Deviation Request Received",
 						"RequestId", parsed.RequestID.String(),
 						"Agent Address", parsed.Agent,
 						"BlockNumber", log.BlockNumber,
 					)
+
+					lastReqId, err := serviceManager.AgentsDeviationRequestId(&bind.CallOpts{}, parsed.Agent)
+
+					if err != nil {
+						ag.Logger.Error("Error while fetching last requestId", "err", err)
+						break L1
+					}
+
+					if lastReqId.Cmp(parsed.RequestID) > -1 {
+						ag.Logger.Warn("Request Id already processed", "reqId", parsed.RequestID.String(), "agent", parsed.Agent.Hex())
+						break
+					}
 
 					ch <- &Request{
 						ReqId:                parsed.RequestID,
