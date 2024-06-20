@@ -98,6 +98,7 @@ contract RegistryCoordinator is
      */
     function registerOperator(
         bytes calldata quorumNumbers,
+        string calldata socket,
         IBLSApkRegistry.PubkeyRegistrationParams calldata params,
         SignatureWithSaltAndExpiry memory operatorSignature
     ) external {
@@ -145,6 +146,7 @@ contract RegistryCoordinator is
      */
     function registerOperatorWithChurn(
         bytes calldata quorumNumbers,
+        string calldata socket,
         IBLSApkRegistry.PubkeyRegistrationParams calldata params,
         OperatorKickParam[] calldata operatorKickParams,
         SignatureWithSaltAndExpiry memory churnApproverSignature,
@@ -941,6 +943,7 @@ contract RegistryCoordinator is
             blockNumber >= quorumBitmapUpdate.updateBlockNumber,
             "RegistryCoordinator.getQuorumBitmapAtBlockNumberByIndex: quorumBitmapUpdate is from after blockNumber"
         );
+
         require(
             quorumBitmapUpdate.nextUpdateBlockNumber == 0 ||
                 blockNumber < quorumBitmapUpdate.nextUpdateBlockNumber,
