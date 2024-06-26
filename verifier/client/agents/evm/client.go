@@ -13,13 +13,11 @@ import (
 	"github.com/Cedro-Finance/CedroAVS/verifier/common"
 	"github.com/Cedro-Finance/CedroAVS/verifier/config"
 	"github.com/Layr-Labs/eigensdk-go/logging"
-	ether "github.com/ethereum/go-ethereum"
 
 	// ethAbi "github.com/ethereum/go-ethereum/accounts/abi"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethCommon "github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -34,36 +32,42 @@ func NewClient(config config.ChainConfig, logger logging.Logger) common.IAgentPo
 
 	ethClient := ethclient.NewClient(rpc)
 
-	gClient := graphql.NewGraphQLClient(config.GraphqlUrl, nil)
+	gClient := graphql.NewGraphQLClient(config.GraphqlUrl, logger)
 
 	return &Client{
-		name:          config.Name,
-		chain:         config.Chain,
-		eth:           ethClient,
-		blockFinality: config.BlockFinality,
-		blockTime:     time.Duration(config.BlockTime) * time.Second,
-		logger:        logger,
+		Name:          config.Name,
+		Chain:         config.Chain,
+		ChainId:       config.ChainId,
+		Eth:           ethClient,
+		BlockFinality: config.BlockFinality,
+		BlockTime:     time.Duration(config.BlockTime) * time.Second,
+		Logger:        logger,
 		GraphClient:   gClient,
 	}
 }
 
 type Client struct {
-	name          string
-	chain         string
-	eth           *ethclient.Client
-	blockFinality uint64
-	blockTime     time.Duration //in second
-	logger        logging.Logger
-	agent         *agentpod.AgentPod
+	Name          string
+	Chain         string
+	Eth           *ethclient.Client
+	BlockFinality uint64
+	BlockTime     time.Duration //in second
+	Logger        logging.Logger
+	Agent         *agentpod.AgentPod
 	GraphClient   *graphql.GraphQLClient
+	ChainId       string
 }
 
 func (c *Client) GetCurrentBlock(ctx context.Context) (uint64, error) {
-	return c.eth.BlockNumber(ctx)
+	return c.Eth.BlockNumber(ctx)
 }
 
-func (c *Client)GetGraphClient() *graphql.GraphQLClient {
+func (c *Client) GetGraphClient() *graphql.GraphQLClient {
 	return c.GraphClient
+}
+
+func (c *Client) GetChainId() string {
+	return c.Chain
 }
 
 func (c *Client) GetFinalizedBlock(ctx context.Context) (uint64, error) {
@@ -75,57 +79,33 @@ func (c *Client) GetFinalizedBlock(ctx context.Context) (uint64, error) {
 		return 0, err
 	}
 
-	return currentBlock - c.blockFinality, nil
+	return currentBlock - c.BlockFinality, nil
 
-}
-
-func (c *Client) NonceAt(ctx context.Context, account ethCommon.Address, blockNumber *big.Int) (uint64, error) {
-	return c.eth.NonceAt(ctx, account, blockNumber)
-}
-
-func (c *Client) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
-	return c.eth.SuggestGasPrice(ctx)
-}
-
-func (c *Client) FilterLogs(
-	ctx context.Context, fromHeight uint64, toHeight uint64,
-	contractAddress ethCommon.Address, topics ethCommon.Hash) ([]types.Log, error) {
-
-	logs, err := c.eth.FilterLogs(ctx, ether.FilterQuery{
-		FromBlock: big.NewInt(int64(fromHeight)),
-		ToBlock:   big.NewInt(int64(toHeight)),
-		Addresses: []ethCommon.Address{contractAddress},
-		Topics:    [][]ethCommon.Hash{{topics}},
-	})
-	if err != nil {
-		return nil, err
-	}
-	return logs, err
 }
 
 func (c *Client) NewAgentContract(addr ethCommon.Address) *agentpod.AgentPod {
-	agent, err := agentpod.NewAgentPod(addr, c.eth)
+	agent, err := agentpod.NewAgentPod(addr, c.Eth)
 
 	if err != nil {
 		fmt.Println("Contract not initialized")
 		panic(err)
 	}
 
-	c.agent = agent
+	c.Agent = agent
 
 	return agent
 }
 
 func (c *Client) InitializeAgentPod(addr ethCommon.Address) {
-	agent, err := agentpod.NewAgentPod(addr, c.eth)
+	agent, err := agentpod.NewAgentPod(addr, c.Eth)
 
 	if err != nil {
-		c.logger.Errorf("Error while initializing contract", "err", err)
+		c.Logger.Errorf("Error while initializing contract", "err", err)
 
 		return
 	}
 
-	c.agent = agent
+	c.Agent = agent
 }
 
 func (c *Client) GetBlockFromTimestamp(ctx context.Context, timestamp uint64) (uint64, error) {
@@ -137,7 +117,7 @@ func (c *Client) GetBlockFromTimestamp(ctx context.Context, timestamp uint64) (u
 		return 0, err
 	}
 
-	block, err := c.eth.BlockByNumber(ctx, big.NewInt(int64(currentBlock)))
+	block, err := c.Eth.BlockByNumber(ctx, big.NewInt(int64(currentBlock)))
 
 	if err != nil {
 		fmt.Println("Error getting block info")
@@ -146,7 +126,7 @@ func (c *Client) GetBlockFromTimestamp(ctx context.Context, timestamp uint64) (u
 
 	timediff := block.Time() - timestamp
 
-	blockDiff := timediff / uint64(c.blockTime)
+	blockDiff := timediff / uint64(c.BlockTime)
 
 	finalBlock := currentBlock + blockDiff
 
@@ -154,38 +134,38 @@ func (c *Client) GetBlockFromTimestamp(ctx context.Context, timestamp uint64) (u
 }
 
 func (c *Client) GetBalance(ctx context.Context, reqEvent *avs.Request, balanceChan chan<- *big.Int) {
-	if c.agent == nil {
-		fmt.Print("Agent not initialized")
-	}
+	var balance *big.Int
 
 	finalizedBlock, err := c.GetFinalizedBlock(ctx)
 
 	if err != nil {
-		logger.GetLogger().Error("Error while getting finalized block")
+		c.Logger.Error("Error while getting finalized block", "chain", c.ChainId, "err", err)
+		balanceChan <- nil
+		return
 	}
 
 	blockByTimestamp, err := c.GetBlockFromTimestamp(ctx, reqEvent.Timestamp)
 
 	if err != nil {
-		logger.GetLogger().Error("Error whole geting block from timestamp")
+		c.Logger.Error("Error while getting block by timestamp", "chain", c.ChainId, "err", err)
+		balanceChan <- nil
+		return
 	}
 
 	if blockByTimestamp > finalizedBlock {
-		time.Sleep(time.Duration(blockByTimestamp-finalizedBlock) * c.blockTime)
+		time.Sleep(time.Duration(blockByTimestamp-finalizedBlock) * c.BlockTime)
 	}
 
-	balance, err := c.agent.GetBalanceOfAgent(&bind.CallOpts{
+	balance, err = c.Agent.GetBalanceOfAgent(&bind.CallOpts{
 		BlockNumber: big.NewInt(int64(blockByTimestamp)),
 	})
 
 	if err != nil {
-		fmt.Println("Errro while getting balance")
-
-	}
-
-	if balance == nil {
-		balance = big.NewInt(0)
+		c.Logger.Error("Error while getting balance", "chain", c.ChainId, "err", err)
+		balanceChan <- nil
+		return
 	}
 
 	balanceChan <- balance
+
 }

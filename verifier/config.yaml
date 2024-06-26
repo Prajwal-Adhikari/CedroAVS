@@ -11,19 +11,19 @@ chains:
   - name: ethereum-sepolia
     chain_id: SEP
     chain: evm 
-    node_url: https://ethereum-holesky-rpc.publicnode.com
+    node_url: https://rpc.sepolia.ethpandaops.io
     block_finality: 1
     block_time: 12
-    graphql_url: https://api.studio.thegraph.com/query/41099/avs-sepolia/v0.0.4j
+    graphql_url: https://api.studio.thegraph.com/query/41099/avs-sepolia/v0.0.4k
 
   
   - name: binance
-    chain_id: evm
-    chainId: BNB
-    node_url: https://ethereum-holesky-rpc.publicnode.com
+    chain: evm
+    chain_id: BNB
+    node_url: https://bsc-testnet-rpc.publicnode.com
     block_finality: 1
     block_time: 12
-    graphql_url: https://api.studio.thegraph.com/query/41099/avs-bsc/v0.0.4j
+    graphql_url: https://api.studio.thegraph.com/query/41099/avs-bsc/v0.0.4k
   
 
 
@@ -44,7 +44,7 @@ ethereum:
 
 agent_manager: "0xD0621425d41cb00989d44D84FE10eF35FB0D879B"
 agent_manager_poll_duration: 10
-agent_manager_start_height: 1774450
+agent_manager_start_height: 1804322
 graphql_url: https://api.studio.thegraph.com/query/41099/cedro-avs/v0.0.4k
 
 

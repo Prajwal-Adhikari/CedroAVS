@@ -8,10 +8,10 @@ import (
 
 	// "github.com/Cedro-Finance/CedroAVS/verifier/client/agents"
 	"github.com/Cedro-Finance/CedroAVS/api/graphql"
+	"github.com/Cedro-Finance/CedroAVS/core"
 	"github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
 	"github.com/Cedro-Finance/CedroAVS/verifier/common"
 	"github.com/Cedro-Finance/CedroAVS/verifier/config"
-	"github.com/Cedro-Finance/CedroAVS/verifier/keys"
 	"github.com/Cedro-Finance/CedroAVS/verifier/rpc"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/eth"
@@ -19,6 +19,7 @@ import (
 	"github.com/Layr-Labs/eigensdk-go/chainio/txmgr"
 	sdkEcdsa "github.com/Layr-Labs/eigensdk-go/crypto/ecdsa"
 	"github.com/Layr-Labs/eigensdk-go/signerv2"
+	"github.com/Layr-Labs/eigensdk-go/types"
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
@@ -28,10 +29,16 @@ import (
 )
 
 var RegisteredClients = map[string]func(config.ChainConfig, sdklogging.Logger) common.IAgentPodClient{}
+var maxRetry = 5
+
+type OperatorDeviationTask struct {
+	req     *avs.Request
+	reqInfo *core.BalanceTaskInfo
+	retries uint64
+}
 
 type Operator struct {
 	avs        *avs.AVSClient
-	keystore   *keys.KeyStore
 	blsKeyPair *bls.KeyPair
 
 	agentManager              *avs.AgentManager
@@ -41,8 +48,39 @@ type Operator struct {
 	gRPCAggreagatorIpPortAddr string
 	gRpcClient                *rpc.AggregatorGRpcClient
 	chainAgents               map[string]common.IAgentPodClient
+	graphClient               *graphql.GraphQLClient
 
-	graphClient *graphql.GraphQLClient
+	balanceTasks     map[sdktypes.TaskIndex](*OperatorDeviationTask)
+	balanceTaskMutex sync.RWMutex
+
+	balanceReqCh chan *avs.Request
+	errCh        chan *DeviationError
+}
+
+func (o *Operator) GetTaskByIndex(taskIndex sdktypes.TaskIndex) *OperatorDeviationTask {
+	o.balanceTaskMutex.RLock()
+	defer o.balanceTaskMutex.RUnlock()
+
+	res := o.balanceTasks[taskIndex]
+
+	return res
+}
+
+func (o *Operator) CreateOperatorTask(taskInfo *core.BalanceTaskInfo, req *avs.Request) (*OperatorDeviationTask, error) {
+	task := o.GetTaskByIndex(taskInfo.TaskIndex)
+
+	if task == nil {
+		o.balanceTaskMutex.Lock()
+		task = &OperatorDeviationTask{
+			req:     req,
+			retries: 0,
+			reqInfo: taskInfo,
+		}
+		o.balanceTasks[taskInfo.TaskIndex] = task
+		o.balanceTaskMutex.Unlock()
+	}
+
+	return task, nil
 }
 
 func NewOperator(cfg config.Config) (*Operator, error) {
@@ -63,14 +101,14 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 	ethRpcClient, err := eth.NewClient(cfg.EthConfig.RpcUrl)
 
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	//Operator Key Management
 	operatorAddress, err := sdkEcdsa.GetAddressFromKeyStoreFile(cfg.KeyStore.Path)
 
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	ecdsaKeypassword, ok := os.LookupEnv("OPERATOR_ECDSA_KEY_PASSWORD")
@@ -88,7 +126,7 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 	signerV2, _, err := signerv2.SignerFromConfig(signerConfig, big.NewInt(17000)) //Chain Id
 
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	privateKey, err := sdkEcdsa.ReadKey(signerConfig.KeystorePath, signerConfig.Password)
@@ -135,6 +173,7 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 
 	if err != nil {
 		logger.Error("cannot get agent manager", err)
+		return nil, err
 	}
 
 	regAgents := make(map[string]common.IAgentPodClient)
@@ -157,7 +196,6 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 	return &Operator{
 		avs:                       avsClient,
 		blsKeyPair:                cfg.BlsPrivateKey,
-		keystore:                  &keys.KeyStore{},
 		operatorId:                operatorId,
 		txMgr:                     txMgr,
 		logger:                    logger,
@@ -166,8 +204,17 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 		chainAgents:               regAgents,
 		gRpcClient:                gRpc,
 		graphClient:               graphQLClient,
+		balanceTasks:              make(map[uint32]*OperatorDeviationTask),
+
+		balanceReqCh: make(chan *avs.Request),
+		errCh:        make(chan *DeviationError),
 	}, nil
 
+}
+
+type DeviationError struct {
+	TaskIndex types.TaskIndex
+	Error     error
 }
 
 func Start(ctx context.Context, cfg *config.Config) {
@@ -175,30 +222,70 @@ func Start(ctx context.Context, cfg *config.Config) {
 	op, err := NewOperator(*cfg)
 
 	if err != nil {
-		panic("Couldn't start operator")
+		op.logger.Error("Error while starting operator.", "err", err)
+		return
 	}
 
-	op.logger.Infof("Starting Operator")
+	op.logger.Info("Starting Operator", "operatorId", op.operatorId)
 
 	// First initialize Operator to the Aggregator
 
-	op.logger.Infof("Init operator to aggregator.")
+	op.logger.Infof("Initializing operator to aggregator.")
 	err = op.gRpcClient.InitOperatorToAggregator()
 	if err != nil {
 		op.logger.Errorf("Init operator to aggregator failed: %v", err)
-		panic(err)
+		return
 	}
 
 	op.logger.Infof("Init operator to aggregator succeed")
 
-	balanceReqCh := make(chan *avs.Request) //Chanel to accept request from AVS contract
+	go op.agentManager.PollEvents(ctx, op.balanceReqCh, op.avs.AvsReader.AvsServiceBindings.ServiceManager)
 
-	var wg sync.WaitGroup
+	for {
+		select {
+		case reqEvent := <-op.balanceReqCh:
+			op.logger.Info("Event Received")
 
-	wg.Add(1)
+			// RETRY_LOOP:
+			// 	for {
+			reqInfo, err := op.gRpcClient.CreateBalanceTaskToAggregator(reqEvent)
 
-	go op.agentManager.PollEvents(ctx, balanceReqCh, op.avs.AvsReader.AvsServiceBindings.ServiceManager)
-	go op.ProcessDeviationCheckRequest(ctx, balanceReqCh)
+			if err != nil {
+				op.logger.Error("Create Task To Aggregator Failed. Trying again", "err", err)
+				continue
 
-	wg.Wait()
+				// break RETRY_LOOP
+			}
+
+			task, err := op.CreateOperatorTask(reqInfo, reqEvent)
+
+			if err != nil {
+				op.logger.Error("Create task in the ooerator side threw isseu")
+				continue
+			}
+
+			go op.ProcessDeviationCheckRequest(ctx, task)
+			// }
+
+		case err := <-op.errCh:
+			op.logger.Error("Error occured while performing the task", err.Error)
+
+			task := op.GetTaskByIndex(err.TaskIndex)
+
+			//TODO: Remove Hardcode value
+			if task.retries < uint64(maxRetry) {
+				op.logger.Info("Retrying the request again", "reqId", task.req.ReqId, "agent", task.req.AgentAddress.Hex())
+
+				task.retries += 1
+
+				op.balanceReqCh <- task.req
+			}
+
+		case <-ctx.Done():
+			return
+		}
+
+		//If there's an error, retry the same block like above case block for maxRetries time. how to do that?
+
+	}
 }
