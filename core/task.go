@@ -299,7 +299,7 @@ func (r SignedTaskRespResponse) ToPbType() *aggregator.SignedTaskRespResponse {
 	}
 }
 
-func GetRequestHash(reqId *big.Int, agentAddr common.Address) ([]byte, error) {
+func GetRequestHash(reqId *big.Int, agentAddr common.Address) (string, error) {
 	reqType, err := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
 		{
 			Name: "reqId",
@@ -312,7 +312,7 @@ func GetRequestHash(reqId *big.Int, agentAddr common.Address) ([]byte, error) {
 	})
 
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	s := struct {
@@ -332,7 +332,7 @@ func GetRequestHash(reqId *big.Int, agentAddr common.Address) ([]byte, error) {
 	bytes, err := arguments.Pack(s)
 
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	hasher := sha3.NewLegacyKeccak256()
@@ -340,5 +340,5 @@ func GetRequestHash(reqId *big.Int, agentAddr common.Address) ([]byte, error) {
 	hasher.Write(bytes)
 	copy(headerHash[:], hasher.Sum(nil)[:32])
 
-	return headerHash[:], nil
+	return hex.EncodeToString(headerHash[:]), nil
 }

@@ -66,3 +66,43 @@ func (c *GraphQLClient) GetAgentPodsForAgent(ctx context.Context, agent string) 
 
 	return pods, err
 }
+
+func (c *GraphQLClient) GetAgentPodsChainLists(ctx context.Context, agent string) (AgentPodChainListInfo, error) {
+	// Define the query variables
+	vars := map[string]interface{}{
+		"agent": graphql.String(strings.ToLower(agent)),
+	}
+
+	var query AgentPodChainListsQuery
+
+	err := c.client.Query(ctx, &query, vars)
+
+	if err != nil {
+		c.logger.Error("Error while fetching operator info from graph", "err", err)
+		return AgentPodChainListInfo{}, err
+	}
+
+	pods, err := ConvertAgentPodsChains(&query)
+
+	return pods, err
+}
+
+func (c *GraphQLClient) GetUnclaimedDepositsLists(ctx context.Context, agent string) ([]DepositInfo, error) {
+	vars := map[string]interface{}{
+		"agentId": graphql.String(strings.ToLower(agent)),
+	}
+
+	var query UnclaimedDepositListQuery
+
+	err := c.client.Query(ctx, &query, vars)
+
+	if err != nil {
+		c.logger.Error("Error while fetching info from graph", "err", err)
+		return []DepositInfo{}, err
+	}
+
+	pods, err := ConvertDepositListInfo(&query)
+
+	return pods, err
+
+}

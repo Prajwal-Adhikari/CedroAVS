@@ -8,7 +8,6 @@ import (
 
 	"github.com/Cedro-Finance/CedroAVS/api/graphql"
 	"github.com/Cedro-Finance/CedroAVS/core"
-	"github.com/Cedro-Finance/CedroAVS/core/logger"
 
 	// "github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
 	// "github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -204,7 +203,7 @@ func (r *Operator) SignAndSendBalanceResponse(ctx context.Context, balHeader *co
 	hash, err := balHeader.GetBalanceHeaderHash()
 
 	if err != nil {
-		logger.GetLogger().Error("Error while hasing the message", "err", err)
+		r.logger.Error("Error while hasing the message", "err", err)
 
 		r.errCh <- &DeviationError{
 			TaskIndex: balHeader.TaskIndex,
@@ -223,10 +222,10 @@ func (r *Operator) SignAndSendBalanceResponse(ctx context.Context, balHeader *co
 		OperatorId:   r.operatorId,
 	}
 
-	err = r.gRpcClient.SendSignedTaskResponse(request)
+	response, err := r.gRpcClient.SendSignedTaskResponse(request)
 
 	if err != nil {
-		r.logger.Errorf("Error while sending Signed Task response")
+		r.logger.Error("Error while sending Signed Task response", "err", err)
 
 		r.errCh <- &DeviationError{
 			TaskIndex: balHeader.TaskIndex,
@@ -235,6 +234,17 @@ func (r *Operator) SignAndSendBalanceResponse(ctx context.Context, balHeader *co
 
 		return
 	}
+
+	r.balanceTaskMutex.Lock()
+	delete(r.balanceTasks, balHeader.TaskIndex)
+	r.balanceTaskMutex.Unlock()
+
+	r.logger.Info("Successfully posted the signatures to the aggregator",
+		"task", balHeader.TaskIndex,
+		"reqId", balHeader.ReqId.String(),
+		"agent", balHeader.AgentAddress.Hex(),
+		"response", response)
+
 }
 
 func calculateDeviationPercentage(totalActualBalance, totalIdealBalance *big.Int) *big.Float {

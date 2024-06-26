@@ -4,6 +4,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"math/big"
+	"strconv"
 	"strings"
 
 	"github.com/Layr-Labs/eigensdk-go/crypto/bls"
@@ -58,7 +60,6 @@ type AgentPodsInfo struct {
 }
 
 func ConvertAgentPodsInfo(query *AgentPodMappingQuery) (AgentPodsInfo, error) {
-	fmt.Println(query)
 	chainId := string(query.AgentPods.ChainId)
 	chainIdBytes, err := hex.DecodeString(chainId[2:])
 
@@ -76,4 +77,106 @@ func ConvertAgentPodsInfo(query *AgentPodMappingQuery) (AgentPodsInfo, error) {
 
 	return podInfo, nil
 
+}
+
+type AgentPodChainListInfo struct {
+	Agent    common.Address
+	ChainIds []string
+}
+
+func ConvertAgentPodsChains(query *AgentPodChainListsQuery) (AgentPodChainListInfo, error) {
+
+	if len(query.AgendPodChains) == 0 {
+		return AgentPodChainListInfo{}, fmt.Errorf("no chains found for given agent")
+	}
+
+	chainIds := query.AgendPodChains[0].ChainIDs
+	parsedChainIds := make([]string, 0)
+
+	for _, cId := range chainIds {
+		chainIdBytes, err := hex.DecodeString(string(cId)[2:])
+
+		if err != nil {
+			log.Println("Error")
+		}
+
+		chainName := strings.Trim(string(chainIdBytes), "\x00")
+
+		parsedChainIds = append(parsedChainIds, chainName)
+
+	}
+
+	//TODO: Remove ETH 
+	parsedChainIds = append(parsedChainIds, "ETH")
+
+	podInfo := AgentPodChainListInfo{
+		Agent:    common.HexToAddress(string(query.AgendPodChains[0].Agent)),
+		ChainIds: parsedChainIds,
+	}
+
+	return podInfo, nil
+}
+
+type DepositInfo struct {
+	IsClaimed       bool
+	InterestRate    *big.Int
+	TxnID           *big.Int
+	PrincipalAmount *big.Int
+	BlockTimestamp  uint64
+	TimeInterval    *big.Int
+	AgentID         common.Address
+}
+
+func ConvertDepositListInfo(query *UnclaimedDepositListQuery) ([]DepositInfo, error) {
+	deposits := query.Deposits
+
+	depositList := make([]DepositInfo, 0)
+
+	for _, deposit := range deposits {
+
+		interestRate, ok := new(big.Int).SetString(string(deposit.InterestRate), 10)
+
+		if !ok {
+			return []DepositInfo{}, nil
+		}
+
+		isClaimed := bool(deposit.IsClaimed)
+		txId, ok := new(big.Int).SetString(string(deposit.TxnID), 10)
+
+		if !ok {
+			return []DepositInfo{}, nil
+		}
+
+		principalAmount, ok := new(big.Int).SetString(string(deposit.PrincipalAmount), 10)
+
+		if !ok {
+			return []DepositInfo{}, nil
+		}
+
+		timeInterval, ok := new(big.Int).SetString(string(deposit.TimeInterval), 10)
+
+		if !ok {
+			return []DepositInfo{}, nil
+		}
+
+		blockTimestamp, err := strconv.ParseUint(string(deposit.BlockTimestamp), 10, 64)
+
+		if err != nil {
+			return []DepositInfo{}, err
+		}
+
+		dep := DepositInfo{
+			IsClaimed:       isClaimed,
+			InterestRate:    interestRate,
+			PrincipalAmount: principalAmount,
+			BlockTimestamp:  blockTimestamp,
+			AgentID:         common.HexToAddress(string(deposit.AgentID)),
+			TxnID:           txId,
+			TimeInterval:    timeInterval,
+		}
+
+		depositList = append(depositList, dep)
+	}
+
+	return depositList, nil
 }

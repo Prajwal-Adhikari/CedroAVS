@@ -244,7 +244,7 @@ func Start(ctx context.Context, cfg *config.Config) {
 	for {
 		select {
 		case reqEvent := <-op.balanceReqCh:
-			op.logger.Info("Event Received")
+			op.logger.Debug("Event Received", "req", reqEvent.ReqId, "agent", reqEvent.AgentAddress.Hex())
 
 			// RETRY_LOOP:
 			// 	for {

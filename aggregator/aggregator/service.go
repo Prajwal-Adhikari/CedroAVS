@@ -3,7 +3,6 @@ package aggregator
 import (
 	// "context"
 
-	"bytes"
 	"context"
 	"fmt"
 	"math/big"
@@ -35,7 +34,7 @@ type AggregatorService struct {
 	tasks   map[types.TaskIndex]*core.BalanceTaskInfo
 	tasksMu sync.RWMutex
 
-	finishedTasks   map[[32]byte]*FinishedTaskStatus
+	finishedTasks   map[string]*FinishedTaskStatus
 	finishedTasksMu sync.RWMutex
 
 	nextTaskIndex   types.TaskIndex
@@ -94,7 +93,7 @@ func NewAggregatorService(c *config.Config, logger logging.Logger) (*AggregatorS
 		ethClient:             clients.EthHttpClient,
 		blsAggregationService: blsAggregationService,
 		tasks:                 make(map[types.TaskIndex]*core.BalanceTaskInfo),
-		finishedTasks:         make(map[[32]byte]*FinishedTaskStatus),
+		finishedTasks:         make(map[string]*FinishedTaskStatus),
 		cfg:                   c,
 		graphClient:           graphClient,
 	}, nil
@@ -103,7 +102,7 @@ func NewAggregatorService(c *config.Config, logger logging.Logger) (*AggregatorS
 
 var _ rpc.AggregatorRpcHandler = (*AggregatorService)(nil)
 
-func (ags *AggregatorService) GetTaskByRequestHash(reqHash []byte) *core.BalanceTaskInfo {
+func (ags *AggregatorService) GetTaskByRequestHash(reqHash string) *core.BalanceTaskInfo {
 	ags.tasksMu.RLock()
 	defer ags.tasksMu.RUnlock()
 
@@ -112,7 +111,7 @@ func (ags *AggregatorService) GetTaskByRequestHash(reqHash []byte) *core.Balance
 		if err != nil {
 			return nil
 		}
-		if bytes.Equal(hash, reqHash) {
+		if hash == reqHash {
 			return task
 		}
 	}
@@ -137,6 +136,20 @@ func (agg *AggregatorService) newIndex() types.TaskIndex {
 	agg.nextTaskIndex += 1
 
 	return res
+}
+
+func (agg *AggregatorService) GetFinishedTaskByRequestHash(requestHash string) *FinishedTaskStatus {
+	agg.finishedTasksMu.RLock()
+	defer agg.finishedTasksMu.RUnlock()
+
+	return agg.finishedTasks[requestHash]
+}
+
+func (agg *AggregatorService) SetFinishedTask(requestHash string, finished *FinishedTaskStatus) {
+	agg.finishedTasksMu.Lock()
+	defer agg.finishedTasksMu.Unlock()
+
+	agg.finishedTasks[requestHash] = finished
 }
 
 // Called by Operator
@@ -164,11 +177,19 @@ func (ags *AggregatorService) CreateTask(req *core.CreateTaskRequest) (*core.Cre
 		return nil, err
 	}
 
+	finishedTask := ags.GetFinishedTaskByRequestHash(reqHash)
+
+	if finishedTask != nil {
+		ags.logger.Error("Task already finished", "reqId", req.ReqId.String(), "agent", req.AgentAddress.Hex())
+
+		return nil, err
+	}
+
 	task := ags.GetTaskByRequestHash(reqHash)
 
 	if task == nil {
 		taskIndex := ags.newIndex()
-		task, err = ags.sendNewTask(core.Bytes32(reqHash), taskIndex, req.ReferenceBlockNumber, req.ReqId, req.AgentAddress)
+		task, err = ags.sendNewTask(reqHash, taskIndex, req.ReferenceBlockNumber, req.ReqId, req.AgentAddress)
 
 		if err != nil {
 			ags.logger.Error("send new task failed", "err", err)
@@ -209,11 +230,6 @@ func (ags *AggregatorService) ProcessSignedTaskResponse(req *core.SignedTaskResp
 		return nil, err
 	}
 
-	if err != nil {
-		ags.logger.Error("Error while typecasting", "err", err)
-		return nil, err
-	}
-
 	err = ags.blsAggregationService.ProcessNewSignature(
 		context.Background(), taskIndex, taskResponseDigest,
 		&req.BlsSignature, req.OperatorId,
@@ -232,7 +248,7 @@ func (agg *AggregatorService) GetResponseChannel() <-chan BLSAggregationServiceR
 	return agg.blsAggregationService.GetResponseChannel()
 }
 
-func (agg *AggregatorService) sendNewTask(reqHash core.Bytes32, taskIndex uint32, refBlock uint64, reqId *big.Int, agentAddr common.Address) (*core.BalanceTaskInfo, error) {
+func (agg *AggregatorService) sendNewTask(reqHash string, taskIndex uint32, refBlock uint64, reqId *big.Int, agentAddr common.Address) (*core.BalanceTaskInfo, error) {
 	agg.logger.Info("Aggregator sending new task", "alert", reqHash, "task", taskIndex)
 
 	var err error

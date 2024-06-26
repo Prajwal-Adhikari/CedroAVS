@@ -158,7 +158,7 @@ func (agg *Aggregator) sendAggregatedResponseToContract(blsAggServiceResp BLSAgg
 	if blsAggServiceResp.Err != nil {
 		agg.logger.Error("BlsAggregationServiceResponse contains an error", "err", blsAggServiceResp.Err)
 		// panicing to help with debugging (fail fast), but we shouldn't panic if we run this in production
-		panic(blsAggServiceResp.Err)
+		return
 	}
 	nonSignerPubkeys := []cedroservicemanager.BN254G1Point{}
 	for _, nonSignerPubkey := range blsAggServiceResp.NonSignersPubkeysG1 {
@@ -192,5 +192,20 @@ func (agg *Aggregator) sendAggregatedResponseToContract(blsAggServiceResp BLSAgg
 		agg.logger.Error("Aggregator failed to respond to task", "err", err)
 	}
 
-	fmt.Println("RESPONSE", res)
+	if res != nil {
+		reqHash, err := core.GetRequestHash(task.ReqId, task.AgentAddress)
+		if err != nil {
+			agg.logger.Error("Aggregator failed to find req Hash")
+		}
+		agg.service.SetFinishedTask(reqHash, &FinishedTaskStatus{
+			Message:          task,
+			TxHash:           res.TxHash,
+			BlockHash:        res.BlockHash,
+			BlockNumber:      res.BlockNumber,
+			TransactionIndex: res.TransactionIndex,
+		})
+	} else {
+		agg.logger.Error("the send confirm alert res is failed by nil return", "hash", task.ReqId)
+	}
+
 }

@@ -28,3 +28,24 @@ type AgentPodMappingQuery struct {
 		ChainId       graphql.String `graphql:"chainID"`
 	} `graphql:"agentOwnerMapping(id:$id)"`
 }
+
+type AgentPodChainListsQuery struct {
+	AgendPodChains []struct {
+		ChainIDs []graphql.String `graphql:"chainIDs"`
+		Agent    graphql.String   `graphql:"agent"`
+	} `graphql:"agentPodChainLists(where: {agent: $agent}, orderBy: blockTimestamp, orderDirection: desc)"`
+}
+
+type DeposisInfoQuery struct {
+	IsClaimed       graphql.Boolean `graphql:"isClaimed"`
+	InterestRate    graphql.String  `graphql:"interestRate"`
+	TxnID           graphql.String  `graphql:"txnID"`
+	PrincipalAmount graphql.String  `graphql:"principalAmount"`
+	BlockTimestamp  graphql.String  `graphql:"blockTimestamp"`
+	TimeInterval    graphql.String  `graphql:"timeInterval"`
+	AgentID         graphql.String  `graphql:"agentId"`
+}
+
+type UnclaimedDepositListQuery struct {
+	Deposits []DeposisInfoQuery `graphql:"deposits(where: {agentId: $agentId, isClaimed:false})"`
+}

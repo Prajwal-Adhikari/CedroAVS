@@ -118,17 +118,16 @@ func (cl *AggregatorGRpcClient) CreateBalanceTaskToAggregator(req *avs.Request) 
 	return info, nil
 }
 
-func (cl *AggregatorGRpcClient) SendSignedTaskResponse(signedTaskResponse *core.SignedTaskRespRequest) error {
+func (cl *AggregatorGRpcClient) SendSignedTaskResponse(signedTaskResponse *core.SignedTaskRespRequest) (*aggregator.SignedTaskRespResponse, error) {
 	conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {
-		return fmt.Errorf("dial initOperatorToAggregator connection failed: %v", err.Error())
+		return nil, fmt.Errorf("dial initOperatorToAggregator connection failed: %v", err.Error())
 	}
 
 	n := aggregator.NewAggregatorClient(conn)
 
 	nodeCtx, cancel := context.WithTimeout(context.Background(), cl.timeout)
-
 	defer cancel()
 
 	cl.logger.Debug("Sending Signed Task", "taskResponse", signedTaskResponse.Balance)
@@ -142,10 +141,9 @@ func (cl *AggregatorGRpcClient) SendSignedTaskResponse(signedTaskResponse *core.
 	response, err := n.ProcessSignedTaskResponse(nodeCtx, request)
 
 	if err != nil {
-		fmt.Println("Failed")
+		cl.logger.Error("Error while sending signed response to aggregator", "err", err)
+		return nil, err
 	}
 
-	fmt.Println(response)
-
-	return nil
+	return response, nil
 }
