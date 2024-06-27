@@ -621,18 +621,20 @@ contract RegistryCoordinator is
         // Update operator's bitmap and status
         _updateOperatorBitmap({operatorId: operatorId, newBitmap: newBitmap});
 
+        // Deregister operator with each of the registry contracts
+        blsApkRegistry.deregisterOperator(operator, quorumNumbers);
+        stakeRegistry.deregisterOperator(operatorId, quorumNumbers);
+        indexRegistry.deregisterOperator(operatorId, quorumNumbers);
+
         // If the operator is no longer registered for any quorums, update their status and deregister
         // them from the AVS via the EigenLayer core contracts
         if (newBitmap.isEmpty()) {
             operatorInfo.status = OperatorStatus.DEREGISTERED;
             serviceManager.deregisterOperatorFromAVS(operator);
+            blsApkRegistry.removeOperatorDetails(operator);
+            delete _operatorInfo[operator];
             emit OperatorDeregistered(operator, operatorId);
         }
-
-        // Deregister operator with each of the registry contracts
-        blsApkRegistry.deregisterOperator(operator, quorumNumbers);
-        stakeRegistry.deregisterOperator(operatorId, quorumNumbers);
-        indexRegistry.deregisterOperator(operatorId, quorumNumbers);
     }
 
     /**

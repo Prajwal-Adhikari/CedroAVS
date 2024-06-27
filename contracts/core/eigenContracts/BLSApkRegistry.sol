@@ -89,6 +89,15 @@ contract BLSApkRegistry is BLSApkRegistryStorage {
         );
     }
 
+    function removeOperatorDetails(
+        address operator
+    ) public virtual onlyRegistryCoordinator {
+        // Get the operator's pubkey. Reverts if they have not registered a key
+        (, bytes32 pubKeyHash) = getRegisteredPubkey(operator);
+        delete operatorToPubkeyHash[operator];
+        delete pubkeyHashToOperator[pubKeyHash];
+    }
+
     /**
      * @notice Initializes a new quorum by pushing its first apk update
      * @param quorumNumber The number of the new quorum
