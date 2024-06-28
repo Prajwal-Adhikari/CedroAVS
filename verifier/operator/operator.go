@@ -55,6 +55,8 @@ type Operator struct {
 
 	balanceReqCh chan *avs.Request
 	errCh        chan *DeviationError
+
+	signatureCh chan *core.SignedTaskRespRequest
 }
 
 func (o *Operator) GetTaskByIndex(taskIndex sdktypes.TaskIndex) *OperatorDeviationTask {
@@ -208,6 +210,7 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 
 		balanceReqCh: make(chan *avs.Request),
 		errCh:        make(chan *DeviationError),
+		signatureCh:  make(chan *core.SignedTaskRespRequest, 10),
 	}, nil
 
 }
@@ -243,6 +246,8 @@ func Start(ctx context.Context, cfg *config.Config) {
 
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case reqEvent := <-op.balanceReqCh:
 			op.logger.Debug("Event Received", "req", reqEvent.ReqId, "agent", reqEvent.AgentAddress.Hex())
 
@@ -281,11 +286,11 @@ func Start(ctx context.Context, cfg *config.Config) {
 				op.balanceReqCh <- task.req
 			}
 
-		case <-ctx.Done():
-			return
+		case signReq := <-op.signatureCh:
+			op.logger.Info("Signature Receive")
+
+			go op.SendSignedTaskToAggregator(ctx, signReq)
+
 		}
-
-		//If there's an error, retry the same block like above case block for maxRetries time. how to do that?
-
 	}
 }

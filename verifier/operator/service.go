@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/Cedro-Finance/CedroAVS/api/graphql"
-	"github.com/Cedro-Finance/CedroAVS/core"
+	// "github.com/Cedro-Finance/CedroAVS/core"
 
 	// "github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
 	// "github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -190,62 +190,11 @@ func (r *Operator) FetchAgentIdealBalance(ctx context.Context, task *OperatorDev
 			totalAmount = totalAmount.Add(totalAmount, interest)
 			totalAmount = totalAmount.Add(totalAmount, deposit.PrincipalAmount)
 		}
-
 	}
 
 	balCh <- totalAmount
 }
 
-func (r *Operator) SignAndSendBalanceResponse(ctx context.Context, balHeader *core.BalanceTaskInfo) {
-
-	r.logger.Info("Balance Heaader", "header", balHeader)
-
-	hash, err := balHeader.GetBalanceHeaderHash()
-
-	if err != nil {
-		r.logger.Error("Error while hasing the message", "err", err)
-
-		r.errCh <- &DeviationError{
-			TaskIndex: balHeader.TaskIndex,
-			Error:     err,
-		}
-		return
-	}
-
-	signature := r.blsKeyPair.SignMessage(hash)
-
-	r.logger.Info("Signed the message", "sign", signature)
-
-	request := &core.SignedTaskRespRequest{
-		Balance:      *balHeader,
-		BlsSignature: *signature,
-		OperatorId:   r.operatorId,
-	}
-
-	response, err := r.gRpcClient.SendSignedTaskResponse(request)
-
-	if err != nil {
-		r.logger.Error("Error while sending Signed Task response", "err", err)
-
-		r.errCh <- &DeviationError{
-			TaskIndex: balHeader.TaskIndex,
-			Error:     err,
-		}
-
-		return
-	}
-
-	r.balanceTaskMutex.Lock()
-	delete(r.balanceTasks, balHeader.TaskIndex)
-	r.balanceTaskMutex.Unlock()
-
-	r.logger.Info("Successfully posted the signatures to the aggregator",
-		"task", balHeader.TaskIndex,
-		"reqId", balHeader.ReqId.String(),
-		"agent", balHeader.AgentAddress.Hex(),
-		"response", response)
-
-}
 
 func calculateDeviationPercentage(totalActualBalance, totalIdealBalance *big.Int) *big.Float {
 	// Calculate the deviation: totalActualBalance - totalIdealBalance

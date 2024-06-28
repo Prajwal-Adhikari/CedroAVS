@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
@@ -12,15 +13,17 @@ import (
 )
 
 type GraphQLClient struct {
-	client *graphql.Client
+	client *RetryQuerier
 	logger logging.Logger
 }
 
 func NewGraphQLClient(url string, logger logging.Logger) *GraphQLClient {
 	client := graphql.NewClient(url, nil)
 
+	querier := NewRetryQuerier(client, time.Second*5, 3)
+
 	return &GraphQLClient{
-		client: client,
+		client: querier,
 		logger: logger,
 	}
 }
@@ -104,5 +107,4 @@ func (c *GraphQLClient) GetUnclaimedDepositsLists(ctx context.Context, agent str
 	pods, err := ConvertDepositListInfo(&query)
 
 	return pods, err
-
 }
