@@ -13,39 +13,41 @@ type OperatorQuery struct {
 	} `graphql:"operator(id: $id)"`
 }
 
-type AgentPodCreatedQuery struct {
-	AgentPods []struct {
-		Agent         graphql.String `graphql:"agent"`
-		AgentContract graphql.String `graphql:"agentContract"`
-		ChainId       graphql.String `graphql:"chainID"`
-	} `graphql:"agentPodCreateds(where: {agent_contains: $agent})"`
-}
-
-type AgentPodMappingQuery struct {
-	AgentPods struct {
-		Agent         graphql.String `graphql:"id"`
-		AgentContract graphql.String `graphql:"agentContract"`
-		ChainId       graphql.String `graphql:"chainID"`
-	} `graphql:"agentOwnerMapping(id:$id)"`
+type EnrolledAgentsListQuery struct {
+	AgendPodChains []struct {
+		Agent graphql.String `graphql:"agentWallet"`
+	} `graphql:"agentPodChainLists(orderBy: blockTimestamp, orderDirection: desc)"`
 }
 
 type AgentPodChainListsQuery struct {
 	AgendPodChains []struct {
 		ChainIDs []graphql.String `graphql:"chainIDs"`
-		Agent    graphql.String   `graphql:"agent"`
-	} `graphql:"agentPodChainLists(where: {agent: $agent}, orderBy: blockTimestamp, orderDirection: desc)"`
+		Agent    graphql.String   `graphql:"agentWallet"`
+	} `graphql:"agentPodChainLists(where: {agentWallet: $agent}, orderBy: blockTimestamp, orderDirection: desc)"`
 }
 
 type DeposisInfoQuery struct {
 	IsClaimed       graphql.Boolean `graphql:"isClaimed"`
-	InterestRate    graphql.String  `graphql:"interestRate"`
+	InterestRate    graphql.Int     `graphql:"interestRate"`
 	TxnID           graphql.String  `graphql:"txnID"`
-	PrincipalAmount graphql.String  `graphql:"principalAmount"`
-	BlockTimestamp  graphql.String  `graphql:"blockTimestamp"`
-	TimeInterval    graphql.String  `graphql:"timeInterval"`
-	AgentID         graphql.String  `graphql:"agentId"`
+	PrincipalAmount graphql.Int     `graphql:"principalAmount"`
+	BlockTimestamp  graphql.Int     `graphql:"blockTimestamp"`
+	TimeInterval    graphql.Int     `graphql:"timeInterval"`
+	Agent           graphql.String  `graphql:"agentWallet"`
+	AgentContract   graphql.String  `graphql:"agentPodContract"`
+	BlockNumber     graphql.Int     `graphql:"blockNumber"`
+}
+
+type AgentSummaryQuery struct {
+	AgentSummary struct {
+		AgentContract     graphql.String `graphql:"agentPodContract"`
+		Agent             graphql.String `graphql:"agentWallet"`
+		TotalDepositCount graphql.String `graphql:"totalDepositCount"`
+		TotalClaimCount   graphql.String `graphql:"totalClaimCount"`
+		ChainId           graphql.String `graphql:"chainID"`
+	} `graphql:"agentSummary(id:$id)"`
 }
 
 type UnclaimedDepositListQuery struct {
-	Deposits []DeposisInfoQuery `graphql:"deposits(where: {agentId: $agentId, isClaimed:false})"`
+	Deposits []DeposisInfoQuery `graphql:"deposits(where: {agentWallet: $agentId, isClaimed:false, blockTimestamp_lte:$timestamp}, from: $from, skip:$skip)"`
 }

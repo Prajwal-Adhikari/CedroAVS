@@ -11,8 +11,10 @@ import (
 
 	// "github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
 	// "github.com/ethereum/go-ethereum/accounts/abi/bind"
+
 	ethcommon "github.com/ethereum/go-ethereum/common"
 
+	"github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
 	"github.com/Cedro-Finance/CedroAVS/verifier/common"
 )
 
@@ -31,7 +33,7 @@ func (r *Operator) getAgentPodsForAgent(ctx context.Context, agentAddress ethcom
 	for index, chain := range agentRegisteredChains.ChainIds {
 		client := r.chainAgents[chain]
 
-		agentPod, err := client.GetGraphClient().GetAgentPodsForAgent(ctx, agentAddress.Hex())
+		agentPod, err := client.GetGraphClient().GetAgentSummaries(ctx, agentAddress.Hex())
 
 		if err != nil {
 			r.logger.Error("Error getting agentPods address from graph", "err", err)
@@ -145,7 +147,7 @@ func CalculateInterest(depositInfo *graphql.DepositInfo, timestamp uint64) *big.
 	maturityPeriod := blockTimestamp.Add(time.Duration(timeInterval.Int64()) * time.Second)
 	// Determine whether to calculate interest up to maturity period or current timestamp
 	var interestTime uint64
-	if maturityPeriod.After(time.Now()) {
+	if maturityPeriod.After(time.Unix(int64(timestamp), 0)) {
 		interestTime = uint64(maturityPeriod.Unix())
 	} else {
 		interestTime = timestamp
@@ -174,7 +176,7 @@ func (r *Operator) FetchAgentIdealBalance(ctx context.Context, task *OperatorDev
 	for _, chain := range agentRegisteredChains.ChainIds {
 		client := r.chainAgents[chain]
 
-		deposits, err := client.GetGraphClient().GetUnclaimedDepositsLists(ctx, task.req.AgentAddress.Hex())
+		deposits, err := client.GetGraphClient().GetUnclaimedDepositsLists(ctx, task.req.AgentAddress.Hex(), task.req.Timestamp)
 
 		if err != nil {
 			r.logger.Error("Error getting deposits address from graph", "err", err)
@@ -195,7 +197,6 @@ func (r *Operator) FetchAgentIdealBalance(ctx context.Context, task *OperatorDev
 	balCh <- totalAmount
 }
 
-
 func calculateDeviationPercentage(totalActualBalance, totalIdealBalance *big.Int) *big.Float {
 	// Calculate the deviation: totalActualBalance - totalIdealBalance
 	deviation := new(big.Int).Sub(totalActualBalance, totalIdealBalance)
@@ -211,46 +212,130 @@ func calculateDeviationPercentage(totalActualBalance, totalIdealBalance *big.Int
 	return deviationPercentage
 }
 
-// func (r *Operator) ProcessOffchainDeviationCheckRequest(ctx context.Context, eventCh <-chan *avs.Request) {
-// 	for {
-// 		reqEvent := <-eventCh
+func (r *Operator) StartOffChainDeviationCheck(ctx context.Context) {
 
-// 		//Now for every balance request event, there should be two jobs running in parallel
-// 		//Routine 1: Fetch the balances of agents in all the chains to get the actual Balance
-// 		//Routine 2: Fetch the total deposits & aprs of agents to get the ideal balance
+	r.logger.Info("Offchain trigger service started")
 
-// 		idealBalCh := make(chan *big.Int)
-// 		actualBalCh := make(chan *big.Int)
+	dur := time.Duration(time.Minute * 1)
 
-// 		go r.FetchAgentActualBalance(ctx, reqEvent, actualBalCh)
-// 		go r.FetchAgentIdealBalance(ctx, reqEvent, idealBalCh)
+	ticker := time.NewTicker(dur)
 
-// 		totalIdealBalance := <-idealBalCh
-// 		totalActualBalance := <-actualBalCh
+	for {
+		select {
+		case <-ctx.Done():
+			return
 
-// 		// Find the deviation threshold
+		case <-ticker.C:
+			r.logger.Infof("Offchain deviation trigger period")
+		}
 
-// 		deviationPercentage, err := r.agentManager.Contract.DeviationPercentage(&bind.CallOpts{}, reqEvent.AgentAddress)
+	RETRY_LOOP:
+		for {
+			agents, err := r.graphClient.GetEnrolledAgentsList(ctx)
 
-// 		if err != nil {
-// 			r.logger.Error("Error while getting deviation percentage", "err", err)
-// 		}
+			if err != nil {
+				r.logger.Error("Error while getting all the enrolled agents in agent manager")
+				break RETRY_LOOP
+			}
 
-// 		fmt.Println(deviationPercentage)
+			//Current Block Number
 
-// 		deviation := calculateDeviationPercentage(totalActualBalance, totalIdealBalance)
+			blockNumber, err := r.avs.Eth.BlockNumber(ctx)
 
-// 		if deviation.Cmp(big.NewFloat(10.0)) == 1 { // deviation is greater than threshold 10%
-// 			// balResponse := &agents.AggregateBalanceResponse{
-// 			// 	ReqId:                reqEvent.ReqId,
-// 			// 	ActualBalance:        totalActualBalance,
-// 			// 	IdealBalance:         totalIdealBalance,
-// 			// 	ReferenceBlockNumber: reqEvent.ReferenceBlockNumber,
-// 			// }
+			if err != nil {
+				r.logger.Error("OffchainDeviationCheckTrigger error while getting block number", "err", err)
 
-// 			// go r.SignAndSendBalanceResponse(ctx, balResponse)
-// 			fmt.Println("")
-// 		}
+				break RETRY_LOOP
+			}
 
-// 	}
-// }
+			blockDetails, err := r.avs.Eth.BlockByNumber(ctx, big.NewInt(int64(blockNumber)))
+
+			if err != nil {
+				r.logger.Error("OffchainDeviationCheckTrigger errro geting block details", "err", err)
+
+				break RETRY_LOOP
+			}
+
+			for _, agent := range agents {
+				r.balanceReqCh <- &avs.Request{
+					ReqId:                big.NewInt(100),
+					ReferenceBlockNumber: blockNumber,
+					AgentAddress:         agent,
+					Timestamp:            blockDetails.Time(),
+					IsOffChain:           true,
+				}
+			}
+
+			break
+		}
+
+	}
+
+}
+
+func (r *Operator) ProcessOffchainDeviationCheckRequest(ctx context.Context, task *OperatorDeviationTask) {
+
+	//Now for every balance request event, there should be two jobs running in parallel
+	//Routine 1: Fetch the balances of agents in all the chains to get the actual Balance
+	//Routine 2: Fetch the total deposits & aprs of agents to get the ideal balance
+
+	// Find the deviation threshold
+
+	deviationPercentage, err := r.agentManager.GetDeviationPercentage(ctx, task.req.AgentAddress, task.req.ReferenceBlockNumber)
+
+	if err != nil {
+		r.logger.Error("Error while getting deviation percentage", "err", err)
+
+	}
+
+	idealBalCh := make(chan *big.Int)
+	actualBalCh := make(chan *big.Int)
+
+	go r.FetchAgentActualBalance(ctx, task, actualBalCh)
+	go r.FetchAgentIdealBalance(ctx, task, idealBalCh)
+
+	totalIdealBalance := <-idealBalCh
+	totalActualBalance := <-actualBalCh
+
+	if totalActualBalance == nil {
+		r.errCh <- &DeviationError{
+			TaskIndex: task.reqInfo.TaskIndex,
+			Error:     fmt.Errorf("error while getting actual balance"),
+		}
+
+		return
+	}
+
+	if totalIdealBalance == nil {
+		r.errCh <- &DeviationError{
+			TaskIndex: task.reqInfo.TaskIndex,
+			Error:     fmt.Errorf("error while getting ideal balance"),
+		}
+
+		return
+	}
+
+	r.logger.Info("ProcessDeviationCheck",
+		"RequestId", task.reqInfo.ReqId.String(),
+		"idealBalance", totalIdealBalance.String(),
+		"totalBalance", totalActualBalance.String(),
+	)
+
+	task.reqInfo.ActualBalance = totalActualBalance
+	task.reqInfo.IdealBalance = totalIdealBalance
+	task.reqInfo.ReferenceBlockNumber = task.req.ReferenceBlockNumber
+	task.reqInfo.ReqId = task.req.ReqId
+	task.reqInfo.AgentAddress = task.req.AgentAddress
+
+	devPercentFloat, _ := deviationPercentage.Float64()
+
+	deviation := calculateDeviationPercentage(totalActualBalance, totalIdealBalance)
+
+	if deviation.Cmp(big.NewFloat(devPercentFloat)) == 1 { // deviation is greater than threshold 10%
+
+		r.logger.Info("deviation occured", "agent", task.req.AgentAddress.Hex(), "blockNumber", task.req.ReferenceBlockNumber)
+
+		go r.SignAndSendBalanceResponse(ctx, task.reqInfo)
+	}
+
+}

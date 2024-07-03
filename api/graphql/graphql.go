@@ -5,25 +5,26 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strings"
-	"time"
+	// "time"
 
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/shurcooL/graphql"
 )
 
 type GraphQLClient struct {
-	client *RetryQuerier
+	client *graphql.Client
 	logger logging.Logger
 }
 
 func NewGraphQLClient(url string, logger logging.Logger) *GraphQLClient {
 	client := graphql.NewClient(url, nil)
 
-	querier := NewRetryQuerier(client, time.Second*5, 3)
+	// querier := NewRetryQuerier(client, time.Second*5, 3)
 
 	return &GraphQLClient{
-		client: querier,
+		client: client,
 		logger: logger,
 	}
 }
@@ -50,25 +51,25 @@ func (c *GraphQLClient) GetOperatorInfo(ctx context.Context, opId sdktypes.Opera
 	return *parsed, err
 }
 
-func (c *GraphQLClient) GetAgentPodsForAgent(ctx context.Context, agent string) (AgentPodsInfo, error) {
-	// Define the query variables
-	vars := map[string]interface{}{
-		"id": graphql.String(strings.ToLower(agent)),
-	}
+// func (c *GraphQLClient) GetAgentPodsForAgent(ctx context.Context, agent string) (AgentPodsInfo, error) {
+// 	// Define the query variables
+// 	vars := map[string]interface{}{
+// 		"id": graphql.String(strings.ToLower(agent)),
+// 	}
 
-	var query AgentPodMappingQuery
+// 	var query AgentPodMappingQuery
 
-	err := c.client.Query(ctx, &query, vars)
+// 	err := c.client.Query(ctx, &query, vars)
 
-	if err != nil {
-		c.logger.Error("Error while fetching operator info from graph", "err", err)
-		return AgentPodsInfo{}, err
-	}
+// 	if err != nil {
+// 		c.logger.Error("Error while fetching operator info from graph", "err", err)
+// 		return AgentPodsInfo{}, err
+// 	}
 
-	pods, err := ConvertAgentPodsInfo(&query)
+// 	pods, err := ConvertAgentPodsInfo(&query)
 
-	return pods, err
-}
+// 	return pods, err
+// }
 
 func (c *GraphQLClient) GetAgentPodsChainLists(ctx context.Context, agent string) (AgentPodChainListInfo, error) {
 	// Define the query variables
@@ -90,21 +91,80 @@ func (c *GraphQLClient) GetAgentPodsChainLists(ctx context.Context, agent string
 	return pods, err
 }
 
-func (c *GraphQLClient) GetUnclaimedDepositsLists(ctx context.Context, agent string) ([]DepositInfo, error) {
-	vars := map[string]interface{}{
-		"agentId": graphql.String(strings.ToLower(agent)),
+func (c *GraphQLClient) GetEnrolledAgentsList(ctx context.Context) ([]common.Address, error) {
+
+	var query EnrolledAgentsListQuery
+
+	err := c.client.Query(ctx, &query, nil)
+
+	if err != nil {
+		c.logger.Error("Error while fetching operator info from graph", "err", err)
+		return []common.Address{}, err
 	}
 
-	var query UnclaimedDepositListQuery
+	pods, err := ConvertEnrolledAgent(&query)
+
+	return pods, err
+}
+
+func (c *GraphQLClient) GetAgentSummaries(ctx context.Context, agent string) (AgentSummary, error) {
+
+	vars := map[string]interface{}{
+		"id": graphql.String(strings.ToLower(agent)),
+	}
+
+	var query AgentSummaryQuery
 
 	err := c.client.Query(ctx, &query, vars)
 
 	if err != nil {
+		return AgentSummary{}, err
+	}
+
+	summary, err := ConvertAgentSummaryInfo(&query)
+
+	return summary, err
+}
+
+func (c *GraphQLClient) GetUnclaimedDepositsLists(ctx context.Context, agent string, timestamp uint64) ([]DepositInfo, error) {
+
+	summary, err := c.GetAgentSummaries(ctx, agent)
+
+	if err != nil {
 		c.logger.Error("Error while fetching info from graph", "err", err)
+
 		return []DepositInfo{}, err
 	}
 
-	pods, err := ConvertDepositListInfo(&query)
+	totalUnclaimedDeposits := summary.TotalDepositCount - summary.TotalClaimCount
 
-	return pods, err
+	deposits := make([]DeposisInfoQuery, 0)
+
+	for {
+		vars := map[string]interface{}{
+			"agentId":   graphql.String(strings.ToLower(agent)),
+			"timestamp": graphql.String(fmt.Sprint(timestamp)),
+			"skip":      graphql.Int(len(deposits)),
+			"first":     graphql.Int(1000),
+		}
+
+		var query UnclaimedDepositListQuery
+
+		err = c.client.Query(ctx, &query, vars)
+
+		if err != nil {
+			c.logger.Error("Error while fetching info from graph", "err", err)
+			return []DepositInfo{}, err
+		}
+
+		if len(deposits) == totalUnclaimedDeposits {
+			break
+		}
+
+		deposits = append(deposits, query.Deposits...)
+	}
+
+	pDeps, err := ConvertDepositListInfo(deposits)
+
+	return pDeps, err
 }

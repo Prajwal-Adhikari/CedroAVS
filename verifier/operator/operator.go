@@ -80,6 +80,7 @@ func (o *Operator) CreateOperatorTask(taskInfo *core.BalanceTaskInfo, req *avs.R
 		}
 		o.balanceTasks[taskInfo.TaskIndex] = task
 		o.balanceTaskMutex.Unlock()
+
 	}
 
 	return task, nil
@@ -242,14 +243,17 @@ func Start(ctx context.Context, cfg *config.Config) {
 
 	op.logger.Infof("Init operator to aggregator succeed")
 
-	go op.agentManager.PollEvents(ctx, op.balanceReqCh, op.avs.AvsReader.AvsServiceBindings.ServiceManager)
+	// go op.agentManager.PollEvents(ctx, op.balanceReqCh, op.avs.AvsReader.AvsServiceBindings.ServiceManager)
+
+	go op.StartOffChainDeviationCheck(ctx)
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
+
 		case reqEvent := <-op.balanceReqCh:
-			op.logger.Debug("Event Received", "req", reqEvent.ReqId, "agent", reqEvent.AgentAddress.Hex())
+			op.logger.Debug("Event Received", "req", reqEvent.ReqId, "agent", reqEvent.AgentAddress.Hex(), "offchain", reqEvent.IsOffChain)
 
 			// RETRY_LOOP:
 			// 	for {
@@ -266,6 +270,11 @@ func Start(ctx context.Context, cfg *config.Config) {
 
 			if err != nil {
 				op.logger.Error("Create task in the ooerator side threw isseu")
+				continue
+			}
+
+			if task.req.IsOffChain {
+				go op.ProcessOffchainDeviationCheckRequest(ctx, task)
 				continue
 			}
 
