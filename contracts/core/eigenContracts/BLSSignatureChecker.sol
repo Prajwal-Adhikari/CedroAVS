@@ -10,6 +10,8 @@ import {IStakeRegistry, IDelegationManager} from "./interfaces/IStakeRegistry.so
 import {BitmapUtils} from "./libraries/BitmapUtils.sol";
 import {BN254} from "./libraries/BN254.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title Used for checking BLS aggregate signatures from the operators of a `BLSRegistry`.
  * @author Layr Labs, Inc.
@@ -39,12 +41,6 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
     }
 
     function _BLSSignatureChecker_init() internal onlyInitializing {}
-
-    // function setRegistryCoordinatorAddress(
-    //     IRegistryCoordinator _registryCoordinator
-    // ) external{
-
-    // }
 
     /**
      * /**
@@ -92,10 +88,16 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
         bytes calldata quorumNumbers,
         uint32 referenceBlockNumber,
         NonSignerStakesAndSignature memory params
-    ) public view returns (QuorumStakeTotals memory, bytes32) {
+    ) public view returns (QuorumStakeTotals memory, bytes32)  {
+
         require(
-            // (quorumNumbers.length == params.quorumApks.length) &&
-            (quorumNumbers.length == params.quorumApkIndices.length) &&
+            quorumNumbers.length != 0,
+            "BLSSignatureChecker.checkSignatures: empty quorum input"
+        );
+        
+        require(
+            (quorumNumbers.length == params.quorumApks.length) &&
+                (quorumNumbers.length == params.quorumApkIndices.length) &&
                 (quorumNumbers.length == params.totalStakeIndices.length) &&
                 (quorumNumbers.length == params.nonSignerStakeIndices.length),
             "BLSSignatureChecker.checkSignatures: input quorum length mismatch"
@@ -330,6 +332,7 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
             apkG2,
             PAIRING_EQUALITY_CHECK_GAS
         );
+
     }
 
     function _setStaleStakesForbidden(bool value) internal {
