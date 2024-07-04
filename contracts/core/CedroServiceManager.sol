@@ -9,10 +9,12 @@ import {IPauserRegistry} from "./eigenContracts/interfaces/IPauserRegistry.sol";
 import {ServiceManagerBase, IAVSDirectory, IRewardsCoordinator, IRegistryCoordinator, ISignatureUtils, IStakeRegistry} from "./eigenContracts/ServiceManagerBase.sol";
 import {BLSSignatureChecker} from "./eigenContracts/BLSSignatureChecker.sol";
 import {IServiceManager} from "./eigenContracts/interfaces/IServiceManager.sol";
-
+import {IAgentManager} from "../operator/interfaces/IAgentManager.sol";
 import {IRoleManager} from "./interfaces/IRoleManager.sol";
 import {CedroServiceManagerStorage} from "./CedroServiceManagerStorage.sol";
-import {DATA} from "./libraries/Data.sol";
+import {CedroServiceData} from "./libraries/CedroServiceData.sol";
+
+import "hardhat/console.sol";
 
 string constant TAG = "CedroServiceManager";
 
@@ -23,11 +25,7 @@ contract CedroServiceManager is
 {
     using EnumerableSet for EnumerableSet.Bytes32Set;
 
-    //status of the operator registration
-    bool public OperatorRegistrationStatus;
-    //address of the rolemanager contract
-
-    uint256 public roleManagerAddressOne;
+    IAgentManager public agentManager;
 
     error OperatorRegistrationPaused(string contractTAG);
     error MessageHashAlreadyAdded(string contractTAG);
@@ -41,8 +39,9 @@ contract CedroServiceManager is
 
     event OperatorRegistered(address indexed operator);
     event OperatorDeRegistered(address indexed operator);
-    event AgentBalanceConfirmed();
-    event AgentFraudConfirmed();
+    event QuorumThresholdPercentageChanged(uint256 thresholdpercentage);
+    event AgentBalanceConfirmed(address agentAddress, uint256 SlashingAmount);
+    event AgentFraudConfirmed(address agentAddress, uint256 SlashingAmount);
 
     /**
      * @dev Modifier that checks if system is paused or not.
@@ -52,58 +51,25 @@ contract CedroServiceManager is
         _;
     }
 
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
     function initialize(
-        address _roleManager,
+        address __roleManagerAddress,
         IAVSDirectory __avsDirectory,
-        IRewardsCoordinator ___paymentCoordinator,
+        IRewardsCoordinator __rewardsCoordinator,
         IStakeRegistry __stakeRegistry
     ) public initializer {
-        _BLSSignatureChecker_init(_roleManager);
+        _BLSSignatureChecker_init(__roleManagerAddress);
         __ServiceManagerBase_init(
             __avsDirectory,
-            ___paymentCoordinator,
+            __rewardsCoordinator,
             __stakeRegistry,
-            _roleManager
+            __roleManagerAddress
         );
-    }
-
-    //////////////////////////////////////////////////////////////////////////////
-    //                          Operator Registration                           //
-    //////////////////////////////////////////////////////////////////////////////
-
-    /**
-     * @notice Register an operator with the AVS. Forwards call to EigenLayer' AVSDirectory.
-     * @param operator The address of the operator to register.
-     * @param operatorSignature The signature, salt, and expiry of the operator's signature.
-     */
-    function registerOperatorToAVS(
-        address operator,
-        ISignatureUtils.SignatureWithSaltAndExpiry memory operatorSignature
-    ) external override(ServiceManagerBase) {
-        _avsDirectory.registerOperatorToAVS(operator, operatorSignature);
-        emit OperatorRegistered(operator);
-    }
-
-    /**
-     * @notice Deregister an operator from the AVS. Forwards a call to EigenLayer's AVSDirectory.
-     */
-    function deregisterOperatorFromAVS(
-        address operator
-    )
-        external
-        override(ServiceManagerBase)
-        onlyRole(IRoleManager(roleManager).REGISTRYCOORDINATOR_ADMIN())
-    {
-        if (!operatorAllowlist[operator]) {
-            revert NotInAllowlist(TAG);
-        }
-        _avsDirectory.deregisterOperatorFromAVS(operator);
-        emit OperatorDeRegistered(operator);
     }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -111,54 +77,58 @@ contract CedroServiceManager is
     //////////////////////////////////////////////////////////////////////////////
 
     // /**
-    //  * @notice Confirm the AI Agent Blance accross the chains
-    //  * @param  balanceHeader -
+    //  * @notice Confirm the AI Agent Blance accross the chains and check if it is deviated
+    //  * @param  deviationBalanceHeader -
     //  * @param nonSignerStakesAndSignature -
     //  **/
     function confirmAgentDeviation(
-        DATA.DeviationBalanceHeader calldata balanceHeader,
+        CedroServiceData.DeviationBalanceHeader calldata deviationBalanceHeader,
         NonSignerStakesAndSignature memory nonSignerStakesAndSignature
-    ) external {
+    ) external onlyRoles(IRoleManager(roleManagerAddress).VERIFIER_ADMIN()) {
+      
         if (tx.origin != msg.sender) revert InvalidSender(TAG);
 
-        if (balanceHeader.referenceBlockNumber >= block.number) {
+        if (deviationBalanceHeader.referenceBlockNumber >= block.number)
             revert InvalidReferenceBlockNum(TAG);
-        }
 
         if (
-            balanceHeader.requestId <=
-            agentDeviationRequestId[balanceHeader.agentOperator]
-        ) {
-            revert InvalidRequestId(TAG);
-        }
+            deviationBalanceHeader.requestId != type(uint256).max &&
+            (deviationBalanceHeader.requestId <=
+                agentsDeviationRequestId[deviationBalanceHeader.agentAddress] ||
+                deviationBalanceHeader.requestId == 0)
+        ) revert InvalidRequestId(TAG);
 
         if (
-            balanceHeader.quorumNumbers.length !=
-            balanceHeader.quorumThresholdPercentages.length
+            deviationBalanceHeader.quorumNumbers.length !=
+            deviationBalanceHeader.quorumThresholdPercentages.length
         ) revert InvalidQuorumParam(TAG);
 
         // calculate reducedBalancehHeaderHash which nodes signed
         bytes32 reducedBalanceHeaderHash = hashDeviationBalanceHeader(
-            balanceHeader
+            deviationBalanceHeader
         );
+
+        console.log();
+        console.log("Message Hash");
+        console.logBytes32(reducedBalanceHeaderHash);
 
         (
             QuorumStakeTotals memory quorumStakeTotals,
             bytes32 signatoryRecordHash
         ) = checkSignatures(
                 reducedBalanceHeaderHash,
-                balanceHeader.quorumNumbers, // use list of uint8s instead of uint256 bitmap to not iterate 256 times
-                balanceHeader.referenceBlockNumber,
+                deviationBalanceHeader.quorumNumbers, // use list of uint8s instead of uint256 bitmap to not iterate 256 times
+                deviationBalanceHeader.referenceBlockNumber,
                 nonSignerStakesAndSignature
             );
 
         for (
             uint256 i = 0;
-            i < balanceHeader.quorumThresholdPercentages.length;
+            i < deviationBalanceHeader.quorumThresholdPercentages.length;
             ++i
         ) {
             uint8 currentQuorumThresholdPercentages = uint8(
-                balanceHeader.quorumThresholdPercentages[i]
+                deviationBalanceHeader.quorumThresholdPercentages[i]
             );
             if (currentQuorumThresholdPercentages > 100) {
                 revert InvalidQuorumThresholdPercentage(TAG);
@@ -182,10 +152,33 @@ contract CedroServiceManager is
             revert MessageHashAlreadyAdded(TAG);
         }
 
-        emit AgentBalanceConfirmed();
+        // calcualte the amount to be slashed
+        uint256 slashingAmount = calculateSlashingAmount(
+            deviationBalanceHeader.idealAmount,
+            deviationBalanceHeader.actualAmount,
+            agentManager.deviationPercentage(
+                deviationBalanceHeader.agentAddress
+            )
+        );
 
-        agentDeviationRequestId[balanceHeader.agentOperator] = balanceHeader
-            .requestId;
+        if (slashingAmount > 0)
+            agentManager.slashAgent(
+                deviationBalanceHeader.agentAddress,
+                slashingAmount
+            );
+
+        //calls to agent manager when check is not initiated offchain, request Id is sent max to denote it is offchain call
+        if (deviationBalanceHeader.requestId != type(uint256).max) {
+            agentManager.receivedResponse(deviationBalanceHeader.agentAddress);
+            agentsDeviationRequestId[
+                deviationBalanceHeader.agentAddress
+            ] = deviationBalanceHeader.requestId;
+        }
+
+        emit AgentBalanceConfirmed(
+            deviationBalanceHeader.agentAddress,
+            slashingAmount
+        );
     }
 
     /**
@@ -193,21 +186,13 @@ contract CedroServiceManager is
      * @param fraudBalanceHeader - evidence of fraud.
      **/
     function confirmAgentFraud(
-        DATA.FraudBalanceHeader calldata fraudBalanceHeader,
+        CedroServiceData.FraudBalanceHeader calldata fraudBalanceHeader,
         NonSignerStakesAndSignature memory nonSignerStakesAndSignature
-    ) external {
+    ) external onlyRoles(IRoleManager(roleManagerAddress).VERIFIER_ADMIN()) {
         if (tx.origin != msg.sender) revert InvalidSender(TAG);
 
-        if (fraudBalanceHeader.referenceBlockNumber >= block.number) {
+        if (fraudBalanceHeader.referenceBlockNumber >= block.number)
             revert InvalidReferenceBlockNum(TAG);
-        }
-
-        if (
-            fraudBalanceHeader.requestId <=
-            agentFraudRequestId[fraudBalanceHeader.agentOperator]
-        ) {
-            revert InvalidRequestId(TAG);
-        }
 
         if (
             fraudBalanceHeader.quorumNumbers.length ==
@@ -215,7 +200,7 @@ contract CedroServiceManager is
         ) revert InvalidQuorumParam(TAG);
 
         // calculate reducedBalancehHeaderHash which nodes signed
-        bytes32 reducedBalanceHeaderHash = hashFraudBalanceHeader(
+        bytes32 reducedFraudBalanceHeaderHash = hashFraudBalanceHeader(
             fraudBalanceHeader
         );
 
@@ -224,7 +209,7 @@ contract CedroServiceManager is
             QuorumStakeTotals memory quorumStakeTotals,
             bytes32 signatoryRecordHash
         ) = checkSignatures(
-                reducedBalanceHeaderHash,
+                reducedFraudBalanceHeaderHash,
                 fraudBalanceHeader.quorumNumbers, // use list of uint8s instead of uint256 bitmap to not iterate 256 times
                 fraudBalanceHeader.referenceBlockNumber,
                 nonSignerStakesAndSignature
@@ -254,21 +239,28 @@ contract CedroServiceManager is
             }
         }
 
-        uint32 requestIdMemory = agentDeviationRequestId[
-            fraudBalanceHeader.agentOperator
-        ];
-
         // store deviation message hash
-        bool success = _resolvedMessageHashes.add(reducedBalanceHeaderHash);
+        bool success = _resolvedMessageHashes.add(
+            reducedFraudBalanceHeaderHash
+        );
         if (!success) {
             revert MessageHashAlreadyAdded(TAG);
         }
 
-        agentDeviationRequestId[fraudBalanceHeader.agentOperator] =
-            requestIdMemory +
-            1;
+        uint256 requestIdMemory = agentsFraudRequestId[
+            fraudBalanceHeader.agentAddress
+        ];
 
-        emit AgentFraudConfirmed();
+        if (fraudBalanceHeader.insufficientAmount > 0)
+            agentManager.slashAgent(
+                fraudBalanceHeader.agentAddress,
+                fraudBalanceHeader.insufficientAmount
+            );
+
+        emit AgentFraudConfirmed(
+            fraudBalanceHeader.agentAddress,
+            fraudBalanceHeader.insufficientAmount
+        );
     }
 
     /**
@@ -276,7 +268,7 @@ contract CedroServiceManager is
      * @param evidence - evidence of the fraud.
      **/
     function challengeOperators(
-        DATA.OperatorChallengeEvidence calldata evidence
+        CedroServiceData.OperatorChallengeEvidence calldata evidence
     ) external {
         // :TO DO
     }
@@ -293,40 +285,89 @@ contract CedroServiceManager is
 
     /// @notice hash the deviation header
     function hashDeviationBalanceHeader(
-        DATA.DeviationBalanceHeader calldata balanceHeader
+        CedroServiceData.DeviationBalanceHeader calldata deviationBalanceHeader
     ) internal pure returns (bytes32) {
         return
-            keccak256(abi.encode(reduceDeviationBalanceHeader(balanceHeader)));
+            keccak256(
+                abi.encode(reduceDeviationBalanceHeader(deviationBalanceHeader))
+            );
     }
 
     /// @notice hash the fraud header
     function hashFraudBalanceHeader(
-        DATA.FraudBalanceHeader calldata balanceHeader
+        CedroServiceData.FraudBalanceHeader calldata deviationBalanceHeader
     ) internal pure returns (bytes32) {
-        return keccak256(abi.encode(reduceFraudBalanceHeader(balanceHeader)));
+        return
+            keccak256(
+                abi.encode(reduceFraudBalanceHeader(deviationBalanceHeader))
+            );
+    }
+
+    function setRegistryCoordinatorAddress(
+        IRegistryCoordinator __registryCoordinator
+    ) external onlyRoles(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
+        registryCoordinator = __registryCoordinator;
+        _registryCoordinator = __registryCoordinator;
+        stakeRegistry = registryCoordinator.stakeRegistry();
+        blsApkRegistry = registryCoordinator.blsApkRegistry();
+        delegation = stakeRegistry.delegation();
+    }
+
+    function setQuorumThresholdPercentage(
+        uint8 thresholdPercentage
+    ) external onlyRoles(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
+        if (thresholdPercentage > 100) {
+            revert InvalidQuorumThresholdPercentage(TAG);
+        }
+        quorumThresholdPercentage = thresholdPercentage;
+        emit QuorumThresholdPercentageChanged(thresholdPercentage);
+    }
+
+    function setAgentManagerAddress(
+        IAgentManager _agentManagerAddress
+    ) external onlyRoles(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
+        agentManager = _agentManagerAddress;
     }
 
     function setPauseStatus(
         bool status
-    ) external onlyRole(IRoleManager(roleManager).AVS_ADMIN()) {
+    ) external onlyRole(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
         pausedStatus = status;
     }
 
     /**
      * @notice converts a balance header to a reduced balance header
-     * @param balanceHeader the balance header to convert
+     * @param deviationBalanceHeader the balance header to convert
      */
 
     function reduceDeviationBalanceHeader(
-        DATA.DeviationBalanceHeader calldata balanceHeader
-    ) internal pure returns (DATA.ReducedDeviationHeader memory) {
+        CedroServiceData.DeviationBalanceHeader calldata deviationBalanceHeader
+    ) internal pure returns (CedroServiceData.ReducedDeviationHeader memory) {
         return
-            DATA.ReducedDeviationHeader({
-                actualAmount: balanceHeader.actualAmount,
-                idealAmount: balanceHeader.idealAmount,
-                referenceRequestId: balanceHeader.requestId,
-                referenceBlockNumber: balanceHeader.referenceBlockNumber
+            CedroServiceData.ReducedDeviationHeader({
+                agentAddress: deviationBalanceHeader.agentAddress,
+                referenceBlockNumber: deviationBalanceHeader
+                    .referenceBlockNumber,
+                requestId: deviationBalanceHeader.requestId,
+                actualAmount: deviationBalanceHeader.actualAmount,
+                idealAmount: deviationBalanceHeader.idealAmount
             });
+    }
+
+    /**
+     * @notice Calculates the amount that needs to be slashed of the agent
+     * @dev using Basis Points as measurement units - 1% = 100 basis points
+     * @param idealAmount the ideal balance that ai agent should have
+     * @param actualAmount the actual balance possesed by ai agent
+     * @param deviationPercentage the accepted deviation percentage of an ai agent
+     */
+    function calculateSlashingAmount(
+        uint256 idealAmount,
+        uint256 actualAmount,
+        uint256 deviationPercentage
+    ) internal pure returns (uint256) {
+        return ((((1e18 - deviationPercentage)) * idealAmount - actualAmount) /
+            1e18);
     }
 
     /// @notice Checks if messageHash exists
@@ -336,16 +377,17 @@ contract CedroServiceManager is
 
     /**
      * @notice converts a balance header to a reduced balance header
-     * @param balanceHeader the balance header to convert
+     * @param fraudBalanceHeader the balance header to convert
      */
 
     function reduceFraudBalanceHeader(
-        DATA.FraudBalanceHeader calldata balanceHeader
-    ) internal pure returns (DATA.ReducedFraudHeader memory) {
+        CedroServiceData.FraudBalanceHeader calldata fraudBalanceHeader
+    ) internal pure returns (CedroServiceData.ReducedFraudHeader memory) {
         return
-            DATA.ReducedFraudHeader({
-                insufficientAmount: balanceHeader.insufficientAmount,
-                referenceBlockNumber: balanceHeader.referenceBlockNumber
+            CedroServiceData.ReducedFraudHeader({
+                agentAddress: fraudBalanceHeader.agentAddress,
+                referenceBlockNumber: fraudBalanceHeader.referenceBlockNumber,
+                insufficientAmount: fraudBalanceHeader.insufficientAmount
             });
     }
 

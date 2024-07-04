@@ -31,8 +31,8 @@ abstract contract ServiceManagerBase is IServiceManager, ContextUpgradeable {
     error NotInAllowlist(string contractTAG);
 
     IAVSDirectory public _avsDirectory;
-    IRewardsCoordinator internal _rewardsCoordinator;
-    IRegistryCoordinator internal _registryCoordinator;
+    IRewardsCoordinator public _rewardsCoordinator;
+    IRegistryCoordinator public _registryCoordinator;
     IStakeRegistry internal _stakeRegistry;
 
     /// @notice when applied to a function, only allows the RegistryCoordinator to call it
@@ -86,29 +86,12 @@ abstract contract ServiceManagerBase is IServiceManager, ContextUpgradeable {
         roleManagerAddress = _roleManager;
     }
 
-    function setRegistryCoordinator(
-        IRegistryCoordinator __registryCoordinator
-    ) external {
-        _registryCoordinator = __registryCoordinator;
-    }
-
-    /**
-     * @notice Configures role manager address
-     * This function can only be accessed by the account with role DEFAULT_ADMIN_ROLE.
-     * @param _roleManagerAddress - address of the roleManager contract.
-     **/
-    function setRoleManagerAddress(
-        address _roleManagerAddress
-    ) external onlyRoles(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
-        roleManagerAddress = _roleManagerAddress;
-    }
-
     /**
      * @notice Updates the metadata URI for the AVS
      * @param _metadataURI is the metadata URI for the AVS
      * @dev only callable by the owner
      */
-    function updateAVSMetadataURI(string memory _metadataURI) public virtual {
+    function updateAVSMetadataURI(string memory _metadataURI) public virtual onlyRoles(IRoleManager(roleManagerAddress).AVS_ADMIN()){
         _avsDirectory.updateAVSMetadataURI(_metadataURI);
     }
 
@@ -175,9 +158,20 @@ abstract contract ServiceManagerBase is IServiceManager, ContextUpgradeable {
         _avsDirectory.deregisterOperatorFromAVS(operator);
     }
 
-     function setRewardsInitiator(address newRewardsInitiator) internal {
+    function setRewardsInitiator(address newRewardsInitiator) external onlyRoles(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
         emit RewardsInitiatorUpdated(rewardsInitiator, newRewardsInitiator);
         rewardsInitiator = newRewardsInitiator;
+    }
+
+    /**
+     * @notice Whitelists operators
+     * This function can only be accessed by account with role AVS_ADMIN.
+     * @param operators - list of operators to whitelist
+     **/
+    function addOperatorsToAllowlist(address[] calldata operators) external onlyRoles(IRoleManager(roleManagerAddress).AVS_ADMIN()){
+        for (uint256 i; i < operators.length; i++) {
+            operatorAllowlist[operators[i]] = true;
+        }
     }
 
     /**

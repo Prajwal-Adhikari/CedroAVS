@@ -77,6 +77,13 @@ interface IBLSApkRegistry is IRegistry {
      *         5) `quorumNumbers` is a subset of the quorumNumbers that the operator is registered for
      */ 
     function deregisterOperator(address operator, bytes calldata quorumNumbers) external;
+
+     /**
+     * @notice Deregisters the `operator`'s pubkey as operator is no longer registered for any quorums.
+     * @param operator The address of the operator to deregister.
+     * @dev access restricted to the RegistryCoordinator
+     */ 
+    function removeOperatorDetails(address operator) external;
     
     /**
      * @notice Initializes a new quorum by pushing its first apk update

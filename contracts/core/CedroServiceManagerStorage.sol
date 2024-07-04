@@ -14,10 +14,10 @@ contract CedroServiceManagerStorage {
     bool pausedStatus;
 
     /// @notice The current requestid of the  agent deviation check, specific to agent operator
-    mapping(address => uint32) public agentDeviationRequestId;
+    mapping(address => uint256) public agentsDeviationRequestId;
 
     /// @notice The current requestid of the  agent fraud check, specific to agent operator
-    mapping(address => uint32) public agentFraudRequestId;
+    mapping(address => uint256) public agentsFraudRequestId;
 
     /// @notice Resolved deviation message hashes, prevent aggregator from replay any resolved message hash
     EnumerableSet.Bytes32Set internal _resolvedMessageHashes;

@@ -39,6 +39,8 @@ abstract contract RegistryCoordinatorStorage is
     /// @notice The maximum number of quorums this contract supports
     uint8 internal constant MAX_QUORUM_COUNT = 192;
 
+    bool pausedStatus;
+
     /// @notice the ServiceManager for this AVS, which forwards calls onto EigenLayer's core contracts
     IServiceManager public serviceManager;
     /// @notice the BLS Aggregate Pubkey Registry contract that will keep track of operators' aggregate BLS public keys per quorum
@@ -82,6 +84,11 @@ abstract contract RegistryCoordinatorStorage is
         _;
     }
 
+    modifier isPaused() {
+        require(!pausedStatus, "AVS System is paused");
+        _;
+    }
+
     /// @notice the last timestamp an operator was ejected
     mapping(address => uint256) public lastEjectionTimestamp;
     /// @notice the delay in seconds before an operator can reregister after being ejected
@@ -93,6 +100,7 @@ abstract contract RegistryCoordinatorStorage is
     }
 
     function _RegistryCoordinatorStorage_init(
+        address _roleManagerAddress,
         IServiceManager _serviceManager,
         IStakeRegistry _stakeRegistry,
         IBLSApkRegistry _blsApkRegistry,
@@ -102,17 +110,24 @@ abstract contract RegistryCoordinatorStorage is
         stakeRegistry = _stakeRegistry;
         blsApkRegistry = _blsApkRegistry;
         indexRegistry = _indexRegistry;
+        roleManagerAddress = _roleManagerAddress;
     }
 
     /**
      * @notice Configures role manager address
-     * This function can only be accessed by the account with role DEFAULT_ADMIN_ROLE.
+     * This function can only be accessed by the account with role AVS_ADMIN().
      * @param _roleManagerAddress - address of the roleManager contract.
      **/
     function setRoleManager(
         address _roleManagerAddress
-    ) external onlyRole(IRoleManager(roleManagerAddress).DEFAULT_ADMIN_ROLE()) {
+    ) external onlyRole(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
         roleManagerAddress = _roleManagerAddress;
+    }
+
+    function setPauseStatus(
+        bool status
+    ) external onlyRole(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
+        pausedStatus = status;
     }
 
     // storage gap for upgradeability
