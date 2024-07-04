@@ -2,10 +2,9 @@
 pragma solidity ^0.8.12;
 
 import {IDelegationManager} from "./interfaces/IDelegationManager.sol";
-
 import {StakeRegistryStorage, IStrategy} from "./StakeRegistryStorage.sol";
-
 import {IRegistryCoordinator} from "./interfaces/IRegistryCoordinator.sol";
+import {IRoleManager} from "../interfaces/IRoleManager.sol";
 import {IStakeRegistry} from "./interfaces/IStakeRegistry.sol";
 
 import {BitmapUtils} from "./libraries/BitmapUtils.sol";
@@ -30,11 +29,6 @@ contract StakeRegistry is StakeRegistryStorage {
         _;
     }
 
-    // modifier () {
-    //     require(msg.sender == IRegistryCoordinator(registryCoordinator).owner(), "StakeRegistry.: caller is not the owner of the registryCoordinator");
-    //     _;
-    // }
-
     modifier quorumExists(uint8 quorumNumber) {
         require(
             _quorumExists(quorumNumber),
@@ -43,17 +37,17 @@ contract StakeRegistry is StakeRegistryStorage {
         _;
     }
 
-     /// @custom:oz-upgrades-unsafe-allow constructor
-     constructor() {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
         // disable initializers so that the implementation contract cannot be initialized
         _disableInitializers();
     }
 
     function initialize(
-        address ownerAddress,
+        address _roleManagerAddress,
         IDelegationManager _delegationManager
     ) external initializer {
-        _stakeRegistryStorage_init(ownerAddress, _delegationManager);
+        _stakeRegistryStorage_init(_roleManagerAddress, _delegationManager);
     }
 
     /*******************************************************************************
@@ -221,7 +215,7 @@ contract StakeRegistry is StakeRegistryStorage {
         uint8 quorumNumber,
         uint96 minimumStake,
         StrategyParams[] memory _strategyParams
-    ) public virtual {
+    ) public virtual onlyRegistryCoordinator {
         require(
             !_quorumExists(quorumNumber),
             "StakeRegistry.initializeQuorum: quorum already exists"
@@ -241,7 +235,12 @@ contract StakeRegistry is StakeRegistryStorage {
     function setMinimumStakeForQuorum(
         uint8 quorumNumber,
         uint96 minimumStake
-    ) public virtual quorumExists(quorumNumber) {
+    )
+        public
+        virtual
+        quorumExists(quorumNumber)
+        onlyRole(IRoleManager(roleManagerAddress).AVS_ADMIN())
+    {
         _setMinimumStakeForQuorum(quorumNumber, minimumStake);
     }
 
@@ -254,7 +253,12 @@ contract StakeRegistry is StakeRegistryStorage {
     function addStrategies(
         uint8 quorumNumber,
         StrategyParams[] memory _strategyParams
-    ) public virtual quorumExists(quorumNumber) {
+    )
+        public
+        virtual
+        quorumExists(quorumNumber)
+        onlyRole(IRoleManager(roleManagerAddress).AVS_ADMIN())
+    {
         _addStrategyParams(quorumNumber, _strategyParams);
     }
 
@@ -266,7 +270,12 @@ contract StakeRegistry is StakeRegistryStorage {
     function removeStrategies(
         uint8 quorumNumber,
         uint256[] memory indicesToRemove
-    ) public virtual quorumExists(quorumNumber) {
+    )
+        public
+        virtual
+        quorumExists(quorumNumber)
+        onlyRole(IRoleManager(roleManagerAddress).AVS_ADMIN())
+    {
         uint256 toRemoveLength = indicesToRemove.length;
         require(
             toRemoveLength > 0,
@@ -311,7 +320,12 @@ contract StakeRegistry is StakeRegistryStorage {
         uint8 quorumNumber,
         uint256[] calldata strategyIndices,
         uint96[] calldata newMultipliers
-    ) public virtual quorumExists(quorumNumber) {
+    )
+        public
+        virtual
+        quorumExists(quorumNumber)
+        onlyRole(IRoleManager(roleManagerAddress).AVS_ADMIN())
+    {
         uint256 numStrats = strategyIndices.length;
         require(
             numStrats > 0,

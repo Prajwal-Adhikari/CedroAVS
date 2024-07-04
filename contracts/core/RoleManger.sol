@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
+import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import {AccessControlUpgradeable} from "@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol";
 
 string constant TAG = "RoleManagerCore";
 
@@ -16,7 +15,6 @@ contract RoleManagerCore is ContextUpgradeable, AccessControlUpgradeable {
     bytes32 public constant REGISTRYCOORDINATOR_ADMIN = keccak256("REGISTRYCOORDINATOR_ADMIN");
     bytes32 public constant VERIFIER_ADMIN = keccak256("VERIFIER_ADMIN");
    
-
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();

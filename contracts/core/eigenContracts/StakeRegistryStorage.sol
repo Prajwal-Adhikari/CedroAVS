@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.12;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 
 import {IDelegationManager} from "./interfaces/IDelegationManager.sol";
 import {IStrategyManager, IStrategy} from "./interfaces/IStrategyManager.sol";
 import {IRegistryCoordinator} from "./interfaces/IRegistryCoordinator.sol";
+import {IRoleManager} from "../interfaces/IRoleManager.sol";
 import {IStakeRegistry} from "./interfaces/IStakeRegistry.sol";
 
 /**
@@ -13,7 +14,7 @@ import {IStakeRegistry} from "./interfaces/IStakeRegistry.sol";
  * @author Layr Labs, Inc.
  * @notice This storage contract is separate from the logic to simplify the upgrade process.
  */
-abstract contract StakeRegistryStorage is IStakeRegistry, OwnableUpgradeable {
+abstract contract StakeRegistryStorage is IStakeRegistry, ContextUpgradeable {
     /// @notice Constant used as a divisor in calculating weights.
     uint256 public constant WEIGHTING_DIVISOR = 1e18;
     /// @notice Maximum length of dynamic arrays in the `strategyParams` mapping.
@@ -26,6 +27,9 @@ abstract contract StakeRegistryStorage is IStakeRegistry, OwnableUpgradeable {
 
     /// @notice the coordinator contract that this registry is associated with
     address public registryCoordinator;
+
+    //address of the rolemanager contract
+    address public roleManagerAddress;
 
     /// @notice In order to register for a quorum i, an operator must have at least `minimumStakeForQuorum[i]`
     /// evaluated by this contract's 'VoteWeigher' logic.
@@ -45,23 +49,31 @@ abstract contract StakeRegistryStorage is IStakeRegistry, OwnableUpgradeable {
     mapping(uint8 => StrategyParams[]) public strategyParams;
     mapping(uint8 => IStrategy[]) public strategiesPerQuorum;
 
-     /// @custom:oz-upgrades-unsafe-allow constructor
-     constructor() {
+    /**
+     * @dev Modifier that checks if caller has a specific role.
+     **/
+    modifier onlyRole(bytes32 role) {
+        IRoleManager(roleManagerAddress).checkRole(role, _msgSender());
+        _;
+    }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
         // disable initializers so that the implementation contract cannot be initialized
         _disableInitializers();
     }
 
     function _stakeRegistryStorage_init(
-        address ownerAddress,
+        address _roleManagerAddress,
         IDelegationManager _delegationManager
     ) internal initializer {
         delegation = _delegationManager;
-        __Ownable_init(ownerAddress);
+        roleManagerAddress = _roleManagerAddress;
     }
 
-    function setRegisterCoordinator(
+    function setRegisteryCoordinator(
         IRegistryCoordinator _registryCoordinator
-    ) external onlyOwner {
+    ) external onlyRole(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
         registryCoordinator = address(_registryCoordinator);
     }
 

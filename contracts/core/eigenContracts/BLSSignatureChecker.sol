@@ -10,8 +10,6 @@ import {IStakeRegistry, IDelegationManager} from "./interfaces/IStakeRegistry.so
 import {BitmapUtils} from "./libraries/BitmapUtils.sol";
 import {BN254} from "./libraries/BN254.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title Used for checking BLS aggregate signatures from the operators of a `BLSRegistry`.
  * @author Layr Labs, Inc.

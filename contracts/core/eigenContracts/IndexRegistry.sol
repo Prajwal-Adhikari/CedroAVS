@@ -23,8 +23,8 @@ contract IndexRegistry is IndexRegistryStorage {
         _disableInitializers();
     }
 
-    function initialize(address ownerAddress) external initializer {
-        _indexRegistryStorage_init(ownerAddress);
+    function initialize(address _roleManagerAddress) external initializer {
+        _indexRegistryStorage_init(_roleManagerAddress);
     }
 
     /*******************************************************************************

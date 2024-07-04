@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.12;
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 
 import {IBLSApkRegistry} from "./interfaces/IBLSApkRegistry.sol";
 import {IStakeRegistry} from "./interfaces/IStakeRegistry.sol";
@@ -12,7 +12,7 @@ import {IRegistryCoordinator} from "./interfaces/IRegistryCoordinator.sol";
 
 abstract contract RegistryCoordinatorStorage is
     IRegistryCoordinator,
-    OwnableUpgradeable
+    ContextUpgradeable
 {
     /*******************************************************************************
                                CONSTANTS AND IMMUTABLES 
@@ -38,6 +38,8 @@ abstract contract RegistryCoordinatorStorage is
     uint8 internal constant PAUSED_UPDATE_OPERATOR = 2;
     /// @notice The maximum number of quorums this contract supports
     uint8 internal constant MAX_QUORUM_COUNT = 192;
+
+    bool pausedStatus;
 
     /// @notice the ServiceManager for this AVS, which forwards calls onto EigenLayer's core contracts
     IServiceManager public serviceManager;
@@ -82,6 +84,11 @@ abstract contract RegistryCoordinatorStorage is
         _;
     }
 
+    modifier isPaused() {
+        require(!pausedStatus, "AVS System is paused");
+        _;
+    }
+
     /// @notice the last timestamp an operator was ejected
     mapping(address => uint256) public lastEjectionTimestamp;
     /// @notice the delay in seconds before an operator can reregister after being ejected
@@ -93,7 +100,7 @@ abstract contract RegistryCoordinatorStorage is
     }
 
     function _RegistryCoordinatorStorage_init(
-        address ownerAddress,
+        address _roleManagerAddress,
         IServiceManager _serviceManager,
         IStakeRegistry _stakeRegistry,
         IBLSApkRegistry _blsApkRegistry,
@@ -103,28 +110,24 @@ abstract contract RegistryCoordinatorStorage is
         stakeRegistry = _stakeRegistry;
         blsApkRegistry = _blsApkRegistry;
         indexRegistry = _indexRegistry;
-        __Ownable_init(ownerAddress);
+        roleManagerAddress = _roleManagerAddress;
     }
 
     /**
      * @notice Configures role manager address
-     * This function can only be accessed by the account with role DEFAULT_ADMIN_ROLE.
+     * This function can only be accessed by the account with role AVS_ADMIN().
      * @param _roleManagerAddress - address of the roleManager contract.
      **/
     function setRoleManager(
         address _roleManagerAddress
-    ) external onlyRole(IRoleManager(roleManagerAddress).DEFAULT_ADMIN_ROLE()) {
+    ) external onlyRole(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
         roleManagerAddress = _roleManagerAddress;
     }
 
-    /// @dev need to override function here since its defined in both these contracts
-    function owner()
-        public
-        view
-        override(OwnableUpgradeable, IRegistryCoordinator)
-        returns (address)
-    {
-        return OwnableUpgradeable.owner();
+    function setPauseStatus(
+        bool status
+    ) external onlyRole(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
+        pausedStatus = status;
     }
 
     // storage gap for upgradeability
