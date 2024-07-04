@@ -2,12 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./ERC20Mock.sol";
 import "../../interfaces/IOracle.sol";
 
 contract AaveMock {
-    using SafeMath for uint256;
     mapping(address => address) public aToken;
     mapping(address => address) public dToken;
     mapping(address => address[]) public userCollateralList;
@@ -140,27 +138,27 @@ contract AaveMock {
         uint256 debt;
         uint256 len = assets.length;
         for (uint256 i; i < len; ) {
-            collateral += ERC20Mock(aToken[assets[i]])
+            collateral += (ERC20Mock(aToken[assets[i]])
                 .balanceOf(user)
-                .mul(IOracle(oracle).getSinglePrice(assetKey[assets[i]]))
-                .div(1e18);
+                * (IOracle(oracle).getSinglePrice(assetKey[assets[i]])))
+                / (1e18);
             unchecked {
                 i++;
             }
         }
 
         for (uint256 i; i < len; ) {
-            debt += ERC20Mock(dToken[assets[i]])
+            debt += (ERC20Mock(dToken[assets[i]])
                 .balanceOf(user)
-                .mul(IOracle(oracle).getSinglePrice(assetKey[assets[i]]))
-                .div(1e18);
+                * (IOracle(oracle).getSinglePrice(assetKey[assets[i]])))
+                / (1e18);
 
             unchecked {
                 i++;
             }
         }
         require(
-            debt == 0 || debt.mul(1e18).div(collateral) <= 5e17,
+            debt == 0 || (debt * (1e18)) / (collateral) <= 5e17,
             "Health Factor exceeded"
         );
     }

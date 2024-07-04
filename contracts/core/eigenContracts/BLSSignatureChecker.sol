@@ -18,6 +18,7 @@ import {BN254} from "./libraries/BN254.sol";
  */
 contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
     using BN254 for BN254.G1Point;
+
     address public roleManager;
 
     // CONSTANTS & IMMUTABLES
@@ -32,13 +33,6 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
     /// @notice If true, check the staleness of the operator stakes and that its within the delegation withdrawalDelayBlocks window.
     bool public staleStakesForbidden;
 
-    // modifier onlyCoordinatorOwner() {
-    //     require(
-    //         msg.sender == registryCoordinator.owner(),
-    //         "BLSSignatureChecker.onlyCoordinatorOwner: caller is not the owner of the registryCoordinator"
-    //     );
-    //     _;
-    // }
     /**
      * @dev Modifier that checks if caller has a specific role.
      **/
@@ -53,18 +47,9 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
     }
 
     function _BLSSignatureChecker_init(
-        address _roleManager
+        address _roleManagerAddress
     ) internal onlyInitializing {
-        roleManager = _roleManager;
-    }
-
-    function setRegistryCoordinatorAddress(
-        IRegistryCoordinator _registryCoordinator
-    ) external {
-        registryCoordinator = _registryCoordinator;
-        stakeRegistry = _registryCoordinator.stakeRegistry();
-        blsApkRegistry = _registryCoordinator.blsApkRegistry();
-        delegation = stakeRegistry.delegation();
+        roleManager = _roleManagerAddress;
     }
 
     /**
@@ -74,7 +59,7 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
      * @param value to toggle staleStakesForbidden
      */
     // onlyCoordinatorOwner
-    function setStaleStakesForbidden(bool value) external {
+    function setStaleStakesForbidden(bool value) external onlyRole(IRoleManager(roleManager).AVS_ADMIN()) {
         _setStaleStakesForbidden(value);
     }
 
@@ -157,11 +142,13 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
         nonSigners.quorumBitmaps = new uint256[](
             params.nonSignerPubkeys.length
         );
+
         nonSigners.pubkeyHashes = new bytes32[](params.nonSignerPubkeys.length);
 
         {
             // Get a bitmap of the quorums signing the message, and validate that
             // quorumNumbers contains only unique, valid quorum numbers
+
             uint256 signingQuorumBitmap = BitmapUtils.orderedBytesArrayToBitmap(
                 quorumNumbers,
                 registryCoordinator.quorumCount()
@@ -256,7 +243,6 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
                     });
                 stakeTotals.signedStakeForQuorum[i] = stakeTotals
                     .totalStakeForQuorum[i];
-
                 // Keep track of the nonSigners index in the quorum
                 uint256 nonSignerForQuorumIndex = 0;
 
@@ -286,6 +272,7 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
                 }
             }
         }
+
         {
             // verify the signature
             (
@@ -356,20 +343,20 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
         );
     }
 
-    /**
-     * @notice Configures role manager address
-     * This function can only be accessed by the account with role DEFAULT_ADMIN_ROLE.
-     * @param roleManagerAddress - address of the roleManager contract.
-     **/
-    function setRoleManager(
-        address roleManagerAddress
-    ) external onlyRole(IRoleManager(roleManager).DEFAULT_ADMIN_ROLE()) {
-        roleManager = roleManagerAddress;
-    }
-
     function _setStaleStakesForbidden(bool value) internal {
         staleStakesForbidden = value;
         emit StaleStakesForbiddenUpdate(value);
+    }
+
+    /**
+     * @notice Configures role manager address
+     * This function can only be accessed by the account with role DEFAULT_ADMIN_ROLE.
+     * @param _roleManagerAddress - address of the roleManager contract.
+     **/
+    function setRoleManager(
+        address _roleManagerAddress
+    ) external onlyRole(IRoleManager(roleManager).AVS_ADMIN()) {
+        roleManager = _roleManagerAddress;
     }
 
     // storage gap for upgradeability

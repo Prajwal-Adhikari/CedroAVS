@@ -15,3 +15,5 @@ node_modules
 
 *.abi
 .DS_Store
+
+.openzeppelin/

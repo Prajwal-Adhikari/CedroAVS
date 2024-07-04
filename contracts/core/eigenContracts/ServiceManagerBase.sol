@@ -6,25 +6,33 @@ import {IRoleManager} from "../interfaces/IRoleManager.sol";
 import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import {ISignatureUtils} from "./interfaces/ISignatureUtils.sol";
 import {IAVSDirectory} from "./interfaces/IAVSDirectory.sol";
-import {IPaymentCoordinator} from "./interfaces/IPaymentCoordinator.sol";
+import {IRewardsCoordinator} from "./interfaces/IRewardsCoordinator.sol";
 
 import {IServiceManager} from "./interfaces/IServiceManager.sol";
 import {IRegistryCoordinator} from "./interfaces/IRegistryCoordinator.sol";
 import {IStakeRegistry} from "./interfaces/IStakeRegistry.sol";
 import {BitmapUtils} from "./libraries/BitmapUtils.sol";
 
+string constant TAG = "ServiceManagerBase";
+
 /**
  * @title Minimal implementation of a ServiceManager-type contract.
  * This contract can be inherited from or simply used as a point-of-reference.
  * @author Layr Labs, Inc.
  */
-abstract contract ServiceManagerBase is IServiceManager, OwnableUpgradeable {
+abstract contract ServiceManagerBase is IServiceManager, ContextUpgradeable {
     using BitmapUtils for *;
-    address roleManagerAddress;
+    address public roleManagerAddress;
+    address public rewardsInitiator;
 
-    IAVSDirectory internal _avsDirectory;
-    IPaymentCoordinator internal _paymentCoordinator;
-    IRegistryCoordinator internal _registryCoordinator;
+    /// @notice The list of allowed operaors
+    mapping(address => bool) public operatorAllowlist;
+
+    error NotInAllowlist(string contractTAG);
+
+    IAVSDirectory public _avsDirectory;
+    IRewardsCoordinator public _rewardsCoordinator;
+    IRegistryCoordinator public _registryCoordinator;
     IStakeRegistry internal _stakeRegistry;
 
     /// @notice when applied to a function, only allows the RegistryCoordinator to call it
@@ -35,6 +43,24 @@ abstract contract ServiceManagerBase is IServiceManager, OwnableUpgradeable {
         );
         _;
     }
+
+    /**
+     * @dev Modifier that checks if operator is whitelisted
+     **/
+    modifier onlyWhitelistedOperator() {
+        require(operatorAllowlist[msg.sender], "Operator is not whitelisted");
+        _;
+    }
+
+    /// @notice only rewardsInitiator can call createAVSRewardsSubmission
+    modifier onlyRewardsInitiator() {
+        require(
+            msg.sender == rewardsInitiator,
+            "ServiceManagerBase.onlyRewardsInitiator: caller is not the rewards initiator"
+        );
+        _;
+    }
+
     /**
      * @dev Modifier that checks if caller has a specific role.
      **/
@@ -44,29 +70,20 @@ abstract contract ServiceManagerBase is IServiceManager, OwnableUpgradeable {
     }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor(
-        IAVSDirectory __avsDirectory,
-        IPaymentCoordinator ___paymentCoordinator,
-        IStakeRegistry __stakeRegistry,
-        address _roleManager
-    ) {
-        _avsDirectory = __avsDirectory;
-        _paymentCoordinator = ___paymentCoordinator;
-        _stakeRegistry = __stakeRegistry;
-        roleManagerAddress = _roleManager;
+    constructor() {
         _disableInitializers();
     }
 
     function __ServiceManagerBase_init(
-        address initialOwner
+        IAVSDirectory __avsDirectory,
+        IRewardsCoordinator __rewardsCoordinator,
+        IStakeRegistry __stakeRegistry,
+        address _roleManager
     ) internal virtual onlyInitializing {
-        _transferOwnership(initialOwner);
-    }
-
-    function setRegistryCoordinator(
-        IRegistryCoordinator __registryCoordinator
-    ) external {
-        _registryCoordinator = __registryCoordinator;
+        _avsDirectory = __avsDirectory;
+        _rewardsCoordinator = __rewardsCoordinator;
+        _stakeRegistry = __stakeRegistry;
+        roleManagerAddress = _roleManager;
     }
 
     /**
@@ -74,43 +91,43 @@ abstract contract ServiceManagerBase is IServiceManager, OwnableUpgradeable {
      * @param _metadataURI is the metadata URI for the AVS
      * @dev only callable by the owner
      */
-    function updateAVSMetadataURI(
-        string memory _metadataURI
-    ) public virtual onlyOwner {
+    function updateAVSMetadataURI(string memory _metadataURI) public virtual onlyRoles(IRoleManager(roleManagerAddress).AVS_ADMIN()){
         _avsDirectory.updateAVSMetadataURI(_metadataURI);
     }
 
     /**
-     * @notice Creates a new range payment on behalf of an AVS, to be split amongst the
-     * set of stakers delegated to operators who are registered to the `avs`.
-     * Note that the owner calling this function must have approved the tokens to be transferred to the ServiceManager
-     * and of course has the required balances.
-     * @param rangePayments The range payments being created
-     * @dev Expected to be called by the ServiceManager of the AVS on behalf of which the payment is being made
-     * @dev The duration of the `rangePayment` cannot exceed `paymentCoordinator.MAX_PAYMENT_DURATION()`
-     * @dev The tokens are sent to the `PaymentCoordinator` contract
+     * @notice Creates a new rewards submission to the EigenLayer RewardsCoordinator contract, to be split amongst the
+     * set of stakers delegated to operators who are registered to this `avs`
+     * @param rewardsSubmissions The rewards submissions being created
+     * @dev Only callabe by the permissioned rewardsInitiator address
+     * @dev The duration of the `rewardsSubmission` cannot exceed `MAX_REWARDS_DURATION`
+     * @dev The tokens are sent to the `RewardsCoordinator` contract
      * @dev Strategies must be in ascending order of addresses to check for duplicates
-     * @dev This function will revert if the `rangePayment` is malformed,
+     * @dev This function will revert if the `rewardsSubmission` is malformed,
      * e.g. if the `strategies` and `weights` arrays are of non-equal lengths
      */
-    function payForRange(
-        IPaymentCoordinator.RangePayment[] calldata rangePayments
-    ) public virtual onlyOwner {
-        for (uint256 i = 0; i < rangePayments.length; ++i) {
-            // transfer token to ServiceManager and approve PaymentCoordinator to transfer again
-            // in payForRange() call
-            rangePayments[i].token.transferFrom(
+    function createAVSRewardsSubmission(
+        IRewardsCoordinator.RewardsSubmission[] calldata rewardsSubmissions
+    ) public virtual onlyRewardsInitiator {
+        for (uint256 i = 0; i < rewardsSubmissions.length; ++i) {
+            // transfer token to ServiceManager and approve RewardsCoordinator to transfer again
+            // in createAVSRewardsSubmission() call
+            rewardsSubmissions[i].token.transferFrom(
                 msg.sender,
                 address(this),
-                rangePayments[i].amount
+                rewardsSubmissions[i].amount
             );
-            rangePayments[i].token.approve(
-                address(_paymentCoordinator),
-                rangePayments[i].amount
+            uint256 allowance = rewardsSubmissions[i].token.allowance(
+                address(this),
+                address(_rewardsCoordinator)
+            );
+            rewardsSubmissions[i].token.approve(
+                address(_rewardsCoordinator),
+                rewardsSubmissions[i].amount + allowance
             );
         }
 
-        _paymentCoordinator.payForRange(rangePayments);
+        _rewardsCoordinator.createAVSRewardsSubmission(rewardsSubmissions);
     }
 
     /**
@@ -122,6 +139,9 @@ abstract contract ServiceManagerBase is IServiceManager, OwnableUpgradeable {
         address operator,
         ISignatureUtils.SignatureWithSaltAndExpiry memory operatorSignature
     ) external virtual onlyRegistryCoordinator {
+        if (!operatorAllowlist[operator]) {
+            revert NotInAllowlist(TAG);
+        }
         _avsDirectory.registerOperatorToAVS(operator, operatorSignature);
     }
 
@@ -132,7 +152,26 @@ abstract contract ServiceManagerBase is IServiceManager, OwnableUpgradeable {
     function deregisterOperatorFromAVS(
         address operator
     ) external virtual onlyRegistryCoordinator {
+        if (!operatorAllowlist[operator]) {
+            revert NotInAllowlist(TAG);
+        }
         _avsDirectory.deregisterOperatorFromAVS(operator);
+    }
+
+    function setRewardsInitiator(address newRewardsInitiator) external onlyRoles(IRoleManager(roleManagerAddress).AVS_ADMIN()) {
+        emit RewardsInitiatorUpdated(rewardsInitiator, newRewardsInitiator);
+        rewardsInitiator = newRewardsInitiator;
+    }
+
+    /**
+     * @notice Whitelists operators
+     * This function can only be accessed by account with role AVS_ADMIN.
+     * @param operators - list of operators to whitelist
+     **/
+    function addOperatorsToAllowlist(address[] calldata operators) external onlyRoles(IRoleManager(roleManagerAddress).AVS_ADMIN()){
+        for (uint256 i; i < operators.length; i++) {
+            operatorAllowlist[operators[i]] = true;
+        }
     }
 
     /**

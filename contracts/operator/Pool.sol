@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -17,7 +16,6 @@ string constant TAG = "Pool";
 
 contract Pool is Context, ReentrancyGuard {
     using ECDSA for bytes32;
-    using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
     address public owner;

@@ -7,7 +7,7 @@ import {IDelegationManager} from "../../contracts/core/eigenContracts/interfaces
 import {IStrategyManager} from "../../contracts/core/eigenContracts/interfaces/IStrategyManager.sol";
 import {IStrategy} from "../../contracts/core/eigenContracts/interfaces/IStrategy.sol";
 import {ISignatureUtils} from "../../contracts/core/eigenContracts/interfaces/ISignatureUtils.sol";
-import "hardhat/console.sol";
+
 
 contract DelegationMock is IDelegationManager {
     // @dev Chain ID at the time of contract deployment
@@ -120,7 +120,7 @@ contract DelegationMock is IDelegationManager {
         return 0;
     }
 
-    function minWithdrawalDelayBlocks() external view returns (uint256) {
+    function minWithdrawalDelayBlocks() external pure returns (uint256) {
         return 50400;
     }
 
@@ -130,7 +130,7 @@ contract DelegationMock is IDelegationManager {
      */
     function strategyWithdrawalDelayBlocks(
         IStrategy /*strategy*/
-    ) external view returns (uint256) {
+    ) external pure returns (uint256) {
         return 0;
     }
 
@@ -147,7 +147,7 @@ contract DelegationMock is IDelegationManager {
 
     function getWithdrawalDelay(
         IStrategy[] calldata /*strategies*/
-    ) public view returns (uint256) {
+    ) public pure returns (uint256) {
         return 0;
     }
 
@@ -223,21 +223,21 @@ contract DelegationMock is IDelegationManager {
         uint256 /*expiry*/
     ) external pure returns (bytes32 digestHash) {}
 
-    function DOMAIN_TYPEHASH() public view returns (bytes32) {
+    function DOMAIN_TYPEHASH() public pure returns (bytes32) {
         return
             keccak256(
                 "EIP712Domain(string name,uint256 chainId,address verifyingContract)"
             );
     }
 
-    function STAKER_DELEGATION_TYPEHASH() public view returns (bytes32) {
+    function STAKER_DELEGATION_TYPEHASH() public pure returns (bytes32) {
         return
             keccak256(
                 "StakerDelegation(address staker,address operator,uint256 nonce,uint256 expiry)"
             );
     }
 
-    function DELEGATION_APPROVAL_TYPEHASH() public view returns (bytes32) {
+    function DELEGATION_APPROVAL_TYPEHASH() public pure returns (bytes32) {
         return
             keccak256(
                 "DelegationApproval(address delegationApprover,address staker,address operator,bytes32 salt,uint256 expiry)"
