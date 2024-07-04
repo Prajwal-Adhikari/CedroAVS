@@ -65,6 +65,14 @@ func NewAgentManager(cfg *config.Config, logger logging.Logger, ethClient eth.Cl
 
 }
 
+func (ag *AgentManager) GetDeviationPercentage(ctx context.Context, agent common.Address, blockNumber uint64) (*big.Int, error) {
+	dev, err := ag.Contract.DeviationPercentage(&bind.CallOpts{
+		BlockNumber: big.NewInt(int64(blockNumber)),
+	}, agent)
+
+	return dev, err
+}
+
 func (ag *AgentManager) PollEvents(ctx context.Context, ch chan<- *Request, serviceManager *cedroservicemanager.CedroServiceManager) {
 	dur := ag.PollDuration
 

@@ -134,38 +134,53 @@ func (c *Client) GetBlockFromTimestamp(ctx context.Context, timestamp uint64) (u
 }
 
 func (c *Client) GetBalance(ctx context.Context, reqEvent *avs.Request, balanceChan chan<- *big.Int) {
+
 	var balance *big.Int
 
-	finalizedBlock, err := c.GetFinalizedBlock(ctx)
+	maxRetries := 10
+	retryCount := 0
 
-	if err != nil {
-		c.Logger.Error("Error while getting finalized block", "chain", c.ChainId, "err", err)
-		balanceChan <- nil
-		return
+RETRY_LOOP:
+	for {
+		if retryCount <= maxRetries {
+			finalizedBlock, err := c.GetFinalizedBlock(ctx)
+
+			if err != nil {
+				c.Logger.Error("Error while getting finalized block", "chain", c.ChainId, "err", err, "retryCount", retryCount)
+				retryCount++
+				break RETRY_LOOP
+			}
+
+			blockByTimestamp, err := c.GetBlockFromTimestamp(ctx, reqEvent.Timestamp)
+
+			if err != nil {
+				c.Logger.Error("Error while getting block by timestamp", "chain", c.ChainId, "err", err, "retryCount", retryCount)
+				retryCount++
+				return
+			}
+
+			if blockByTimestamp > finalizedBlock {
+				time.Sleep(time.Duration(blockByTimestamp-finalizedBlock) * c.BlockTime)
+			}
+
+			balance, err = c.Agent.PrincipalBalanceOfAgentPod(&bind.CallOpts{
+				BlockNumber: big.NewInt(int64(blockByTimestamp)),
+			})
+
+			if err != nil {
+				c.Logger.Error("Error while getting balance", "chain", c.ChainId, "err", err, "retryCount", retryCount)
+				retryCount++
+				return
+			}
+
+			balanceChan <- balance
+			return
+		} else {
+			c.Logger.Error("max retry threshold reached, error getting the balance from the agendpod client")
+
+			balanceChan <- nil
+			return
+		}
 	}
-
-	blockByTimestamp, err := c.GetBlockFromTimestamp(ctx, reqEvent.Timestamp)
-
-	if err != nil {
-		c.Logger.Error("Error while getting block by timestamp", "chain", c.ChainId, "err", err)
-		balanceChan <- nil
-		return
-	}
-
-	if blockByTimestamp > finalizedBlock {
-		time.Sleep(time.Duration(blockByTimestamp-finalizedBlock) * c.BlockTime)
-	}
-
-	balance, err = c.Agent.GetBalanceOfAgent(&bind.CallOpts{
-		BlockNumber: big.NewInt(int64(blockByTimestamp)),
-	})
-
-	if err != nil {
-		c.Logger.Error("Error while getting balance", "chain", c.ChainId, "err", err)
-		balanceChan <- nil
-		return
-	}
-
-	balanceChan <- balance
 
 }

@@ -53,31 +53,31 @@ func ConvertIndexedOperatorInfoGqlToOperatorInfo(operator *OperatorQuery) (*sdkt
 
 }
 
-type AgentPodsInfo struct {
-	Agent         common.Address
-	AgentContract common.Address
-	ChainId       string
-}
+// type AgentPodsInfo struct {
+// 	Agent         common.Address
+// 	AgentContract common.Address
+// 	ChainId       string
+// }
 
-func ConvertAgentPodsInfo(query *AgentPodMappingQuery) (AgentPodsInfo, error) {
-	chainId := string(query.AgentPods.ChainId)
-	chainIdBytes, err := hex.DecodeString(chainId[2:])
+// func ConvertAgentPodsInfo(query *AgentPodMappingQuery) (AgentPodsInfo, error) {
+// 	chainId := string(query.AgentPods.ChainId)
+// 	chainIdBytes, err := hex.DecodeString(chainId[2:])
 
-	if err != nil {
-		log.Println("Error")
-	}
+// 	if err != nil {
+// 		log.Println("Error")
+// 	}
 
-	chainName := string(chainIdBytes)
+// 	chainName := string(chainIdBytes)
 
-	podInfo := AgentPodsInfo{
-		Agent:         common.HexToAddress(string(query.AgentPods.Agent)),
-		AgentContract: common.HexToAddress(string(query.AgentPods.AgentContract)),
-		ChainId:       strings.Trim(chainName, "\x00"),
-	}
+// 	podInfo := AgentPodsInfo{
+// 		Agent:         common.HexToAddress(string(query.AgentPods.Agent)),
+// 		AgentContract: common.HexToAddress(string(query.AgentPods.AgentContract)),
+// 		ChainId:       strings.Trim(chainName, "\x00"),
+// 	}
 
-	return podInfo, nil
+// 	return podInfo, nil
 
-}
+// }
 
 type AgentPodChainListInfo struct {
 	Agent    common.Address
@@ -106,15 +106,27 @@ func ConvertAgentPodsChains(query *AgentPodChainListsQuery) (AgentPodChainListIn
 
 	}
 
-	//TODO: Remove ETH 
-	parsedChainIds = append(parsedChainIds, "ETH")
-
 	podInfo := AgentPodChainListInfo{
 		Agent:    common.HexToAddress(string(query.AgendPodChains[0].Agent)),
 		ChainIds: parsedChainIds,
 	}
 
 	return podInfo, nil
+}
+
+type EnrolledAgent struct {
+	Agent common.Address
+}
+
+func ConvertEnrolledAgent(query *EnrolledAgentsListQuery) ([]common.Address, error) {
+
+	agents := make([]common.Address, 0)
+
+	for _, agent := range query.AgendPodChains {
+		agents = append(agents, common.HexToAddress(string(agent.Agent)))
+	}
+
+	return agents, nil
 }
 
 type DepositInfo struct {
@@ -125,10 +137,10 @@ type DepositInfo struct {
 	BlockTimestamp  uint64
 	TimeInterval    *big.Int
 	AgentID         common.Address
+	BlockNumber     uint64
 }
 
-func ConvertDepositListInfo(query *UnclaimedDepositListQuery) ([]DepositInfo, error) {
-	deposits := query.Deposits
+func ConvertDepositListInfo(deposits []DeposisInfoQuery) ([]DepositInfo, error) {
 
 	depositList := make([]DepositInfo, 0)
 
@@ -165,18 +177,68 @@ func ConvertDepositListInfo(query *UnclaimedDepositListQuery) ([]DepositInfo, er
 			return []DepositInfo{}, err
 		}
 
+		blockNumber, err := strconv.ParseUint(string(deposit.BlockNumber), 10, 64)
+
+		if err != nil {
+			return []DepositInfo{}, err
+		}
+
 		dep := DepositInfo{
 			IsClaimed:       isClaimed,
 			InterestRate:    interestRate,
 			PrincipalAmount: principalAmount,
 			BlockTimestamp:  blockTimestamp,
-			AgentID:         common.HexToAddress(string(deposit.AgentID)),
+			AgentID:         common.HexToAddress(string(deposit.Agent)),
 			TxnID:           txId,
 			TimeInterval:    timeInterval,
+			BlockNumber:     blockNumber,
 		}
 
 		depositList = append(depositList, dep)
 	}
 
 	return depositList, nil
+}
+
+type AgentSummary struct {
+	AgentContract     common.Address
+	Agent             common.Address
+	ChainId           string
+	TotalDepositCount int
+	TotalClaimCount   int
+}
+
+func ConvertAgentSummaryInfo(query *AgentSummaryQuery) (AgentSummary, error) {
+	agentAddress := common.HexToAddress(string(query.AgentSummary.Agent))
+	agentPod := common.HexToAddress(string(query.AgentSummary.AgentContract))
+
+	chainId := string(query.AgentSummary.ChainId)
+
+	chainIdBytes, err := hex.DecodeString(chainId[2:])
+
+	if err != nil {
+		log.Println("Error")
+	}
+
+	chainName := string(chainIdBytes)
+
+	depositCount, err := strconv.Atoi(string(query.AgentSummary.TotalDepositCount))
+
+	if err != nil {
+		return AgentSummary{}, err
+	}
+
+	claimCount, err := strconv.Atoi(string(query.AgentSummary.TotalClaimCount))
+
+	if err != nil {
+		return AgentSummary{}, err
+	}
+
+	return AgentSummary{
+		AgentContract:     agentPod,
+		Agent:             agentAddress,
+		TotalDepositCount: depositCount,
+		TotalClaimCount:   claimCount,
+		ChainId:           strings.Trim(chainName, "\x00"),
+	}, nil
 }

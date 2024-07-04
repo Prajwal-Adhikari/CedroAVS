@@ -15,7 +15,7 @@ import (
 func (o *Operator) RegisterOperatorWithAVS(operatorEcdsaKeyPair *ecdsa.PrivateKey) error {
 
 	// hardcode these things for now
-	quorumNumbers := []byte{0}
+	quorumNumbers := []byte{1}
 	socket := ""
 
 	fmt.Println(core.ConvertToBN254G1Point(o.blsKeyPair.GetPubKeyG1()))

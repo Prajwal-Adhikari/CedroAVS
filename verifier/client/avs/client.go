@@ -63,4 +63,5 @@ type Request struct {
 	ReferenceBlockNumber uint64
 	AgentAddress         ethCommon.Address
 	Timestamp            uint64
+	IsOffChain           bool
 }
