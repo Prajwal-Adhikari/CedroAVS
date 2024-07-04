@@ -66,7 +66,7 @@ func (o *Operator) RegisterOperatorWithAVS(operatorEcdsaKeyPair *ecdsa.PrivateKe
 }
 
 func (o *Operator) DeregisterOperatorWithAVS(operatorEcdsaKeypair *ecdsa.PrivateKey) error {
-	quorumNumbers := []byte{0}
+	quorumNumbers := []byte{1}
 
 	o.logger.Info(
 		"DeregisterOperatorInQuorumWithAVSRegistryCoordinator",

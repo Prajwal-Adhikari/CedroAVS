@@ -5,7 +5,7 @@ chains:
     node_url: https://ethereum-holesky-rpc.publicnode.com
     block_finality: 1
     block_time: 12
-    graphql_url: https://api.studio.thegraph.com/query/41099/cedro-avs/v0.0.4s
+    graphql_url: https://api.studio.thegraph.com/query/41099/cedro-avs/v0.0.4v
 
 
   - name: ethereum-sepolia
@@ -44,16 +44,16 @@ ethereum:
 
 agent_manager: "0xD0621425d41cb00989d44D84FE10eF35FB0D879B"
 agent_manager_poll_duration: 10
-agent_manager_start_height: 1804322
-graphql_url: https://api.studio.thegraph.com/query/41099/cedro-avs/v0.0.4s
+agent_manager_start_height: 1855466
+graphql_url: https://api.studio.thegraph.com/query/41099/cedro-avs/v0.0.4v
 
 
 avs:
   name: cedro-avs
   eth_rpc_url: https://ethereum-holesky-rpc.publicnode.com
   eth_ws_url: https://ethereum-holesky-rpc.publicnode.com
-  operatorStateRetriever: "0xeAAb9DA7B87Ee17dA9BB40Fcfa4e15E67d58c02C"
-  registryCoordinator: "0xbc5DB5e02F8ff5C2dBB69784e318348d3d85E2e7"
+  operatorStateRetriever: "0x2d3B83D211537eC6D9c1063a7935e595625fE6DE"
+  registryCoordinator: "0xEa20Cd6F0c8a8D2649bcBA30298cdDD3a6d15d09"
 
 log:
   encoding: console

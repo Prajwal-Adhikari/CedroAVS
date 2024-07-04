@@ -2,6 +2,8 @@ package operator
 
 import (
 	"context"
+	"encoding/hex"
+	"fmt"
 
 	"github.com/Cedro-Finance/CedroAVS/core"
 	// "github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
@@ -13,6 +15,8 @@ func (r *Operator) SignAndSendBalanceResponse(ctx context.Context, balHeader *co
 	r.logger.Info("Balance Heaader", "header", balHeader)
 
 	hash, err := balHeader.GetBalanceHeaderHash()
+
+	fmt.Println("==========HASH===============", hex.EncodeToString(hash[:]))
 
 	if err != nil {
 		r.logger.Error("Error while hasing the message", "err", err)

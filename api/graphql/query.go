@@ -28,14 +28,14 @@ type AgentPodChainListsQuery struct {
 
 type DeposisInfoQuery struct {
 	IsClaimed       graphql.Boolean `graphql:"isClaimed"`
-	InterestRate    graphql.Int     `graphql:"interestRate"`
+	InterestRate    graphql.String     `graphql:"interestRate"`
 	TxnID           graphql.String  `graphql:"txnID"`
-	PrincipalAmount graphql.Int     `graphql:"principalAmount"`
-	BlockTimestamp  graphql.Int     `graphql:"blockTimestamp"`
-	TimeInterval    graphql.Int     `graphql:"timeInterval"`
+	PrincipalAmount graphql.String     `graphql:"principalAmount"`
+	BlockTimestamp  graphql.String     `graphql:"blockTimestamp"`
+	TimeInterval    graphql.String     `graphql:"timeInterval"`
 	Agent           graphql.String  `graphql:"agentWallet"`
 	AgentContract   graphql.String  `graphql:"agentPodContract"`
-	BlockNumber     graphql.Int     `graphql:"blockNumber"`
+	BlockNumber     graphql.String     `graphql:"blockNumber"`
 }
 
 type AgentSummaryQuery struct {
