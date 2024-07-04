@@ -24,8 +24,8 @@ contract BLSApkRegistry is BLSApkRegistryStorage {
         _disableInitializers();
     }
 
-    function initialize(address ownerAddress) external initializer {
-        _BLSApkRegistryStorage_init(ownerAddress);
+    function initialize(address _roleManagerAddress) external initializer {
+        _BLSApkRegistryStorage_init(_roleManagerAddress);
     }
 
     /*******************************************************************************
