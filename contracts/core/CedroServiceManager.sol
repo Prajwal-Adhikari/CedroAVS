@@ -14,6 +14,8 @@ import {IRoleManager} from "./interfaces/IRoleManager.sol";
 import {CedroServiceManagerStorage} from "./CedroServiceManagerStorage.sol";
 import {CedroServiceData} from "./libraries/CedroServiceData.sol";
 
+import "hardhat/console.sol";
+
 string constant TAG = "CedroServiceManager";
 
 contract CedroServiceManager is
@@ -49,13 +51,6 @@ contract CedroServiceManager is
         _;
     }
 
-    /**
-     * @dev Modifier that checks if caller has a specific role.
-     **/
-    modifier onlyRole(bytes32 role) {
-        IRoleManager(roleManagerAddress).checkRole(role, _msgSender());
-        _;
-    }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -68,7 +63,7 @@ contract CedroServiceManager is
         IRewardsCoordinator __rewardsCoordinator,
         IStakeRegistry __stakeRegistry
     ) public initializer {
-        _BLSSignatureChecker_init();
+        _BLSSignatureChecker_init(__roleManagerAddress);
         __ServiceManagerBase_init(
             __avsDirectory,
             __rewardsCoordinator,
@@ -90,6 +85,7 @@ contract CedroServiceManager is
         CedroServiceData.DeviationBalanceHeader calldata deviationBalanceHeader,
         NonSignerStakesAndSignature memory nonSignerStakesAndSignature
     ) external onlyRoles(IRoleManager(roleManagerAddress).VERIFIER_ADMIN()) {
+      
         if (tx.origin != msg.sender) revert InvalidSender(TAG);
 
         if (deviationBalanceHeader.referenceBlockNumber >= block.number)
@@ -111,6 +107,10 @@ contract CedroServiceManager is
         bytes32 reducedBalanceHeaderHash = hashDeviationBalanceHeader(
             deviationBalanceHeader
         );
+
+        console.log();
+        console.log("Message Hash");
+        console.logBytes32(reducedBalanceHeaderHash);
 
         (
             QuorumStakeTotals memory quorumStakeTotals,

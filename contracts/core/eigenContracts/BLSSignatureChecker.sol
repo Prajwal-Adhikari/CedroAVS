@@ -33,12 +33,24 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
     /// @notice If true, check the staleness of the operator stakes and that its within the delegation withdrawalDelayBlocks window.
     bool public staleStakesForbidden;
 
+    /**
+     * @dev Modifier that checks if caller has a specific role.
+     **/
+    modifier onlyRole(bytes32 role) {
+        IRoleManager(roleManager).checkRole(role, _msgSender());
+        _;
+    }
+
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
         _disableInitializers();
     }
 
-    function _BLSSignatureChecker_init() internal onlyInitializing {}
+    function _BLSSignatureChecker_init(
+        address _roleManagerAddress
+    ) internal onlyInitializing {
+        roleManager = _roleManagerAddress;
+    }
 
     /**
      * /**
@@ -47,7 +59,7 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
      * @param value to toggle staleStakesForbidden
      */
     // onlyCoordinatorOwner
-    function setStaleStakesForbidden(bool value) external {
+    function setStaleStakesForbidden(bool value) external onlyRole(IRoleManager(roleManager).AVS_ADMIN()) {
         _setStaleStakesForbidden(value);
     }
 
@@ -86,13 +98,12 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
         bytes calldata quorumNumbers,
         uint32 referenceBlockNumber,
         NonSignerStakesAndSignature memory params
-    ) public view returns (QuorumStakeTotals memory, bytes32)  {
-
+    ) public view returns (QuorumStakeTotals memory, bytes32) {
         require(
             quorumNumbers.length != 0,
             "BLSSignatureChecker.checkSignatures: empty quorum input"
         );
-        
+
         require(
             (quorumNumbers.length == params.quorumApks.length) &&
                 (quorumNumbers.length == params.quorumApkIndices.length) &&
@@ -330,12 +341,22 @@ contract BLSSignatureChecker is IBLSSignatureChecker, ContextUpgradeable {
             apkG2,
             PAIRING_EQUALITY_CHECK_GAS
         );
-
     }
 
     function _setStaleStakesForbidden(bool value) internal {
         staleStakesForbidden = value;
         emit StaleStakesForbiddenUpdate(value);
+    }
+
+    /**
+     * @notice Configures role manager address
+     * This function can only be accessed by the account with role DEFAULT_ADMIN_ROLE.
+     * @param _roleManagerAddress - address of the roleManager contract.
+     **/
+    function setRoleManager(
+        address _roleManagerAddress
+    ) external onlyRole(IRoleManager(roleManager).AVS_ADMIN()) {
+        roleManager = _roleManagerAddress;
     }
 
     // storage gap for upgradeability
