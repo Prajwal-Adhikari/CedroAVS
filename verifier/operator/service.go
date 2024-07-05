@@ -217,7 +217,7 @@ func (r *Operator) StartOffChainDeviationCheck(ctx context.Context) {
 
 	r.logger.Info("Offchain trigger service started")
 
-	blockDetails, err := r.avs.Eth.BlockByNumber(ctx, big.NewInt(int64(1861698)))
+	blockDetails, err := r.avs.Eth.BlockByNumber(ctx, big.NewInt(int64(1867349)))
 
 	if err != nil {
 		r.logger.Error("OffchainDeviationCheckTrigger errro geting block details", "err", err)
@@ -225,8 +225,8 @@ func (r *Operator) StartOffChainDeviationCheck(ctx context.Context) {
 	}
 
 	r.balanceReqCh <- &avs.Request{
-		ReqId:                big.NewInt(5),
-		ReferenceBlockNumber: 1861698		,
+		ReqId:                big.NewInt(6),
+		ReferenceBlockNumber: 1867349		,
 		AgentAddress:         ethcommon.HexToAddress("0xdF1Cf915dB7A658dFDEb75aF3873B4e55F25Aa42"),
 		Timestamp:            blockDetails.Time(),
 		// IsOffChain:           true,
