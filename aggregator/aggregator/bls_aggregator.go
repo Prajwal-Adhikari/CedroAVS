@@ -56,12 +56,49 @@ type BLSAggregationServiceResponse struct {
 	// given that those are different for each AVS service manager that individually inherits BLSSignatureChecker
 	NonSignersPubkeysG1          []*bls.G1Point
 	QuorumApksG1                 []*bls.G1Point
-	SignersApkG2                 *bls.G2Point
-	SignersAggSigG1              *bls.Signature
+	SignersApkG2                 map[types.QuorumNum]*bls.G2Point
+	SignersAggSigG1              map[types.QuorumNum]*bls.Signature
 	NonSignerQuorumBitmapIndices []uint32
 	QuorumApkIndices             []uint32
 	TotalStakeIndices            []uint32
 	NonSignerStakeIndices        [][]uint32
+}
+
+// SignatureAggregation contains the results of aggregating signatures from a set of operators across multiple quorums
+type SignatureAggregation struct {
+	// NonSigners contains the public keys of the operators that did not sign the message
+	NonSigners []*bls.G1Point
+	// QuorumAggPubKeys contains the aggregated public keys for all of the operators each quorum,
+	// Including those that did not sign
+	QuorumAggPubKeys map[types.QuorumNum]*bls.G1Point
+	// AggPubKey is the aggregated public key for all of the operators that signed the message,
+	// further aggregated across the quorums; operators signing for multiple quorums will be included in
+	// the aggregation multiple times
+	AggPubKey *bls.G2Point
+	// AggSignature is the aggregated signature for all of the operators that signed the message, mirroring the
+	// AggPubKey.
+	AggSignature *bls.Signature
+	// QuorumResults contains the quorum ID and the amount signed for each quorum
+	QuorumResults map[types.QuorumNum]*types.QuorumAvsState
+}
+
+// QuorumAttestation contains the results of aggregating signatures from a set of operators by quorums
+// It also returns map of all signers across all quorums
+type QuorumAttestation struct {
+	// QuorumAggPubKeys contains the aggregated public keys for all of the operators each quorum,
+	// including those that did not sign
+	QuorumAggPubKey map[types.QuorumNum]*bls.G1Point
+	// SignersAggPubKey is the aggregated public key for all of the operators that signed the message by each quorum
+	SignersAggPubKey map[types.QuorumNum]*bls.G2Point
+	// AggSignature is the aggregated signature for all of the operators that signed the message for each quorum, mirroring the
+	// SignersAggPubKey.
+	AggSignature map[types.QuorumNum]*bls.Signature
+	// QuorumResults contains the quorum ID and the amount signed for each quorum
+	QuorumResults map[types.QuorumNum]*types.QuorumAvsState
+	// SignerMap contains the operator IDs that signed the message
+	SignerMap map[types.QuorumNum]bool
+
+	TotalStakePerQuorum map[types.QuorumNum]*big.Int
 }
 
 // aggregatedOperators is meant to be used as a value in a map
@@ -70,7 +107,7 @@ type aggregatedOperators struct {
 	// aggregate g2 pubkey of all operatos who signed on this taskResponseDigest
 	signersApkG2 *bls.G2Point
 	// aggregate signature of all operators who signed on this taskResponseDigest
-	signersAggSigG1 *bls.Signature
+	signersAggSigG1 map[types.QuorumNum]*bls.Signature
 	// aggregate stake of all operators who signed on this header for each quorum
 	signersTotalStakePerQuorum map[types.QuorumNum]*big.Int
 	// set of OperatorId of operators who signed on this header
@@ -171,6 +208,7 @@ func (b *BLSAggregatorService) singleTaskAggregatorGoroutineFunc(
 	for i, quorumNumber := range quorumNumbers {
 		quorumThresholdPercentagesMap[quorumNumber] = quorumThresholdPercentages[i]
 	}
+
 	operatorsAvsStateDict, err := b.avsReader.GetOperatorsAvsStateAtBlock(context.Background(), quorumNumbers, taskCreatedBlock)
 	if err != nil {
 		b.aggregatedResponsesC <- BLSAggregationServiceResponse{
@@ -179,6 +217,7 @@ func (b *BLSAggregatorService) singleTaskAggregatorGoroutineFunc(
 		}
 		return
 	}
+
 	quorumsAvsStakeDict, err := b.avsReader.GetQuorumsAvsStateAtBlock(context.Background(), quorumNumbers, taskCreatedBlock)
 	if err != nil {
 		b.aggregatedResponsesC <- BLSAggregationServiceResponse{
@@ -187,10 +226,12 @@ func (b *BLSAggregatorService) singleTaskAggregatorGoroutineFunc(
 		}
 		return
 	}
+
 	totalStakePerQuorum := make(map[types.QuorumNum]*big.Int)
 	for quorumNum, quorumAvsState := range quorumsAvsStakeDict {
 		totalStakePerQuorum[quorumNum] = quorumAvsState.TotalStake
 	}
+
 	quorumApksG1 := []*bls.G1Point{}
 	for _, quorumNumber := range quorumNumbers {
 		quorumApksG1 = append(quorumApksG1, quorumsAvsStakeDict[quorumNumber].AggPubkeyG1)
@@ -200,7 +241,17 @@ func (b *BLSAggregatorService) singleTaskAggregatorGoroutineFunc(
 	// and monitor the chain and only close the task goroutine when that block is reached
 	taskExpiredTimer := time.NewTimer(timeToExpiry)
 
-	aggregatedOperatorsDict := map[types.TaskResponseDigest]aggregatedOperators{}
+	// aggregatedOperatorsDict := map[types.TaskResponseDigest]aggregatedOperators{}
+
+	aggSigs := make(map[types.QuorumNum]*bls.Signature, len(quorumNumbers))
+	aggPubKeys := make(map[types.QuorumNum]*bls.G2Point, len(quorumNumbers))
+	signerMap := make(map[types.OperatorId]bool)
+
+	stakeSigned := make(map[types.QuorumNum]*big.Int, len(quorumNumbers))
+	for _, quorumID := range quorumNumbers {
+		stakeSigned[quorumID] = big.NewInt(0)
+	}
+
 	for {
 		select {
 		case signedTaskResponseDigest := <-signedTaskRespsC:
@@ -214,38 +265,34 @@ func (b *BLSAggregatorService) singleTaskAggregatorGoroutineFunc(
 
 			// compute the taskResponseDigest using the hash function
 			taskResponseDigest := signedTaskResponseDigest.TaskResponseDigest
-			// after verifying signature we aggregate its sig and pubkey, and update the signed stake amount
-			digestAggregatedOperators, ok := aggregatedOperatorsDict[taskResponseDigest]
-			if !ok {
-				// first operator to sign on this digest
-				digestAggregatedOperators = aggregatedOperators{
-					// we've already verified that the operator is part of the task's quorum, so we don't need checks here
-					signersApkG2:               bls.NewZeroG2Point().Add(operatorsAvsStateDict[signedTaskResponseDigest.OperatorId].OperatorInfo.Pubkeys.G2Pubkey),
-					signersAggSigG1:            signedTaskResponseDigest.BlsSignature,
-					signersOperatorIdsSet:      map[types.OperatorId]bool{signedTaskResponseDigest.OperatorId: true},
-					signersTotalStakePerQuorum:  cloneStakePerQuorumMap(operatorsAvsStateDict[signedTaskResponseDigest.OperatorId].StakePerQuorum),
+
+			for _, quorumNum := range quorumNumbers {
+
+				stake, ok := operatorsAvsStateDict[signedTaskResponseDigest.OperatorId].StakePerQuorum[quorumNum]
+
+				if !ok || stake.Cmp(big.NewInt(0)) == 0 {
+					continue
 				}
-			} else {
-				digestAggregatedOperators.signersAggSigG1.Add(signedTaskResponseDigest.BlsSignature)
-				digestAggregatedOperators.signersApkG2.Add(operatorsAvsStateDict[signedTaskResponseDigest.OperatorId].OperatorInfo.Pubkeys.G2Pubkey)
-				digestAggregatedOperators.signersOperatorIdsSet[signedTaskResponseDigest.OperatorId] = true
-				for quorumNum, stake := range operatorsAvsStateDict[signedTaskResponseDigest.OperatorId].StakePerQuorum {
-					if _, ok := digestAggregatedOperators.signersTotalStakePerQuorum[quorumNum]; !ok {
-						// if we haven't seen this quorum before, initialize its signed stake to 0
-						// possible if previous operators who sent us signatures were not part of this quorum
-						digestAggregatedOperators.signersTotalStakePerQuorum[quorumNum] = big.NewInt(0)
-					}
-					digestAggregatedOperators.signersTotalStakePerQuorum[quorumNum].Add(digestAggregatedOperators.signersTotalStakePerQuorum[quorumNum], stake)
+
+				signerMap[signedTaskResponseDigest.OperatorId] = true
+
+				stakeSigned[quorumNum].Add(stakeSigned[quorumNum], stake)
+
+				// Add to agg signature
+				if aggSigs[quorumNum] == nil {
+					aggSigs[quorumNum] = signedTaskResponseDigest.BlsSignature
+					aggPubKeys[quorumNum] = bls.NewZeroG2Point().Add(operatorsAvsStateDict[signedTaskResponseDigest.OperatorId].OperatorInfo.Pubkeys.G2Pubkey)
+
+				} else {
+					aggSigs[quorumNum].Add(signedTaskResponseDigest.BlsSignature)
+					aggPubKeys[quorumNum].Add(operatorsAvsStateDict[signedTaskResponseDigest.OperatorId].OperatorInfo.Pubkeys.G2Pubkey)
 				}
 			}
-			// update the aggregatedOperatorsDict. Note that we need to assign the whole struct value at once,
-			// because of https://github.com/golang/go/issues/3117
-			aggregatedOperatorsDict[taskResponseDigest] = digestAggregatedOperators
 
-			if checkIfStakeThresholdsMet(b.logger, digestAggregatedOperators.signersTotalStakePerQuorum, totalStakePerQuorum, quorumThresholdPercentagesMap) {
+			if checkIfStakeThresholdsMet(b.logger, stakeSigned, totalStakePerQuorum, quorumThresholdPercentagesMap) {
 				nonSignersOperatorIds := []types.OperatorId{}
 				for operatorId := range operatorsAvsStateDict {
-					if _, operatorSigned := digestAggregatedOperators.signersOperatorIdsSet[operatorId]; !operatorSigned {
+					if _, operatorSigned := signerMap[operatorId]; !operatorSigned {
 						nonSignersOperatorIds = append(nonSignersOperatorIds, operatorId)
 					}
 				}
@@ -263,6 +310,47 @@ func (b *BLSAggregatorService) singleTaskAggregatorGoroutineFunc(
 					nonSignersG1Pubkeys = append(nonSignersG1Pubkeys, operator.OperatorInfo.Pubkeys.G1Pubkey)
 				}
 
+				quorumAggPubKeys := make(map[types.QuorumNum]*bls.G1Point, len(quorumNumbers))
+
+				for _, quorumNum := range quorumNumbers {
+
+					quorumAggKey := quorumsAvsStakeDict[quorumNum].AggPubkeyG1
+
+					quorumAggPubKeys[quorumNum] = quorumAggKey
+
+					signerAggkey := bls.NewZeroG1Point().Add(quorumAggKey)
+
+					for opInd, nsk := range nonSignersG1Pubkeys {
+
+						stake, ok := operatorsAvsStateDict[nonSignersOperatorIds[opInd]].StakePerQuorum[quorumNum]
+
+						if !ok || stake.Cmp(big.NewInt(0)) == 0 {
+							continue
+						}
+
+						signerAggkey = signerAggkey.Sub(nsk)
+					}
+
+					ok, err := signerAggkey.VerifyEquivalence(aggPubKeys[quorumNum])
+
+					if !ok || err != nil {
+						b.aggregatedResponsesC <- BLSAggregationServiceResponse{
+							Err:       utils.WrapError(errors.New("failed to get verify quorum signature equivalent"), err),
+							TaskIndex: taskIndex,
+						}
+						continue
+					}
+
+					ok, err = aggSigs[quorumNum].Verify(aggPubKeys[quorumNum], taskResponseDigest)
+					if !ok || err != nil {
+						b.aggregatedResponsesC <- BLSAggregationServiceResponse{
+							Err:       utils.WrapError(errors.New("failed to get verify quorum signature"), err),
+							TaskIndex: taskIndex,
+						}
+						return
+					}
+
+				}
 				indices, err := b.avsReader.GetCheckSignaturesIndices(&bind.CallOpts{}, taskCreatedBlock, quorumNumbers, nonSignersOperatorIds)
 				if err != nil {
 					b.aggregatedResponsesC <- BLSAggregationServiceResponse{
@@ -279,8 +367,8 @@ func (b *BLSAggregatorService) singleTaskAggregatorGoroutineFunc(
 					TaskResponseDigest:           taskResponseDigest,
 					NonSignersPubkeysG1:          nonSignersG1Pubkeys,
 					QuorumApksG1:                 quorumApksG1,
-					SignersApkG2:                 digestAggregatedOperators.signersApkG2,
-					SignersAggSigG1:              digestAggregatedOperators.signersAggSigG1,
+					SignersApkG2:                 aggPubKeys,
+					SignersAggSigG1:              aggSigs,
 					NonSignerQuorumBitmapIndices: indices.NonSignerQuorumBitmapIndices,
 					QuorumApkIndices:             indices.QuorumApkIndices,
 					TotalStakeIndices:            indices.TotalStakeIndices,
@@ -378,12 +466,4 @@ func checkIfStakeThresholdsMet(
 		}
 	}
 	return true
-}
-
-func cloneStakePerQuorumMap(stakes map[types.QuorumNum]types.StakeAmount) map[types.QuorumNum]types.StakeAmount {
-	out := make(map[types.QuorumNum]types.StakeAmount, len(stakes))
-	for k, v := range stakes {
-		out[k] = new(big.Int).Set(v)
-	}
-	return out
 }

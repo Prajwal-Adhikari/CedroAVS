@@ -16,6 +16,7 @@ import (
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/eth"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/wallet"
 	"github.com/Layr-Labs/eigensdk-go/chainio/txmgr"
+	"github.com/Layr-Labs/eigensdk-go/crypto/bls"
 	sdkEcdsa "github.com/Layr-Labs/eigensdk-go/crypto/ecdsa"
 	sdklogging "github.com/Layr-Labs/eigensdk-go/logging"
 	"github.com/Layr-Labs/eigensdk-go/signerv2"
@@ -168,11 +169,31 @@ func (agg *Aggregator) sendAggregatedResponseToContract(blsAggServiceResp BLSAgg
 	for _, quorumApk := range blsAggServiceResp.QuorumApksG1 {
 		quorumApks = append(quorumApks, core.ConvertToBN254G1Point(quorumApk))
 	}
+
+	var aggSig *bls.Signature
+	for _, sign := range blsAggServiceResp.SignersAggSigG1 {
+		if aggSig == nil {
+			aggSig = bls.NewZeroSignature().Add(sign)
+		} else {
+			aggSig.Add(sign)
+		}
+	}
+
+	// Aggregate the aggregated public keys. We reuse the first aggregated public key as the accumulator
+	var aggPubKey *bls.G2Point
+	for _, pKey := range blsAggServiceResp.SignersApkG2 {
+		if aggPubKey == nil {
+			aggPubKey = bls.NewZeroG2Point().Add(pKey)
+		} else {
+			aggPubKey.Add(pKey)
+		}
+	}
+
 	nonSignerStakesAndSignature := cedroservicemanager.IBLSSignatureCheckerNonSignerStakesAndSignature{
 		NonSignerPubkeys:             nonSignerPubkeys,
 		QuorumApks:                   quorumApks,
-		ApkG2:                        core.ConvertToBN254G2Point(blsAggServiceResp.SignersApkG2),
-		Sigma:                        core.ConvertToBN254G1Point(blsAggServiceResp.SignersAggSigG1.G1Point),
+		ApkG2:                        core.ConvertToBN254G2Point(aggPubKey),
+		Sigma:                        core.ConvertToBN254G1Point(aggSig.G1Point),
 		NonSignerQuorumBitmapIndices: blsAggServiceResp.NonSignerQuorumBitmapIndices,
 		QuorumApkIndices:             blsAggServiceResp.QuorumApkIndices,
 		TotalStakeIndices:            blsAggServiceResp.TotalStakeIndices,
