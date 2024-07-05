@@ -44,10 +44,10 @@ type BN254G2Point struct {
 // DATADeviationBalanceHeader is an auto generated low-level Go binding around an user-defined struct.
 type DATADeviationBalanceHeader struct {
 	AgentAddress               common.Address
+	ReferenceBlockNumber       uint32
 	QuorumNumbers              []byte
 	QuorumThresholdPercentages []byte
 	RequestId                  *big.Int
-	ReferenceBlockNumber       uint32
 	ActualAmount               *big.Int
 	IdealAmount                *big.Int
 }
@@ -55,10 +55,9 @@ type DATADeviationBalanceHeader struct {
 // DATAFraudBalanceHeader is an auto generated low-level Go binding around an user-defined struct.
 type DATAFraudBalanceHeader struct {
 	AgentAddress               common.Address
+	ReferenceBlockNumber       uint32
 	QuorumNumbers              []byte
 	QuorumThresholdPercentages []byte
-	RequestId                  *big.Int
-	ReferenceBlockNumber       uint32
 	InsufficientAmount         *big.Int
 }
 
@@ -109,7 +108,7 @@ type ISignatureUtilsSignatureWithSaltAndExpiry struct {
 
 // CedroServiceManagerMetaData contains all meta data concerning the CedroServiceManager contract.
 var CedroServiceManagerMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"ContractTAG\",\"type\":\"string\"}],\"name\":\"InsufficientThreshold\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"ContractTAG\",\"type\":\"string\"}],\"name\":\"InsufficientThresholdPercentages\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"ContractTAG\",\"type\":\"string\"}],\"name\":\"InvalidQuorumParam\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"ContractTAG\",\"type\":\"string\"}],\"name\":\"InvalidQuorumThresholdPercentage\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"ContractTAG\",\"type\":\"string\"}],\"name\":\"InvalidReferenceBlockNum\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"ContractTAG\",\"type\":\"string\"}],\"name\":\"InvalidRequestId\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"ContractTAG\",\"type\":\"string\"}],\"name\":\"InvalidSender\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"contractTAG\",\"type\":\"string\"}],\"name\":\"MessageHashAlreadyAdded\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"contractTAG\",\"type\":\"string\"}],\"name\":\"NotInAllowlist\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializing\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"contractTAG\",\"type\":\"string\"}],\"name\":\"OperatorRegistrationPaused\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"AgentBalanceConfirmed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"AgentFraudConfirmed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"OperatorDeRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"OperatorRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"thresholdpercentage\",\"type\":\"uint256\"}],\"name\":\"QuorumThresholdPercentageChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"prevRewardsInitiator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newRewardsInitiator\",\"type\":\"address\"}],\"name\":\"RewardsInitiatorUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"value\",\"type\":\"bool\"}],\"name\":\"StaleStakesForbiddenUpdate\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"OperatorRegistrationStatus\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"THRESHOLD_DENOMINATOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"_avsDirectory\",\"outputs\":[{\"internalType\":\"contractIAVSDirectory\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"_registryCoordinator\",\"outputs\":[{\"internalType\":\"contractIRegistryCoordinator\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"_rewardsCoordinator\",\"outputs\":[{\"internalType\":\"contractIRewardsCoordinator\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"operators\",\"type\":\"address[]\"}],\"name\":\"addOperatorsToAllowlist\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"agentDeviationRequestId\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"agentFraudRequestId\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"agentsDeviationRequestId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"agentsFraudRequestId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"avsDirectory\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"blsApkRegistry\",\"outputs\":[{\"internalType\":\"contractIBLSApkRegistry\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"messageHash\",\"type\":\"bytes32\"}],\"internalType\":\"structDATA.OperatorChallengeEvidence\",\"name\":\"evidence\",\"type\":\"tuple\"}],\"name\":\"challengeOperators\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"msgHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"quorumNumbers\",\"type\":\"bytes\"},{\"internalType\":\"uint32\",\"name\":\"referenceBlockNumber\",\"type\":\"uint32\"},{\"components\":[{\"internalType\":\"uint32[]\",\"name\":\"nonSignerQuorumBitmapIndices\",\"type\":\"uint32[]\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point[]\",\"name\":\"nonSignerPubkeys\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point[]\",\"name\":\"quorumApks\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint256[2]\",\"name\":\"X\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"Y\",\"type\":\"uint256[2]\"}],\"internalType\":\"structBN254.G2Point\",\"name\":\"apkG2\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point\",\"name\":\"sigma\",\"type\":\"tuple\"},{\"internalType\":\"uint32[]\",\"name\":\"quorumApkIndices\",\"type\":\"uint32[]\"},{\"internalType\":\"uint32[]\",\"name\":\"totalStakeIndices\",\"type\":\"uint32[]\"},{\"internalType\":\"uint32[][]\",\"name\":\"nonSignerStakeIndices\",\"type\":\"uint32[][]\"}],\"internalType\":\"structIBLSSignatureChecker.NonSignerStakesAndSignature\",\"name\":\"params\",\"type\":\"tuple\"}],\"name\":\"checkSignatures\",\"outputs\":[{\"components\":[{\"internalType\":\"uint96[]\",\"name\":\"signedStakeForQuorum\",\"type\":\"uint96[]\"},{\"internalType\":\"uint96[]\",\"name\":\"totalStakeForQuorum\",\"type\":\"uint96[]\"}],\"internalType\":\"structIBLSSignatureChecker.QuorumStakeTotals\",\"name\":\"\",\"type\":\"tuple\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"agentAddress\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"quorumNumbers\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"quorumThresholdPercentages\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"requestId\",\"type\":\"uint256\"},{\"internalType\":\"uint32\",\"name\":\"referenceBlockNumber\",\"type\":\"uint32\"},{\"internalType\":\"uint256\",\"name\":\"actualAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"idealAmount\",\"type\":\"uint256\"}],\"internalType\":\"structDATA.DeviationBalanceHeader\",\"name\":\"balanceHeader\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint32[]\",\"name\":\"nonSignerQuorumBitmapIndices\",\"type\":\"uint32[]\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point[]\",\"name\":\"nonSignerPubkeys\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point[]\",\"name\":\"quorumApks\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint256[2]\",\"name\":\"X\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"Y\",\"type\":\"uint256[2]\"}],\"internalType\":\"structBN254.G2Point\",\"name\":\"apkG2\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point\",\"name\":\"sigma\",\"type\":\"tuple\"},{\"internalType\":\"uint32[]\",\"name\":\"quorumApkIndices\",\"type\":\"uint32[]\"},{\"internalType\":\"uint32[]\",\"name\":\"totalStakeIndices\",\"type\":\"uint32[]\"},{\"internalType\":\"uint32[][]\",\"name\":\"nonSignerStakeIndices\",\"type\":\"uint32[][]\"}],\"internalType\":\"structIBLSSignatureChecker.NonSignerStakesAndSignature\",\"name\":\"nonSignerStakesAndSignature\",\"type\":\"tuple\"}],\"name\":\"confirmAgentDeviation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"agentAddress\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"quorumNumbers\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"quorumThresholdPercentages\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"requestId\",\"type\":\"uint256\"},{\"internalType\":\"uint32\",\"name\":\"referenceBlockNumber\",\"type\":\"uint32\"},{\"internalType\":\"uint256\",\"name\":\"insufficientAmount\",\"type\":\"uint256\"}],\"internalType\":\"structDATA.FraudBalanceHeader\",\"name\":\"fraudBalanceHeader\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint32[]\",\"name\":\"nonSignerQuorumBitmapIndices\",\"type\":\"uint32[]\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point[]\",\"name\":\"nonSignerPubkeys\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point[]\",\"name\":\"quorumApks\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint256[2]\",\"name\":\"X\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"Y\",\"type\":\"uint256[2]\"}],\"internalType\":\"structBN254.G2Point\",\"name\":\"apkG2\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point\",\"name\":\"sigma\",\"type\":\"tuple\"},{\"internalType\":\"uint32[]\",\"name\":\"quorumApkIndices\",\"type\":\"uint32[]\"},{\"internalType\":\"uint32[]\",\"name\":\"totalStakeIndices\",\"type\":\"uint32[]\"},{\"internalType\":\"uint32[][]\",\"name\":\"nonSignerStakeIndices\",\"type\":\"uint32[][]\"}],\"internalType\":\"structIBLSSignatureChecker.NonSignerStakesAndSignature\",\"name\":\"nonSignerStakesAndSignature\",\"type\":\"tuple\"}],\"name\":\"confirmAgentFraud\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"messageHash\",\"type\":\"bytes32\"}],\"name\":\"contains\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"components\":[{\"internalType\":\"contractIStrategy\",\"name\":\"strategy\",\"type\":\"address\"},{\"internalType\":\"uint96\",\"name\":\"multiplier\",\"type\":\"uint96\"}],\"internalType\":\"structIRewardsCoordinator.StrategyAndMultiplier[]\",\"name\":\"strategiesAndMultipliers\",\"type\":\"tuple[]\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint32\",\"name\":\"startTimestamp\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"duration\",\"type\":\"uint32\"}],\"internalType\":\"structIRewardsCoordinator.RewardsSubmission[]\",\"name\":\"rewardsSubmissions\",\"type\":\"tuple[]\"}],\"name\":\"createAVSRewardsSubmission\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"delegation\",\"outputs\":[{\"internalType\":\"contractIDelegationManager\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"deregisterOperatorFromAVS\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"getOperatorRestakedStrategies\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getRestakeableStrategies\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_roleManager\",\"type\":\"address\"},{\"internalType\":\"contractIAVSDirectory\",\"name\":\"__avsDirectory\",\"type\":\"address\"},{\"internalType\":\"contractIRewardsCoordinator\",\"name\":\"___rewardsCoordinator\",\"type\":\"address\"},{\"internalType\":\"contractIStakeRegistry\",\"name\":\"__stakeRegistry\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"referenceBlockNumber\",\"type\":\"uint32\"}],\"name\":\"latestServeUntilBlock\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"operatorAllowlist\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"quorumThresholdPercentage\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"salt\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"expiry\",\"type\":\"uint256\"}],\"internalType\":\"structISignatureUtils.SignatureWithSaltAndExpiry\",\"name\":\"operatorSignature\",\"type\":\"tuple\"}],\"name\":\"registerOperatorToAVS\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"registryCoordinator\",\"outputs\":[{\"internalType\":\"contractIRegistryCoordinator\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rewardsInitiator\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"roleManager\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"roleManagerAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"roleManagerAddressOne\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"status\",\"type\":\"bool\"}],\"name\":\"setPauseStatus\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"thresholdPercentage\",\"type\":\"uint8\"}],\"name\":\"setQuorumThresholdPercentage\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIRegistryCoordinator\",\"name\":\"__registryCoordinator\",\"type\":\"address\"}],\"name\":\"setRegistryCoordinatorAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"value\",\"type\":\"bool\"}],\"name\":\"setStaleStakesForbidden\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"stakeRegistry\",\"outputs\":[{\"internalType\":\"contractIStakeRegistry\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"staleStakesForbidden\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"msgHash\",\"type\":\"bytes32\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point\",\"name\":\"apk\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256[2]\",\"name\":\"X\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"Y\",\"type\":\"uint256[2]\"}],\"internalType\":\"structBN254.G2Point\",\"name\":\"apkG2\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point\",\"name\":\"sigma\",\"type\":\"tuple\"}],\"name\":\"trySignatureAndApkVerification\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"pairingSuccessful\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"siganatureIsValid\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_metadataURI\",\"type\":\"string\"}],\"name\":\"updateAVSMetadataURI\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"ContractTAG\",\"type\":\"string\"}],\"name\":\"InsufficientThreshold\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"ContractTAG\",\"type\":\"string\"}],\"name\":\"InsufficientThresholdPercentages\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"ContractTAG\",\"type\":\"string\"}],\"name\":\"InvalidQuorumParam\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"ContractTAG\",\"type\":\"string\"}],\"name\":\"InvalidQuorumThresholdPercentage\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"ContractTAG\",\"type\":\"string\"}],\"name\":\"InvalidReferenceBlockNum\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"ContractTAG\",\"type\":\"string\"}],\"name\":\"InvalidRequestId\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"ContractTAG\",\"type\":\"string\"}],\"name\":\"InvalidSender\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"contractTAG\",\"type\":\"string\"}],\"name\":\"MessageHashAlreadyAdded\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"contractTAG\",\"type\":\"string\"}],\"name\":\"NotInAllowlist\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializing\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"contractTAG\",\"type\":\"string\"}],\"name\":\"OperatorRegistrationPaused\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agentAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"SlashingAmount\",\"type\":\"uint256\"}],\"name\":\"AgentBalanceConfirmed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agentAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"SlashingAmount\",\"type\":\"uint256\"}],\"name\":\"AgentFraudConfirmed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"OperatorDeRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"OperatorRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"thresholdpercentage\",\"type\":\"uint256\"}],\"name\":\"QuorumThresholdPercentageChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"prevRewardsInitiator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newRewardsInitiator\",\"type\":\"address\"}],\"name\":\"RewardsInitiatorUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"value\",\"type\":\"bool\"}],\"name\":\"StaleStakesForbiddenUpdate\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"THRESHOLD_DENOMINATOR\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"_avsDirectory\",\"outputs\":[{\"internalType\":\"contractIAVSDirectory\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"_registryCoordinator\",\"outputs\":[{\"internalType\":\"contractIRegistryCoordinator\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"_rewardsCoordinator\",\"outputs\":[{\"internalType\":\"contractIRewardsCoordinator\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"operators\",\"type\":\"address[]\"}],\"name\":\"addOperatorsToAllowlist\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"agentManager\",\"outputs\":[{\"internalType\":\"contractIAgentManager\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"agentsDeviationRequestId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"agentsFraudRequestId\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"avsDirectory\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"blsApkRegistry\",\"outputs\":[{\"internalType\":\"contractIBLSApkRegistry\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"bytes32\",\"name\":\"messageHash\",\"type\":\"bytes32\"}],\"internalType\":\"structDATA.OperatorChallengeEvidence\",\"name\":\"evidence\",\"type\":\"tuple\"}],\"name\":\"challengeOperators\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"msgHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"quorumNumbers\",\"type\":\"bytes\"},{\"internalType\":\"uint32\",\"name\":\"referenceBlockNumber\",\"type\":\"uint32\"},{\"components\":[{\"internalType\":\"uint32[]\",\"name\":\"nonSignerQuorumBitmapIndices\",\"type\":\"uint32[]\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point[]\",\"name\":\"nonSignerPubkeys\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point[]\",\"name\":\"quorumApks\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint256[2]\",\"name\":\"X\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"Y\",\"type\":\"uint256[2]\"}],\"internalType\":\"structBN254.G2Point\",\"name\":\"apkG2\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point\",\"name\":\"sigma\",\"type\":\"tuple\"},{\"internalType\":\"uint32[]\",\"name\":\"quorumApkIndices\",\"type\":\"uint32[]\"},{\"internalType\":\"uint32[]\",\"name\":\"totalStakeIndices\",\"type\":\"uint32[]\"},{\"internalType\":\"uint32[][]\",\"name\":\"nonSignerStakeIndices\",\"type\":\"uint32[][]\"}],\"internalType\":\"structIBLSSignatureChecker.NonSignerStakesAndSignature\",\"name\":\"params\",\"type\":\"tuple\"}],\"name\":\"checkSignatures\",\"outputs\":[{\"components\":[{\"internalType\":\"uint96[]\",\"name\":\"signedStakeForQuorum\",\"type\":\"uint96[]\"},{\"internalType\":\"uint96[]\",\"name\":\"totalStakeForQuorum\",\"type\":\"uint96[]\"}],\"internalType\":\"structIBLSSignatureChecker.QuorumStakeTotals\",\"name\":\"\",\"type\":\"tuple\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"agentAddress\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"referenceBlockNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes\",\"name\":\"quorumNumbers\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"quorumThresholdPercentages\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"requestId\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"actualAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"idealAmount\",\"type\":\"uint256\"}],\"internalType\":\"structDATA.DeviationBalanceHeader\",\"name\":\"deviationBalanceHeader\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint32[]\",\"name\":\"nonSignerQuorumBitmapIndices\",\"type\":\"uint32[]\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point[]\",\"name\":\"nonSignerPubkeys\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point[]\",\"name\":\"quorumApks\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint256[2]\",\"name\":\"X\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"Y\",\"type\":\"uint256[2]\"}],\"internalType\":\"structBN254.G2Point\",\"name\":\"apkG2\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point\",\"name\":\"sigma\",\"type\":\"tuple\"},{\"internalType\":\"uint32[]\",\"name\":\"quorumApkIndices\",\"type\":\"uint32[]\"},{\"internalType\":\"uint32[]\",\"name\":\"totalStakeIndices\",\"type\":\"uint32[]\"},{\"internalType\":\"uint32[][]\",\"name\":\"nonSignerStakeIndices\",\"type\":\"uint32[][]\"}],\"internalType\":\"structIBLSSignatureChecker.NonSignerStakesAndSignature\",\"name\":\"nonSignerStakesAndSignature\",\"type\":\"tuple\"}],\"name\":\"confirmAgentDeviation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"agentAddress\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"referenceBlockNumber\",\"type\":\"uint32\"},{\"internalType\":\"bytes\",\"name\":\"quorumNumbers\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"quorumThresholdPercentages\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"insufficientAmount\",\"type\":\"uint256\"}],\"internalType\":\"structDATA.FraudBalanceHeader\",\"name\":\"fraudBalanceHeader\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint32[]\",\"name\":\"nonSignerQuorumBitmapIndices\",\"type\":\"uint32[]\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point[]\",\"name\":\"nonSignerPubkeys\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point[]\",\"name\":\"quorumApks\",\"type\":\"tuple[]\"},{\"components\":[{\"internalType\":\"uint256[2]\",\"name\":\"X\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"Y\",\"type\":\"uint256[2]\"}],\"internalType\":\"structBN254.G2Point\",\"name\":\"apkG2\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point\",\"name\":\"sigma\",\"type\":\"tuple\"},{\"internalType\":\"uint32[]\",\"name\":\"quorumApkIndices\",\"type\":\"uint32[]\"},{\"internalType\":\"uint32[]\",\"name\":\"totalStakeIndices\",\"type\":\"uint32[]\"},{\"internalType\":\"uint32[][]\",\"name\":\"nonSignerStakeIndices\",\"type\":\"uint32[][]\"}],\"internalType\":\"structIBLSSignatureChecker.NonSignerStakesAndSignature\",\"name\":\"nonSignerStakesAndSignature\",\"type\":\"tuple\"}],\"name\":\"confirmAgentFraud\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"messageHash\",\"type\":\"bytes32\"}],\"name\":\"contains\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"components\":[{\"internalType\":\"contractIStrategy\",\"name\":\"strategy\",\"type\":\"address\"},{\"internalType\":\"uint96\",\"name\":\"multiplier\",\"type\":\"uint96\"}],\"internalType\":\"structIRewardsCoordinator.StrategyAndMultiplier[]\",\"name\":\"strategiesAndMultipliers\",\"type\":\"tuple[]\"},{\"internalType\":\"contractIERC20\",\"name\":\"token\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint32\",\"name\":\"startTimestamp\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"duration\",\"type\":\"uint32\"}],\"internalType\":\"structIRewardsCoordinator.RewardsSubmission[]\",\"name\":\"rewardsSubmissions\",\"type\":\"tuple[]\"}],\"name\":\"createAVSRewardsSubmission\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"delegation\",\"outputs\":[{\"internalType\":\"contractIDelegationManager\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"deregisterOperatorFromAVS\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"getOperatorRestakedStrategies\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getRestakeableStrategies\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"\",\"type\":\"address[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"__roleManagerAddress\",\"type\":\"address\"},{\"internalType\":\"contractIAVSDirectory\",\"name\":\"__avsDirectory\",\"type\":\"address\"},{\"internalType\":\"contractIRewardsCoordinator\",\"name\":\"__rewardsCoordinator\",\"type\":\"address\"},{\"internalType\":\"contractIStakeRegistry\",\"name\":\"__stakeRegistry\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"referenceBlockNumber\",\"type\":\"uint32\"}],\"name\":\"latestServeUntilBlock\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"operatorAllowlist\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"quorumThresholdPercentage\",\"outputs\":[{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"salt\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"expiry\",\"type\":\"uint256\"}],\"internalType\":\"structISignatureUtils.SignatureWithSaltAndExpiry\",\"name\":\"operatorSignature\",\"type\":\"tuple\"}],\"name\":\"registerOperatorToAVS\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"registryCoordinator\",\"outputs\":[{\"internalType\":\"contractIRegistryCoordinator\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"rewardsInitiator\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"roleManager\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"roleManagerAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIAgentManager\",\"name\":\"_agentManagerAddress\",\"type\":\"address\"}],\"name\":\"setAgentManagerAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"status\",\"type\":\"bool\"}],\"name\":\"setPauseStatus\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"thresholdPercentage\",\"type\":\"uint8\"}],\"name\":\"setQuorumThresholdPercentage\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIRegistryCoordinator\",\"name\":\"__registryCoordinator\",\"type\":\"address\"}],\"name\":\"setRegistryCoordinatorAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newRewardsInitiator\",\"type\":\"address\"}],\"name\":\"setRewardsInitiator\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"value\",\"type\":\"bool\"}],\"name\":\"setStaleStakesForbidden\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"stakeRegistry\",\"outputs\":[{\"internalType\":\"contractIStakeRegistry\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"staleStakesForbidden\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"msgHash\",\"type\":\"bytes32\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point\",\"name\":\"apk\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256[2]\",\"name\":\"X\",\"type\":\"uint256[2]\"},{\"internalType\":\"uint256[2]\",\"name\":\"Y\",\"type\":\"uint256[2]\"}],\"internalType\":\"structBN254.G2Point\",\"name\":\"apkG2\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"X\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"Y\",\"type\":\"uint256\"}],\"internalType\":\"structBN254.G1Point\",\"name\":\"sigma\",\"type\":\"tuple\"}],\"name\":\"trySignatureAndApkVerification\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"pairingSuccessful\",\"type\":\"bool\"},{\"internalType\":\"bool\",\"name\":\"siganatureIsValid\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"_metadataURI\",\"type\":\"string\"}],\"name\":\"updateAVSMetadataURI\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // CedroServiceManagerABI is the input ABI used to generate the binding from.
@@ -258,37 +257,6 @@ func (_CedroServiceManager *CedroServiceManagerTransactorRaw) Transact(opts *bin
 	return _CedroServiceManager.Contract.contract.Transact(opts, method, params...)
 }
 
-// OperatorRegistrationStatus is a free data retrieval call binding the contract method 0xdf4b8650.
-//
-// Solidity: function OperatorRegistrationStatus() view returns(bool)
-func (_CedroServiceManager *CedroServiceManagerCaller) OperatorRegistrationStatus(opts *bind.CallOpts) (bool, error) {
-	var out []interface{}
-	err := _CedroServiceManager.contract.Call(opts, &out, "OperatorRegistrationStatus")
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// OperatorRegistrationStatus is a free data retrieval call binding the contract method 0xdf4b8650.
-//
-// Solidity: function OperatorRegistrationStatus() view returns(bool)
-func (_CedroServiceManager *CedroServiceManagerSession) OperatorRegistrationStatus() (bool, error) {
-	return _CedroServiceManager.Contract.OperatorRegistrationStatus(&_CedroServiceManager.CallOpts)
-}
-
-// OperatorRegistrationStatus is a free data retrieval call binding the contract method 0xdf4b8650.
-//
-// Solidity: function OperatorRegistrationStatus() view returns(bool)
-func (_CedroServiceManager *CedroServiceManagerCallerSession) OperatorRegistrationStatus() (bool, error) {
-	return _CedroServiceManager.Contract.OperatorRegistrationStatus(&_CedroServiceManager.CallOpts)
-}
-
 // THRESHOLDDENOMINATOR is a free data retrieval call binding the contract method 0xef024458.
 //
 // Solidity: function THRESHOLD_DENOMINATOR() view returns(uint256)
@@ -413,66 +381,35 @@ func (_CedroServiceManager *CedroServiceManagerCallerSession) RewardsCoordinator
 	return _CedroServiceManager.Contract.RewardsCoordinator(&_CedroServiceManager.CallOpts)
 }
 
-// AgentDeviationRequestId is a free data retrieval call binding the contract method 0x0224c816.
+// AgentManager is a free data retrieval call binding the contract method 0x7622f78d.
 //
-// Solidity: function agentDeviationRequestId(address ) view returns(uint32)
-func (_CedroServiceManager *CedroServiceManagerCaller) AgentDeviationRequestId(opts *bind.CallOpts, arg0 common.Address) (uint32, error) {
+// Solidity: function agentManager() view returns(address)
+func (_CedroServiceManager *CedroServiceManagerCaller) AgentManager(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
-	err := _CedroServiceManager.contract.Call(opts, &out, "agentDeviationRequestId", arg0)
+	err := _CedroServiceManager.contract.Call(opts, &out, "agentManager")
 
 	if err != nil {
-		return *new(uint32), err
+		return *new(common.Address), err
 	}
 
-	out0 := *abi.ConvertType(out[0], new(uint32)).(*uint32)
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
 
 }
 
-// AgentDeviationRequestId is a free data retrieval call binding the contract method 0x0224c816.
+// AgentManager is a free data retrieval call binding the contract method 0x7622f78d.
 //
-// Solidity: function agentDeviationRequestId(address ) view returns(uint32)
-func (_CedroServiceManager *CedroServiceManagerSession) AgentDeviationRequestId(arg0 common.Address) (uint32, error) {
-	return _CedroServiceManager.Contract.AgentDeviationRequestId(&_CedroServiceManager.CallOpts, arg0)
+// Solidity: function agentManager() view returns(address)
+func (_CedroServiceManager *CedroServiceManagerSession) AgentManager() (common.Address, error) {
+	return _CedroServiceManager.Contract.AgentManager(&_CedroServiceManager.CallOpts)
 }
 
-// AgentDeviationRequestId is a free data retrieval call binding the contract method 0x0224c816.
+// AgentManager is a free data retrieval call binding the contract method 0x7622f78d.
 //
-// Solidity: function agentDeviationRequestId(address ) view returns(uint32)
-func (_CedroServiceManager *CedroServiceManagerCallerSession) AgentDeviationRequestId(arg0 common.Address) (uint32, error) {
-	return _CedroServiceManager.Contract.AgentDeviationRequestId(&_CedroServiceManager.CallOpts, arg0)
-}
-
-// AgentFraudRequestId is a free data retrieval call binding the contract method 0x81da32ab.
-//
-// Solidity: function agentFraudRequestId(address ) view returns(uint32)
-func (_CedroServiceManager *CedroServiceManagerCaller) AgentFraudRequestId(opts *bind.CallOpts, arg0 common.Address) (uint32, error) {
-	var out []interface{}
-	err := _CedroServiceManager.contract.Call(opts, &out, "agentFraudRequestId", arg0)
-
-	if err != nil {
-		return *new(uint32), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(uint32)).(*uint32)
-
-	return out0, err
-
-}
-
-// AgentFraudRequestId is a free data retrieval call binding the contract method 0x81da32ab.
-//
-// Solidity: function agentFraudRequestId(address ) view returns(uint32)
-func (_CedroServiceManager *CedroServiceManagerSession) AgentFraudRequestId(arg0 common.Address) (uint32, error) {
-	return _CedroServiceManager.Contract.AgentFraudRequestId(&_CedroServiceManager.CallOpts, arg0)
-}
-
-// AgentFraudRequestId is a free data retrieval call binding the contract method 0x81da32ab.
-//
-// Solidity: function agentFraudRequestId(address ) view returns(uint32)
-func (_CedroServiceManager *CedroServiceManagerCallerSession) AgentFraudRequestId(arg0 common.Address) (uint32, error) {
-	return _CedroServiceManager.Contract.AgentFraudRequestId(&_CedroServiceManager.CallOpts, arg0)
+// Solidity: function agentManager() view returns(address)
+func (_CedroServiceManager *CedroServiceManagerCallerSession) AgentManager() (common.Address, error) {
+	return _CedroServiceManager.Contract.AgentManager(&_CedroServiceManager.CallOpts)
 }
 
 // AgentsDeviationRequestId is a free data retrieval call binding the contract method 0xd51b1779.
@@ -972,37 +909,6 @@ func (_CedroServiceManager *CedroServiceManagerCallerSession) RoleManagerAddress
 	return _CedroServiceManager.Contract.RoleManagerAddress(&_CedroServiceManager.CallOpts)
 }
 
-// RoleManagerAddressOne is a free data retrieval call binding the contract method 0xa3dd653d.
-//
-// Solidity: function roleManagerAddressOne() view returns(uint256)
-func (_CedroServiceManager *CedroServiceManagerCaller) RoleManagerAddressOne(opts *bind.CallOpts) (*big.Int, error) {
-	var out []interface{}
-	err := _CedroServiceManager.contract.Call(opts, &out, "roleManagerAddressOne")
-
-	if err != nil {
-		return *new(*big.Int), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-
-	return out0, err
-
-}
-
-// RoleManagerAddressOne is a free data retrieval call binding the contract method 0xa3dd653d.
-//
-// Solidity: function roleManagerAddressOne() view returns(uint256)
-func (_CedroServiceManager *CedroServiceManagerSession) RoleManagerAddressOne() (*big.Int, error) {
-	return _CedroServiceManager.Contract.RoleManagerAddressOne(&_CedroServiceManager.CallOpts)
-}
-
-// RoleManagerAddressOne is a free data retrieval call binding the contract method 0xa3dd653d.
-//
-// Solidity: function roleManagerAddressOne() view returns(uint256)
-func (_CedroServiceManager *CedroServiceManagerCallerSession) RoleManagerAddressOne() (*big.Int, error) {
-	return _CedroServiceManager.Contract.RoleManagerAddressOne(&_CedroServiceManager.CallOpts)
-}
-
 // StakeRegistry is a free data retrieval call binding the contract method 0x68304835.
 //
 // Solidity: function stakeRegistry() view returns(address)
@@ -1152,44 +1058,44 @@ func (_CedroServiceManager *CedroServiceManagerTransactorSession) ChallengeOpera
 	return _CedroServiceManager.Contract.ChallengeOperators(&_CedroServiceManager.TransactOpts, evidence)
 }
 
-// ConfirmAgentDeviation is a paid mutator transaction binding the contract method 0xde204c27.
+// ConfirmAgentDeviation is a paid mutator transaction binding the contract method 0x1008ef92.
 //
-// Solidity: function confirmAgentDeviation((address,bytes,bytes,uint256,uint32,uint256,uint256) balanceHeader, (uint32[],(uint256,uint256)[],(uint256,uint256)[],(uint256[2],uint256[2]),(uint256,uint256),uint32[],uint32[],uint32[][]) nonSignerStakesAndSignature) returns()
-func (_CedroServiceManager *CedroServiceManagerTransactor) ConfirmAgentDeviation(opts *bind.TransactOpts, balanceHeader DATADeviationBalanceHeader, nonSignerStakesAndSignature IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Transaction, error) {
-	return _CedroServiceManager.contract.Transact(opts, "confirmAgentDeviation", balanceHeader, nonSignerStakesAndSignature)
+// Solidity: function confirmAgentDeviation((address,uint32,bytes,bytes,uint256,uint256,uint256) deviationBalanceHeader, (uint32[],(uint256,uint256)[],(uint256,uint256)[],(uint256[2],uint256[2]),(uint256,uint256),uint32[],uint32[],uint32[][]) nonSignerStakesAndSignature) returns()
+func (_CedroServiceManager *CedroServiceManagerTransactor) ConfirmAgentDeviation(opts *bind.TransactOpts, deviationBalanceHeader DATADeviationBalanceHeader, nonSignerStakesAndSignature IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Transaction, error) {
+	return _CedroServiceManager.contract.Transact(opts, "confirmAgentDeviation", deviationBalanceHeader, nonSignerStakesAndSignature)
 }
 
-// ConfirmAgentDeviation is a paid mutator transaction binding the contract method 0xde204c27.
+// ConfirmAgentDeviation is a paid mutator transaction binding the contract method 0x1008ef92.
 //
-// Solidity: function confirmAgentDeviation((address,bytes,bytes,uint256,uint32,uint256,uint256) balanceHeader, (uint32[],(uint256,uint256)[],(uint256,uint256)[],(uint256[2],uint256[2]),(uint256,uint256),uint32[],uint32[],uint32[][]) nonSignerStakesAndSignature) returns()
-func (_CedroServiceManager *CedroServiceManagerSession) ConfirmAgentDeviation(balanceHeader DATADeviationBalanceHeader, nonSignerStakesAndSignature IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Transaction, error) {
-	return _CedroServiceManager.Contract.ConfirmAgentDeviation(&_CedroServiceManager.TransactOpts, balanceHeader, nonSignerStakesAndSignature)
+// Solidity: function confirmAgentDeviation((address,uint32,bytes,bytes,uint256,uint256,uint256) deviationBalanceHeader, (uint32[],(uint256,uint256)[],(uint256,uint256)[],(uint256[2],uint256[2]),(uint256,uint256),uint32[],uint32[],uint32[][]) nonSignerStakesAndSignature) returns()
+func (_CedroServiceManager *CedroServiceManagerSession) ConfirmAgentDeviation(deviationBalanceHeader DATADeviationBalanceHeader, nonSignerStakesAndSignature IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Transaction, error) {
+	return _CedroServiceManager.Contract.ConfirmAgentDeviation(&_CedroServiceManager.TransactOpts, deviationBalanceHeader, nonSignerStakesAndSignature)
 }
 
-// ConfirmAgentDeviation is a paid mutator transaction binding the contract method 0xde204c27.
+// ConfirmAgentDeviation is a paid mutator transaction binding the contract method 0x1008ef92.
 //
-// Solidity: function confirmAgentDeviation((address,bytes,bytes,uint256,uint32,uint256,uint256) balanceHeader, (uint32[],(uint256,uint256)[],(uint256,uint256)[],(uint256[2],uint256[2]),(uint256,uint256),uint32[],uint32[],uint32[][]) nonSignerStakesAndSignature) returns()
-func (_CedroServiceManager *CedroServiceManagerTransactorSession) ConfirmAgentDeviation(balanceHeader DATADeviationBalanceHeader, nonSignerStakesAndSignature IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Transaction, error) {
-	return _CedroServiceManager.Contract.ConfirmAgentDeviation(&_CedroServiceManager.TransactOpts, balanceHeader, nonSignerStakesAndSignature)
+// Solidity: function confirmAgentDeviation((address,uint32,bytes,bytes,uint256,uint256,uint256) deviationBalanceHeader, (uint32[],(uint256,uint256)[],(uint256,uint256)[],(uint256[2],uint256[2]),(uint256,uint256),uint32[],uint32[],uint32[][]) nonSignerStakesAndSignature) returns()
+func (_CedroServiceManager *CedroServiceManagerTransactorSession) ConfirmAgentDeviation(deviationBalanceHeader DATADeviationBalanceHeader, nonSignerStakesAndSignature IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Transaction, error) {
+	return _CedroServiceManager.Contract.ConfirmAgentDeviation(&_CedroServiceManager.TransactOpts, deviationBalanceHeader, nonSignerStakesAndSignature)
 }
 
-// ConfirmAgentFraud is a paid mutator transaction binding the contract method 0x8e1186bb.
+// ConfirmAgentFraud is a paid mutator transaction binding the contract method 0x08adb446.
 //
-// Solidity: function confirmAgentFraud((address,bytes,bytes,uint256,uint32,uint256) fraudBalanceHeader, (uint32[],(uint256,uint256)[],(uint256,uint256)[],(uint256[2],uint256[2]),(uint256,uint256),uint32[],uint32[],uint32[][]) nonSignerStakesAndSignature) returns()
+// Solidity: function confirmAgentFraud((address,uint32,bytes,bytes,uint256) fraudBalanceHeader, (uint32[],(uint256,uint256)[],(uint256,uint256)[],(uint256[2],uint256[2]),(uint256,uint256),uint32[],uint32[],uint32[][]) nonSignerStakesAndSignature) returns()
 func (_CedroServiceManager *CedroServiceManagerTransactor) ConfirmAgentFraud(opts *bind.TransactOpts, fraudBalanceHeader DATAFraudBalanceHeader, nonSignerStakesAndSignature IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Transaction, error) {
 	return _CedroServiceManager.contract.Transact(opts, "confirmAgentFraud", fraudBalanceHeader, nonSignerStakesAndSignature)
 }
 
-// ConfirmAgentFraud is a paid mutator transaction binding the contract method 0x8e1186bb.
+// ConfirmAgentFraud is a paid mutator transaction binding the contract method 0x08adb446.
 //
-// Solidity: function confirmAgentFraud((address,bytes,bytes,uint256,uint32,uint256) fraudBalanceHeader, (uint32[],(uint256,uint256)[],(uint256,uint256)[],(uint256[2],uint256[2]),(uint256,uint256),uint32[],uint32[],uint32[][]) nonSignerStakesAndSignature) returns()
+// Solidity: function confirmAgentFraud((address,uint32,bytes,bytes,uint256) fraudBalanceHeader, (uint32[],(uint256,uint256)[],(uint256,uint256)[],(uint256[2],uint256[2]),(uint256,uint256),uint32[],uint32[],uint32[][]) nonSignerStakesAndSignature) returns()
 func (_CedroServiceManager *CedroServiceManagerSession) ConfirmAgentFraud(fraudBalanceHeader DATAFraudBalanceHeader, nonSignerStakesAndSignature IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Transaction, error) {
 	return _CedroServiceManager.Contract.ConfirmAgentFraud(&_CedroServiceManager.TransactOpts, fraudBalanceHeader, nonSignerStakesAndSignature)
 }
 
-// ConfirmAgentFraud is a paid mutator transaction binding the contract method 0x8e1186bb.
+// ConfirmAgentFraud is a paid mutator transaction binding the contract method 0x08adb446.
 //
-// Solidity: function confirmAgentFraud((address,bytes,bytes,uint256,uint32,uint256) fraudBalanceHeader, (uint32[],(uint256,uint256)[],(uint256,uint256)[],(uint256[2],uint256[2]),(uint256,uint256),uint32[],uint32[],uint32[][]) nonSignerStakesAndSignature) returns()
+// Solidity: function confirmAgentFraud((address,uint32,bytes,bytes,uint256) fraudBalanceHeader, (uint32[],(uint256,uint256)[],(uint256,uint256)[],(uint256[2],uint256[2]),(uint256,uint256),uint32[],uint32[],uint32[][]) nonSignerStakesAndSignature) returns()
 func (_CedroServiceManager *CedroServiceManagerTransactorSession) ConfirmAgentFraud(fraudBalanceHeader DATAFraudBalanceHeader, nonSignerStakesAndSignature IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Transaction, error) {
 	return _CedroServiceManager.Contract.ConfirmAgentFraud(&_CedroServiceManager.TransactOpts, fraudBalanceHeader, nonSignerStakesAndSignature)
 }
@@ -1238,23 +1144,23 @@ func (_CedroServiceManager *CedroServiceManagerTransactorSession) DeregisterOper
 
 // Initialize is a paid mutator transaction binding the contract method 0xf8c8765e.
 //
-// Solidity: function initialize(address _roleManager, address __avsDirectory, address ___rewardsCoordinator, address __stakeRegistry) returns()
-func (_CedroServiceManager *CedroServiceManagerTransactor) Initialize(opts *bind.TransactOpts, _roleManager common.Address, __avsDirectory common.Address, ___rewardsCoordinator common.Address, __stakeRegistry common.Address) (*types.Transaction, error) {
-	return _CedroServiceManager.contract.Transact(opts, "initialize", _roleManager, __avsDirectory, ___rewardsCoordinator, __stakeRegistry)
+// Solidity: function initialize(address __roleManagerAddress, address __avsDirectory, address __rewardsCoordinator, address __stakeRegistry) returns()
+func (_CedroServiceManager *CedroServiceManagerTransactor) Initialize(opts *bind.TransactOpts, __roleManagerAddress common.Address, __avsDirectory common.Address, __rewardsCoordinator common.Address, __stakeRegistry common.Address) (*types.Transaction, error) {
+	return _CedroServiceManager.contract.Transact(opts, "initialize", __roleManagerAddress, __avsDirectory, __rewardsCoordinator, __stakeRegistry)
 }
 
 // Initialize is a paid mutator transaction binding the contract method 0xf8c8765e.
 //
-// Solidity: function initialize(address _roleManager, address __avsDirectory, address ___rewardsCoordinator, address __stakeRegistry) returns()
-func (_CedroServiceManager *CedroServiceManagerSession) Initialize(_roleManager common.Address, __avsDirectory common.Address, ___rewardsCoordinator common.Address, __stakeRegistry common.Address) (*types.Transaction, error) {
-	return _CedroServiceManager.Contract.Initialize(&_CedroServiceManager.TransactOpts, _roleManager, __avsDirectory, ___rewardsCoordinator, __stakeRegistry)
+// Solidity: function initialize(address __roleManagerAddress, address __avsDirectory, address __rewardsCoordinator, address __stakeRegistry) returns()
+func (_CedroServiceManager *CedroServiceManagerSession) Initialize(__roleManagerAddress common.Address, __avsDirectory common.Address, __rewardsCoordinator common.Address, __stakeRegistry common.Address) (*types.Transaction, error) {
+	return _CedroServiceManager.Contract.Initialize(&_CedroServiceManager.TransactOpts, __roleManagerAddress, __avsDirectory, __rewardsCoordinator, __stakeRegistry)
 }
 
 // Initialize is a paid mutator transaction binding the contract method 0xf8c8765e.
 //
-// Solidity: function initialize(address _roleManager, address __avsDirectory, address ___rewardsCoordinator, address __stakeRegistry) returns()
-func (_CedroServiceManager *CedroServiceManagerTransactorSession) Initialize(_roleManager common.Address, __avsDirectory common.Address, ___rewardsCoordinator common.Address, __stakeRegistry common.Address) (*types.Transaction, error) {
-	return _CedroServiceManager.Contract.Initialize(&_CedroServiceManager.TransactOpts, _roleManager, __avsDirectory, ___rewardsCoordinator, __stakeRegistry)
+// Solidity: function initialize(address __roleManagerAddress, address __avsDirectory, address __rewardsCoordinator, address __stakeRegistry) returns()
+func (_CedroServiceManager *CedroServiceManagerTransactorSession) Initialize(__roleManagerAddress common.Address, __avsDirectory common.Address, __rewardsCoordinator common.Address, __stakeRegistry common.Address) (*types.Transaction, error) {
+	return _CedroServiceManager.Contract.Initialize(&_CedroServiceManager.TransactOpts, __roleManagerAddress, __avsDirectory, __rewardsCoordinator, __stakeRegistry)
 }
 
 // RegisterOperatorToAVS is a paid mutator transaction binding the contract method 0x9926ee7d.
@@ -1276,6 +1182,27 @@ func (_CedroServiceManager *CedroServiceManagerSession) RegisterOperatorToAVS(op
 // Solidity: function registerOperatorToAVS(address operator, (bytes,bytes32,uint256) operatorSignature) returns()
 func (_CedroServiceManager *CedroServiceManagerTransactorSession) RegisterOperatorToAVS(operator common.Address, operatorSignature ISignatureUtilsSignatureWithSaltAndExpiry) (*types.Transaction, error) {
 	return _CedroServiceManager.Contract.RegisterOperatorToAVS(&_CedroServiceManager.TransactOpts, operator, operatorSignature)
+}
+
+// SetAgentManagerAddress is a paid mutator transaction binding the contract method 0xda35a805.
+//
+// Solidity: function setAgentManagerAddress(address _agentManagerAddress) returns()
+func (_CedroServiceManager *CedroServiceManagerTransactor) SetAgentManagerAddress(opts *bind.TransactOpts, _agentManagerAddress common.Address) (*types.Transaction, error) {
+	return _CedroServiceManager.contract.Transact(opts, "setAgentManagerAddress", _agentManagerAddress)
+}
+
+// SetAgentManagerAddress is a paid mutator transaction binding the contract method 0xda35a805.
+//
+// Solidity: function setAgentManagerAddress(address _agentManagerAddress) returns()
+func (_CedroServiceManager *CedroServiceManagerSession) SetAgentManagerAddress(_agentManagerAddress common.Address) (*types.Transaction, error) {
+	return _CedroServiceManager.Contract.SetAgentManagerAddress(&_CedroServiceManager.TransactOpts, _agentManagerAddress)
+}
+
+// SetAgentManagerAddress is a paid mutator transaction binding the contract method 0xda35a805.
+//
+// Solidity: function setAgentManagerAddress(address _agentManagerAddress) returns()
+func (_CedroServiceManager *CedroServiceManagerTransactorSession) SetAgentManagerAddress(_agentManagerAddress common.Address) (*types.Transaction, error) {
+	return _CedroServiceManager.Contract.SetAgentManagerAddress(&_CedroServiceManager.TransactOpts, _agentManagerAddress)
 }
 
 // SetPauseStatus is a paid mutator transaction binding the contract method 0xc38bb537.
@@ -1339,6 +1266,27 @@ func (_CedroServiceManager *CedroServiceManagerSession) SetRegistryCoordinatorAd
 // Solidity: function setRegistryCoordinatorAddress(address __registryCoordinator) returns()
 func (_CedroServiceManager *CedroServiceManagerTransactorSession) SetRegistryCoordinatorAddress(__registryCoordinator common.Address) (*types.Transaction, error) {
 	return _CedroServiceManager.Contract.SetRegistryCoordinatorAddress(&_CedroServiceManager.TransactOpts, __registryCoordinator)
+}
+
+// SetRewardsInitiator is a paid mutator transaction binding the contract method 0x3bc28c8c.
+//
+// Solidity: function setRewardsInitiator(address newRewardsInitiator) returns()
+func (_CedroServiceManager *CedroServiceManagerTransactor) SetRewardsInitiator(opts *bind.TransactOpts, newRewardsInitiator common.Address) (*types.Transaction, error) {
+	return _CedroServiceManager.contract.Transact(opts, "setRewardsInitiator", newRewardsInitiator)
+}
+
+// SetRewardsInitiator is a paid mutator transaction binding the contract method 0x3bc28c8c.
+//
+// Solidity: function setRewardsInitiator(address newRewardsInitiator) returns()
+func (_CedroServiceManager *CedroServiceManagerSession) SetRewardsInitiator(newRewardsInitiator common.Address) (*types.Transaction, error) {
+	return _CedroServiceManager.Contract.SetRewardsInitiator(&_CedroServiceManager.TransactOpts, newRewardsInitiator)
+}
+
+// SetRewardsInitiator is a paid mutator transaction binding the contract method 0x3bc28c8c.
+//
+// Solidity: function setRewardsInitiator(address newRewardsInitiator) returns()
+func (_CedroServiceManager *CedroServiceManagerTransactorSession) SetRewardsInitiator(newRewardsInitiator common.Address) (*types.Transaction, error) {
+	return _CedroServiceManager.Contract.SetRewardsInitiator(&_CedroServiceManager.TransactOpts, newRewardsInitiator)
 }
 
 // SetStaleStakesForbidden is a paid mutator transaction binding the contract method 0x416c7e5e.
@@ -1452,12 +1400,14 @@ func (it *CedroServiceManagerAgentBalanceConfirmedIterator) Close() error {
 
 // CedroServiceManagerAgentBalanceConfirmed represents a AgentBalanceConfirmed event raised by the CedroServiceManager contract.
 type CedroServiceManagerAgentBalanceConfirmed struct {
-	Raw types.Log // Blockchain specific contextual infos
+	AgentAddress   common.Address
+	SlashingAmount *big.Int
+	Raw            types.Log // Blockchain specific contextual infos
 }
 
-// FilterAgentBalanceConfirmed is a free log retrieval operation binding the contract event 0x93ee994be7dc494113903a4620b33eb451f570878081a7ef5b3af52945790bef.
+// FilterAgentBalanceConfirmed is a free log retrieval operation binding the contract event 0x135c0f63d57042d9134244f2f8134005a2b3525c9943e69ce69c3ae1c3d611f8.
 //
-// Solidity: event AgentBalanceConfirmed()
+// Solidity: event AgentBalanceConfirmed(address agentAddress, uint256 SlashingAmount)
 func (_CedroServiceManager *CedroServiceManagerFilterer) FilterAgentBalanceConfirmed(opts *bind.FilterOpts) (*CedroServiceManagerAgentBalanceConfirmedIterator, error) {
 
 	logs, sub, err := _CedroServiceManager.contract.FilterLogs(opts, "AgentBalanceConfirmed")
@@ -1467,9 +1417,9 @@ func (_CedroServiceManager *CedroServiceManagerFilterer) FilterAgentBalanceConfi
 	return &CedroServiceManagerAgentBalanceConfirmedIterator{contract: _CedroServiceManager.contract, event: "AgentBalanceConfirmed", logs: logs, sub: sub}, nil
 }
 
-// WatchAgentBalanceConfirmed is a free log subscription operation binding the contract event 0x93ee994be7dc494113903a4620b33eb451f570878081a7ef5b3af52945790bef.
+// WatchAgentBalanceConfirmed is a free log subscription operation binding the contract event 0x135c0f63d57042d9134244f2f8134005a2b3525c9943e69ce69c3ae1c3d611f8.
 //
-// Solidity: event AgentBalanceConfirmed()
+// Solidity: event AgentBalanceConfirmed(address agentAddress, uint256 SlashingAmount)
 func (_CedroServiceManager *CedroServiceManagerFilterer) WatchAgentBalanceConfirmed(opts *bind.WatchOpts, sink chan<- *CedroServiceManagerAgentBalanceConfirmed) (event.Subscription, error) {
 
 	logs, sub, err := _CedroServiceManager.contract.WatchLogs(opts, "AgentBalanceConfirmed")
@@ -1504,9 +1454,9 @@ func (_CedroServiceManager *CedroServiceManagerFilterer) WatchAgentBalanceConfir
 	}), nil
 }
 
-// ParseAgentBalanceConfirmed is a log parse operation binding the contract event 0x93ee994be7dc494113903a4620b33eb451f570878081a7ef5b3af52945790bef.
+// ParseAgentBalanceConfirmed is a log parse operation binding the contract event 0x135c0f63d57042d9134244f2f8134005a2b3525c9943e69ce69c3ae1c3d611f8.
 //
-// Solidity: event AgentBalanceConfirmed()
+// Solidity: event AgentBalanceConfirmed(address agentAddress, uint256 SlashingAmount)
 func (_CedroServiceManager *CedroServiceManagerFilterer) ParseAgentBalanceConfirmed(log types.Log) (*CedroServiceManagerAgentBalanceConfirmed, error) {
 	event := new(CedroServiceManagerAgentBalanceConfirmed)
 	if err := _CedroServiceManager.contract.UnpackLog(event, "AgentBalanceConfirmed", log); err != nil {
@@ -1585,12 +1535,14 @@ func (it *CedroServiceManagerAgentFraudConfirmedIterator) Close() error {
 
 // CedroServiceManagerAgentFraudConfirmed represents a AgentFraudConfirmed event raised by the CedroServiceManager contract.
 type CedroServiceManagerAgentFraudConfirmed struct {
-	Raw types.Log // Blockchain specific contextual infos
+	AgentAddress   common.Address
+	SlashingAmount *big.Int
+	Raw            types.Log // Blockchain specific contextual infos
 }
 
-// FilterAgentFraudConfirmed is a free log retrieval operation binding the contract event 0x02ca753a3b90f774e3c4e83ca38f6805283b79e836791ae85a1f89fdc73afd5f.
+// FilterAgentFraudConfirmed is a free log retrieval operation binding the contract event 0x5cfe7f821ee446d640013d716cfadf320f8648b26d6e7acaa7d32129a619c121.
 //
-// Solidity: event AgentFraudConfirmed()
+// Solidity: event AgentFraudConfirmed(address agentAddress, uint256 SlashingAmount)
 func (_CedroServiceManager *CedroServiceManagerFilterer) FilterAgentFraudConfirmed(opts *bind.FilterOpts) (*CedroServiceManagerAgentFraudConfirmedIterator, error) {
 
 	logs, sub, err := _CedroServiceManager.contract.FilterLogs(opts, "AgentFraudConfirmed")
@@ -1600,9 +1552,9 @@ func (_CedroServiceManager *CedroServiceManagerFilterer) FilterAgentFraudConfirm
 	return &CedroServiceManagerAgentFraudConfirmedIterator{contract: _CedroServiceManager.contract, event: "AgentFraudConfirmed", logs: logs, sub: sub}, nil
 }
 
-// WatchAgentFraudConfirmed is a free log subscription operation binding the contract event 0x02ca753a3b90f774e3c4e83ca38f6805283b79e836791ae85a1f89fdc73afd5f.
+// WatchAgentFraudConfirmed is a free log subscription operation binding the contract event 0x5cfe7f821ee446d640013d716cfadf320f8648b26d6e7acaa7d32129a619c121.
 //
-// Solidity: event AgentFraudConfirmed()
+// Solidity: event AgentFraudConfirmed(address agentAddress, uint256 SlashingAmount)
 func (_CedroServiceManager *CedroServiceManagerFilterer) WatchAgentFraudConfirmed(opts *bind.WatchOpts, sink chan<- *CedroServiceManagerAgentFraudConfirmed) (event.Subscription, error) {
 
 	logs, sub, err := _CedroServiceManager.contract.WatchLogs(opts, "AgentFraudConfirmed")
@@ -1637,9 +1589,9 @@ func (_CedroServiceManager *CedroServiceManagerFilterer) WatchAgentFraudConfirme
 	}), nil
 }
 
-// ParseAgentFraudConfirmed is a log parse operation binding the contract event 0x02ca753a3b90f774e3c4e83ca38f6805283b79e836791ae85a1f89fdc73afd5f.
+// ParseAgentFraudConfirmed is a log parse operation binding the contract event 0x5cfe7f821ee446d640013d716cfadf320f8648b26d6e7acaa7d32129a619c121.
 //
-// Solidity: event AgentFraudConfirmed()
+// Solidity: event AgentFraudConfirmed(address agentAddress, uint256 SlashingAmount)
 func (_CedroServiceManager *CedroServiceManagerFilterer) ParseAgentFraudConfirmed(log types.Log) (*CedroServiceManagerAgentFraudConfirmed, error) {
 	event := new(CedroServiceManagerAgentFraudConfirmed)
 	if err := _CedroServiceManager.contract.UnpackLog(event, "AgentFraudConfirmed", log); err != nil {

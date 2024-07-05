@@ -2,7 +2,6 @@ package aggregator
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"os"
 	"sync"
@@ -204,7 +203,6 @@ func (agg *Aggregator) sendAggregatedResponseToContract(blsAggServiceResp BLSAgg
 		"taskIndex", blsAggServiceResp.TaskIndex,
 	)
 
-	fmt.Println(nonSignerStakesAndSignature)
 
 	task := agg.service.GetTaskByIndex(blsAggServiceResp.TaskIndex)
 

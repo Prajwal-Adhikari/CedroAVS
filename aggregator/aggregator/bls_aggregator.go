@@ -250,6 +250,8 @@ func (b *BLSAggregatorService) singleTaskAggregatorGoroutineFunc(
 	stakeSigned := make(map[types.QuorumNum]*big.Int, len(quorumNumbers))
 	for _, quorumID := range quorumNumbers {
 		stakeSigned[quorumID] = big.NewInt(0)
+		aggSigs[quorumID] = bls.NewZeroSignature()
+		aggPubKeys[quorumID] = bls.NewZeroG2Point()
 	}
 
 	for {
@@ -278,15 +280,9 @@ func (b *BLSAggregatorService) singleTaskAggregatorGoroutineFunc(
 
 				stakeSigned[quorumNum].Add(stakeSigned[quorumNum], stake)
 
-				// Add to agg signature
-				if aggSigs[quorumNum] == nil {
-					aggSigs[quorumNum] = signedTaskResponseDigest.BlsSignature
-					aggPubKeys[quorumNum] = bls.NewZeroG2Point().Add(operatorsAvsStateDict[signedTaskResponseDigest.OperatorId].OperatorInfo.Pubkeys.G2Pubkey)
+				aggSigs[quorumNum].Add(signedTaskResponseDigest.BlsSignature)
+				aggPubKeys[quorumNum].Add(operatorsAvsStateDict[signedTaskResponseDigest.OperatorId].OperatorInfo.Pubkeys.G2Pubkey)
 
-				} else {
-					aggSigs[quorumNum].Add(signedTaskResponseDigest.BlsSignature)
-					aggPubKeys[quorumNum].Add(operatorsAvsStateDict[signedTaskResponseDigest.OperatorId].OperatorInfo.Pubkeys.G2Pubkey)
-				}
 			}
 
 			if checkIfStakeThresholdsMet(b.logger, stakeSigned, totalStakePerQuorum, quorumThresholdPercentagesMap) {

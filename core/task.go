@@ -84,12 +84,12 @@ func (r BalanceTaskInfo) ToPbType() *aggregator.BalanceTaskInfo {
 func (r BalanceTaskInfo) ToCedroServiceManagerBalanceHeader() cedroservicemanager.DATADeviationBalanceHeader {
 	return cedroservicemanager.DATADeviationBalanceHeader{
 		AgentAddress:               r.AgentAddress,
+		ReferenceBlockNumber:       uint32(r.ReferenceBlockNumber),
 		QuorumNumbers:              r.QuorumNumbers.UnderlyingType(),
 		QuorumThresholdPercentages: r.QuorumThresholdPercentages.UnderlyingType(),
-		ReferenceBlockNumber:       uint32(r.ReferenceBlockNumber),
+		RequestId:                  r.ReqId,
 		ActualAmount:               r.ActualBalance,
 		IdealAmount:                r.IdealBalance,
-		RequestId:                  r.ReqId,
 	}
 }
 
@@ -101,20 +101,20 @@ func (r *BalanceTaskInfo) EncodeSignHash() ([]byte, error) {
 			Type: "address",
 		},
 		{
-			Name: "actualAmount",
-			Type: "uint256",
-		},
-		{
-			Name: "idealAmount",
-			Type: "uint256",
+			Name: "referenceBlockNumber",
+			Type: "uint32",
 		},
 		{
 			Name: "requestId",
 			Type: "uint256",
 		},
 		{
-			Name: "referenceBlockNumber",
-			Type: "uint32",
+			Name: "actualAmount",
+			Type: "uint256",
+		},
+		{
+			Name: "idealAmount",
+			Type: "uint256",
 		},
 	})
 
@@ -124,16 +124,16 @@ func (r *BalanceTaskInfo) EncodeSignHash() ([]byte, error) {
 
 	s := struct {
 		AgentAddress         common.Address
+		ReferenceBlockNumber uint32
 		RequestId            *big.Int
 		ActualAmount         *big.Int
 		IdealAmount          *big.Int
-		ReferenceBlockNumber uint32
 	}{
 		AgentAddress:         r.AgentAddress,
+		ReferenceBlockNumber: uint32(r.ReferenceBlockNumber),
 		ActualAmount:         r.ActualBalance,
 		IdealAmount:          r.IdealBalance,
 		RequestId:            r.ReqId,
-		ReferenceBlockNumber: uint32(r.ReferenceBlockNumber),
 	}
 
 	arguments := abi.Arguments{
