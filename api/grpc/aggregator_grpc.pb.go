@@ -19,24 +19,29 @@ import (
 const _ = grpc.SupportPackageIsVersion8
 
 const (
-	Aggregator_InitOperator_FullMethodName              = "/aggregator.Aggregator/InitOperator"
-	Aggregator_CreateTask_FullMethodName                = "/aggregator.Aggregator/CreateTask"
-	Aggregator_ProcessSignedTaskResponse_FullMethodName = "/aggregator.Aggregator/ProcessSignedTaskResponse"
+	Aggregator_InitOperator_FullMethodName                        = "/aggregator.Aggregator/InitOperator"
+	Aggregator_CreateDeviationTask_FullMethodName                 = "/aggregator.Aggregator/CreateDeviationTask"
+	Aggregator_CreateAgentSlashTask_FullMethodName                = "/aggregator.Aggregator/CreateAgentSlashTask"
+	Aggregator_ProcessSignedDeviationTaskResponse_FullMethodName  = "/aggregator.Aggregator/ProcessSignedDeviationTaskResponse"
+	Aggregator_ProcessSignedAgentSlashTaskResponse_FullMethodName = "/aggregator.Aggregator/ProcessSignedAgentSlashTaskResponse"
 )
 
 // AggregatorClient is the client API for Aggregator service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// The Aggregator is for collection the bls signatures from operator and
-// then commit the task to AVS.
+// The Aggregator service collects BLS signatures from operators and commits tasks to AVS.
 type AggregatorClient interface {
-	// Send Init operator to aggregator from operator, will check if the config is matching
+	// Initialize an operator in the aggregator, checking if the configuration matches
 	InitOperator(ctx context.Context, in *InitOperatorRequest, opts ...grpc.CallOption) (*InitOperatorResponse, error)
-	// Create a balance send task
-	CreateTask(ctx context.Context, in *CreateTaskRequest, opts ...grpc.CallOption) (*CreateTaskResponse, error)
-	// Send signed task for balance response
-	ProcessSignedTaskResponse(ctx context.Context, in *SignedTaskRespRequest, opts ...grpc.CallOption) (*SignedTaskRespResponse, error)
+	// Create a deviation task
+	CreateDeviationTask(ctx context.Context, in *CreateDeviationTaskRequest, opts ...grpc.CallOption) (*CreateDeviationTaskResponse, error)
+	// Create an agent slash task
+	CreateAgentSlashTask(ctx context.Context, in *CreateAgentSlashTaskRequest, opts ...grpc.CallOption) (*CreateAgentSlashTaskResponse, error)
+	// Process the signed deviation task response
+	ProcessSignedDeviationTaskResponse(ctx context.Context, in *SignedDeviationTaskRespRequest, opts ...grpc.CallOption) (*SignedTaskRespResponse, error)
+	// Process the signed agent slash task response
+	ProcessSignedAgentSlashTaskResponse(ctx context.Context, in *SignedAgentSlashTaskRespRequest, opts ...grpc.CallOption) (*SignedTaskRespResponse, error)
 }
 
 type aggregatorClient struct {
@@ -57,20 +62,40 @@ func (c *aggregatorClient) InitOperator(ctx context.Context, in *InitOperatorReq
 	return out, nil
 }
 
-func (c *aggregatorClient) CreateTask(ctx context.Context, in *CreateTaskRequest, opts ...grpc.CallOption) (*CreateTaskResponse, error) {
+func (c *aggregatorClient) CreateDeviationTask(ctx context.Context, in *CreateDeviationTaskRequest, opts ...grpc.CallOption) (*CreateDeviationTaskResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateTaskResponse)
-	err := c.cc.Invoke(ctx, Aggregator_CreateTask_FullMethodName, in, out, cOpts...)
+	out := new(CreateDeviationTaskResponse)
+	err := c.cc.Invoke(ctx, Aggregator_CreateDeviationTask_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *aggregatorClient) ProcessSignedTaskResponse(ctx context.Context, in *SignedTaskRespRequest, opts ...grpc.CallOption) (*SignedTaskRespResponse, error) {
+func (c *aggregatorClient) CreateAgentSlashTask(ctx context.Context, in *CreateAgentSlashTaskRequest, opts ...grpc.CallOption) (*CreateAgentSlashTaskResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateAgentSlashTaskResponse)
+	err := c.cc.Invoke(ctx, Aggregator_CreateAgentSlashTask_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aggregatorClient) ProcessSignedDeviationTaskResponse(ctx context.Context, in *SignedDeviationTaskRespRequest, opts ...grpc.CallOption) (*SignedTaskRespResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SignedTaskRespResponse)
-	err := c.cc.Invoke(ctx, Aggregator_ProcessSignedTaskResponse_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, Aggregator_ProcessSignedDeviationTaskResponse_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aggregatorClient) ProcessSignedAgentSlashTaskResponse(ctx context.Context, in *SignedAgentSlashTaskRespRequest, opts ...grpc.CallOption) (*SignedTaskRespResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SignedTaskRespResponse)
+	err := c.cc.Invoke(ctx, Aggregator_ProcessSignedAgentSlashTaskResponse_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -81,15 +106,18 @@ func (c *aggregatorClient) ProcessSignedTaskResponse(ctx context.Context, in *Si
 // All implementations must embed UnimplementedAggregatorServer
 // for forward compatibility
 //
-// The Aggregator is for collection the bls signatures from operator and
-// then commit the task to AVS.
+// The Aggregator service collects BLS signatures from operators and commits tasks to AVS.
 type AggregatorServer interface {
-	// Send Init operator to aggregator from operator, will check if the config is matching
+	// Initialize an operator in the aggregator, checking if the configuration matches
 	InitOperator(context.Context, *InitOperatorRequest) (*InitOperatorResponse, error)
-	// Create a balance send task
-	CreateTask(context.Context, *CreateTaskRequest) (*CreateTaskResponse, error)
-	// Send signed task for balance response
-	ProcessSignedTaskResponse(context.Context, *SignedTaskRespRequest) (*SignedTaskRespResponse, error)
+	// Create a deviation task
+	CreateDeviationTask(context.Context, *CreateDeviationTaskRequest) (*CreateDeviationTaskResponse, error)
+	// Create an agent slash task
+	CreateAgentSlashTask(context.Context, *CreateAgentSlashTaskRequest) (*CreateAgentSlashTaskResponse, error)
+	// Process the signed deviation task response
+	ProcessSignedDeviationTaskResponse(context.Context, *SignedDeviationTaskRespRequest) (*SignedTaskRespResponse, error)
+	// Process the signed agent slash task response
+	ProcessSignedAgentSlashTaskResponse(context.Context, *SignedAgentSlashTaskRespRequest) (*SignedTaskRespResponse, error)
 	mustEmbedUnimplementedAggregatorServer()
 }
 
@@ -100,11 +128,17 @@ type UnimplementedAggregatorServer struct {
 func (UnimplementedAggregatorServer) InitOperator(context.Context, *InitOperatorRequest) (*InitOperatorResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InitOperator not implemented")
 }
-func (UnimplementedAggregatorServer) CreateTask(context.Context, *CreateTaskRequest) (*CreateTaskResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateTask not implemented")
+func (UnimplementedAggregatorServer) CreateDeviationTask(context.Context, *CreateDeviationTaskRequest) (*CreateDeviationTaskResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateDeviationTask not implemented")
 }
-func (UnimplementedAggregatorServer) ProcessSignedTaskResponse(context.Context, *SignedTaskRespRequest) (*SignedTaskRespResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ProcessSignedTaskResponse not implemented")
+func (UnimplementedAggregatorServer) CreateAgentSlashTask(context.Context, *CreateAgentSlashTaskRequest) (*CreateAgentSlashTaskResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateAgentSlashTask not implemented")
+}
+func (UnimplementedAggregatorServer) ProcessSignedDeviationTaskResponse(context.Context, *SignedDeviationTaskRespRequest) (*SignedTaskRespResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProcessSignedDeviationTaskResponse not implemented")
+}
+func (UnimplementedAggregatorServer) ProcessSignedAgentSlashTaskResponse(context.Context, *SignedAgentSlashTaskRespRequest) (*SignedTaskRespResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProcessSignedAgentSlashTaskResponse not implemented")
 }
 func (UnimplementedAggregatorServer) mustEmbedUnimplementedAggregatorServer() {}
 
@@ -137,38 +171,74 @@ func _Aggregator_InitOperator_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Aggregator_CreateTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateTaskRequest)
+func _Aggregator_CreateDeviationTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateDeviationTaskRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AggregatorServer).CreateTask(ctx, in)
+		return srv.(AggregatorServer).CreateDeviationTask(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Aggregator_CreateTask_FullMethodName,
+		FullMethod: Aggregator_CreateDeviationTask_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AggregatorServer).CreateTask(ctx, req.(*CreateTaskRequest))
+		return srv.(AggregatorServer).CreateDeviationTask(ctx, req.(*CreateDeviationTaskRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Aggregator_ProcessSignedTaskResponse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SignedTaskRespRequest)
+func _Aggregator_CreateAgentSlashTask_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateAgentSlashTaskRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AggregatorServer).ProcessSignedTaskResponse(ctx, in)
+		return srv.(AggregatorServer).CreateAgentSlashTask(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Aggregator_ProcessSignedTaskResponse_FullMethodName,
+		FullMethod: Aggregator_CreateAgentSlashTask_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AggregatorServer).ProcessSignedTaskResponse(ctx, req.(*SignedTaskRespRequest))
+		return srv.(AggregatorServer).CreateAgentSlashTask(ctx, req.(*CreateAgentSlashTaskRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Aggregator_ProcessSignedDeviationTaskResponse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignedDeviationTaskRespRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServer).ProcessSignedDeviationTaskResponse(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Aggregator_ProcessSignedDeviationTaskResponse_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServer).ProcessSignedDeviationTaskResponse(ctx, req.(*SignedDeviationTaskRespRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Aggregator_ProcessSignedAgentSlashTaskResponse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignedAgentSlashTaskRespRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AggregatorServer).ProcessSignedAgentSlashTaskResponse(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Aggregator_ProcessSignedAgentSlashTaskResponse_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AggregatorServer).ProcessSignedAgentSlashTaskResponse(ctx, req.(*SignedAgentSlashTaskRespRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -185,12 +255,20 @@ var Aggregator_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Aggregator_InitOperator_Handler,
 		},
 		{
-			MethodName: "CreateTask",
-			Handler:    _Aggregator_CreateTask_Handler,
+			MethodName: "CreateDeviationTask",
+			Handler:    _Aggregator_CreateDeviationTask_Handler,
 		},
 		{
-			MethodName: "ProcessSignedTaskResponse",
-			Handler:    _Aggregator_ProcessSignedTaskResponse_Handler,
+			MethodName: "CreateAgentSlashTask",
+			Handler:    _Aggregator_CreateAgentSlashTask_Handler,
+		},
+		{
+			MethodName: "ProcessSignedDeviationTaskResponse",
+			Handler:    _Aggregator_ProcessSignedDeviationTaskResponse_Handler,
+		},
+		{
+			MethodName: "ProcessSignedAgentSlashTaskResponse",
+			Handler:    _Aggregator_ProcessSignedAgentSlashTaskResponse_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

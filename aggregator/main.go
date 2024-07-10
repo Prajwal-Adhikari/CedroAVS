@@ -5,7 +5,8 @@ import (
 	"flag"
 	"log"
 	"sync"
-	"github.com/Cedro-Finance/CedroAVS/aggregator/aggregator"
+
+	aggregator "github.com/Cedro-Finance/CedroAVS/aggregator/aggregation"
 	"github.com/Cedro-Finance/CedroAVS/core/config"
 )
 

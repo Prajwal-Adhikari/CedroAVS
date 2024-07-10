@@ -1,4 +1,4 @@
-package aggregator
+package blsaggregator
 
 import (
 	"context"
@@ -15,7 +15,6 @@ import (
 	"github.com/Layr-Labs/eigensdk-go/types"
 	"github.com/Layr-Labs/eigensdk-go/utils"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	// "github.com/ethereum/go-ethereum/common"
 )
 
 var (

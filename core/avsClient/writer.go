@@ -80,3 +80,28 @@ func (w *AvsWriter) SendConfirmationBatch(ctx context.Context, balanceHeader *co
 	}
 	return receipt, nil
 }
+
+func (w *AvsWriter) SendConfirmationAgentSlash(ctx context.Context, slashHeader *core.AgentSlashTaskInfo, nonSignerStakeSignature cedroservicemanager.IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Receipt, error) {
+	txOpts, err := w.TxMgr.GetNoSendTxOpts()
+
+	if err != nil {
+		w.logger.Error("Error getting tx opts")
+		return nil, err
+	}
+
+	parsedHeader := slashHeader.ToCedroServiceManagerAgentSlashHeader()
+
+	w.logger.Info("Submitting Batch Confirmation for Agent Slash", "agent", slashHeader.AgentAddress)
+
+	tx, err := w.AvsContractBindings.ServiceManager.ConfirmAgentFraud(txOpts, parsedHeader, nonSignerStakeSignature)
+	if err != nil {
+		w.logger.Error("Error submitting SubmitTaskResponse tx while calling respondToTask", "err", err)
+		return nil, err
+	}
+	receipt, err := w.TxMgr.Send(ctx, tx)
+	if err != nil {
+		w.logger.Errorf("Error submitting agentslash task tx")
+		return nil, err
+	}
+	return receipt, nil
+}
