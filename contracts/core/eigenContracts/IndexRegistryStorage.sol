@@ -6,7 +6,6 @@ import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Cont
 import {IRegistryCoordinator} from "./interfaces/IRegistryCoordinator.sol";
 import {IRoleManager} from "../interfaces/IRoleManager.sol";
 import {IIndexRegistry} from "./interfaces/IIndexRegistry.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title Storage variables for the `IndexRegistry` contract.

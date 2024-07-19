@@ -10,13 +10,11 @@ import {IStakeRegistry} from "./interfaces/IStakeRegistry.sol";
 import {IIndexRegistry} from "./interfaces/IIndexRegistry.sol";
 import {IServiceManager} from "./interfaces/IServiceManager.sol";
 import {IRegistryCoordinator} from "./interfaces/IRegistryCoordinator.sol";
-
 import {EIP1271SignatureUtils} from "./libraries/EIP1271SignatureUtils.sol";
+import {RegistryCoordinatorStorage} from "./RegistryCoordinatorStorage.sol";
 import {BitmapUtils} from "./libraries/BitmapUtils.sol";
 import {BN254} from "./libraries/BN254.sol";
 
-import {Pausable} from "./Pausable.sol";
-import {RegistryCoordinatorStorage} from "./RegistryCoordinatorStorage.sol";
 
 /**
  * @title A `RegistryCoordinator` that has three registries:
