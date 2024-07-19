@@ -10,12 +10,6 @@ import (
 	"github.com/Cedro-Finance/CedroAVS/core/config"
 )
 
-// "context"
-
-// env "github.com/Cedro-Finance/CedroAVS/aggregator/helpers"
-// route "github.com/Cedro-Finance/CedroAVS/aggregator/routes"
-// db "github.com/Cedro-Finance/CedroAVS/aggregator/services"
-// "github.com/gin-gonic/gin"
 
 type App struct{}
 
@@ -64,4 +58,3 @@ func main() {
 	wg.Wait()
 }
 
-// Start Polling for the Database some reqId & if the threshold is reached, aggregate the signatueres & send it to the chain

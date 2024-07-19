@@ -10,6 +10,7 @@ import (
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type IAVSReader interface {
@@ -20,6 +21,13 @@ type IAVSReader interface {
 
 	//GetQuorumThresholdPercentages
 	GetQuorumThresholdPercentages(ctx context.Context, blockNumber uint32, quorums sdktypes.QuorumNums) (sdktypes.QuorumThresholdPercentages, error)
+
+	//Get Latest Request ID
+	GetDeviationRequestId(ctx context.Context, blockNumber uint32) (*big.Int, error)
+
+
+	//Get Latest Request ID
+	GetAgentSlashRequestId(ctx context.Context, blockNumber uint32) (*big.Int, error)
 }
 
 type AvsReader struct {
@@ -82,4 +90,30 @@ func (r *AvsReader) GetQuorumThresholdPercentages(ctx context.Context, blockNumb
 	}
 
 	return res, nil
+}
+
+func (r *AvsReader) GetDeviationRequestId(ctx context.Context, agent common.Address, blockNumber uint32) (*big.Int, error) {
+	reqId, err := r.AvsServiceBindings.ServiceManager.AgentsDeviationRequestId(&bind.CallOpts{
+		Context:     ctx,
+		BlockNumber: big.NewInt(int64(blockNumber)),
+	}, agent)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return reqId, nil
+}
+
+func (r *AvsReader) GetAgentSlashRequestId(ctx context.Context, agent common.Address, blockNumber uint32) (*big.Int, error) {
+	reqId, err := r.AvsServiceBindings.ServiceManager.AgentsFraudRequestId(&bind.CallOpts{
+		Context:     ctx,
+		BlockNumber: big.NewInt(int64(blockNumber)),
+	}, agent)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return reqId, nil
 }

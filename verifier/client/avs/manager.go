@@ -43,9 +43,7 @@ type AgentManager struct {
 
 func NewAgentManager(cfg *config.Config, logger logging.Logger, ethClient eth.Client) (*AgentManager, error) {
 
-	contract, err := agentmanager.NewAgentManager(cfg.AgentManagerAddr, ethClient)
-
-	fmt.Println(cfg.AgentManagerAddr)
+	contract, err := agentmanager.NewAgentManager(common.Address{}, ethClient)
 
 	if err != nil {
 		return nil, err
@@ -53,10 +51,10 @@ func NewAgentManager(cfg *config.Config, logger logging.Logger, ethClient eth.Cl
 
 	return &AgentManager{
 		Eth:             ethClient,
-		Address:         cfg.AgentManagerAddr,
-		PollDuration:    time.Duration(cfg.AgentManagerPollDuration) * time.Second,
-		StartBlock:      cfg.AgentManagerStartHeight,
-		NextBlockHeight: cfg.AgentManagerStartHeight,
+		// Address:         cfg.AgentManagerAddr,
+		// PollDuration:    time.Duration(cfg.AgentManagerPollDuration) * time.Second,
+		// StartBlock:      cfg.AgentManagerStartHeight,
+		// NextBlockHeight: cfg.AgentManagerStartHeight,
 		BlockFinality:   cfg.EthConfig.BlockFinality,
 		BlockTime:       time.Duration(cfg.EthConfig.BlockTime) * time.Second,
 		Logger:          logger,
@@ -73,7 +71,7 @@ func (ag *AgentManager) GetDeviationPercentage(ctx context.Context, agent common
 	return dev, err
 }
 
-func (ag *AgentManager) PollEvents(ctx context.Context, ch chan<- *Request, serviceManager *cedroservicemanager.CedroServiceManager) {
+func (ag *AgentManager) PollEvents(ctx context.Context, ch chan<- *DeviationRequest, serviceManager *cedroservicemanager.CedroServiceManager) {
 	dur := ag.PollDuration
 
 	fmt.Println(dur)
@@ -97,8 +95,6 @@ func (ag *AgentManager) PollEvents(ctx context.Context, ch chan<- *Request, serv
 	L1:
 		for {
 			currentBlock, err := ag.Eth.BlockNumber(ctx)
-
-			fmt.Println(currentBlock, ag.NextBlockHeight)
 
 			if err != nil {
 				ag.Logger.Error("Error while getting current block", "err", err)
@@ -169,7 +165,7 @@ func (ag *AgentManager) PollEvents(ctx context.Context, ch chan<- *Request, serv
 						break
 					}
 
-					ch <- &Request{
+					ch <- &DeviationRequest{
 						ReqId:                parsed.RequestID,
 						ReferenceBlockNumber: log.BlockNumber,
 						AgentAddress:         parsed.Agent,

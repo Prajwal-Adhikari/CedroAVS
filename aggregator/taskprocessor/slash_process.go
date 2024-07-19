@@ -21,7 +21,7 @@ type SlashProcess struct {
 	tasks   map[sdktypes.TaskIndex]*core.AgentSlashTaskInfo
 	tasksMu sync.RWMutex
 
-	finishedTasks   map[string]*types.FinishedTaskStatus
+	finishedTasks   map[string]*types.FinishedSlashTaskStatus
 	finishedTasksMu sync.RWMutex
 
 	nextTaskIndex   sdktypes.TaskIndex
@@ -44,17 +44,30 @@ func NewSlashProcessor(c *config.Config, logger logging.Logger, avsWriter *avs.A
 
 	return &SlashProcess{
 		tasks:         make(map[sdktypes.TaskIndex]*core.AgentSlashTaskInfo),
-		finishedTasks: make(map[string]*types.FinishedTaskStatus),
+		finishedTasks: make(map[string]*types.FinishedSlashTaskStatus),
 		service:       aggService,
-		logger: logger,
+		logger:        logger,
 		avsWriter:     avsWriter,
+		nextTaskIndex: 0,
 	}, nil
 }
+
+func (d *SlashProcess) Start(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case res := <-d.service.GetResponseChannel():
+			d.SendAggregatedResponseToContract(res)
+		}
+	}
+}
+
 
 func (d *SlashProcess) GetTaskByIndex(taskIndex sdktypes.TaskIndex) *core.AgentSlashTaskInfo {
 
 	d.tasksMu.RLock()
-	defer d.tasksMu.Unlock()
+	defer d.tasksMu.RUnlock()
 
 	res := d.tasks[taskIndex]
 
@@ -73,10 +86,10 @@ func (d *SlashProcess) NewIndex() sdktypes.TaskIndex {
 
 func (d *SlashProcess) GetTaskByRequestHash(reqHash string) *core.AgentSlashTaskInfo {
 	d.tasksMu.RLock()
-	defer d.tasksMu.Unlock()
+	defer d.tasksMu.RUnlock()
 
 	for _, task := range d.tasks {
-		hash, err := core.GetRequestHash(big.NewInt(0), task.AgentAddress)
+		hash, err := core.GetRequestHash(task.TxnId, task.AgentAddress)
 
 		if err != nil {
 			return nil
@@ -90,14 +103,14 @@ func (d *SlashProcess) GetTaskByRequestHash(reqHash string) *core.AgentSlashTask
 	return nil
 }
 
-func (d *SlashProcess) GetFinishedTaskByRequestHash(hash string) *types.FinishedTaskStatus {
+func (d *SlashProcess) GetFinishedTaskByRequestHash(hash string) *types.FinishedSlashTaskStatus {
 	d.finishedTasksMu.RLock()
-	defer d.finishedTasksMu.Unlock()
+	defer d.finishedTasksMu.RUnlock()
 
 	return d.finishedTasks[hash]
 }
 
-func (d *SlashProcess) SetFinishedTask(reqHash string, finished *types.FinishedTaskStatus) {
+func (d *SlashProcess) SetFinishedTask(reqHash string, finished *types.FinishedSlashTaskStatus) {
 	d.finishedTasksMu.Lock()
 	defer d.finishedTasksMu.Unlock()
 
@@ -105,7 +118,10 @@ func (d *SlashProcess) SetFinishedTask(reqHash string, finished *types.FinishedT
 }
 
 func (d *SlashProcess) CreateTask(req *core.CreateAgentSlashTaskRequest) (*core.CreateAgentSlashTaskResponse, error) {
-	d.logger.Infof("Received Create Task", "reqId", req.ReqId, "Agent", req.AgentAddress)
+	// d.tasksMu.Lock()
+	// defer d.tasksMu.Unlock()
+
+	d.logger.Info("Received Create Task", "reqId", req.TxnId, "Agent", req.AgentAddress)
 
 	reqHash, err := req.GetHash()
 
@@ -117,7 +133,7 @@ func (d *SlashProcess) CreateTask(req *core.CreateAgentSlashTaskRequest) (*core.
 	finishedTask := d.GetFinishedTaskByRequestHash(reqHash)
 
 	if finishedTask != nil {
-		d.logger.Error("Task already finished", "reqId", req.ReqId.String(), "agent", req.AgentAddress.Hex())
+		d.logger.Error("Task already finished", "reqId", req.TxnId.String(), "agent", req.AgentAddress.Hex())
 
 		return nil, err
 	}
@@ -126,7 +142,7 @@ func (d *SlashProcess) CreateTask(req *core.CreateAgentSlashTaskRequest) (*core.
 
 	if task == nil {
 		taskIndex := d.NewIndex()
-		task, err = d.sendNewTask(reqHash, taskIndex, req.ReferenceBlockNumber, req.ReqId, req.AgentAddress)
+		task, err = d.sendNewTask(reqHash, taskIndex, req.ReferenceBlockNumber, req.TxnId, req.AgentAddress)
 
 		if err != nil {
 			d.logger.Error("send new task failed", "err", err)
@@ -139,7 +155,7 @@ func (d *SlashProcess) CreateTask(req *core.CreateAgentSlashTaskRequest) (*core.
 func (d *SlashProcess) ProcessSignedTaskResponse(req *core.SignedAgentSlashTaskRespRequest) (*core.SignedTaskRespResponse, error) {
 	d.logger.Info("New Signature Received from operator", "signature", req.BlsSignature.Serialize(), "operatorId", req.OperatorId, "balance", req.Balance)
 
-	reqHash, err := core.GetRequestHash(big.NewInt(0), req.Balance.AgentAddress)
+	reqHash, err := core.GetRequestHash(req.Balance.TxnId, req.Balance.AgentAddress)
 
 	if err != nil {
 		d.logger.Errorf("Error while creating request hash", "err", fmt.Sprintf("%#f", err))
@@ -153,7 +169,7 @@ func (d *SlashProcess) ProcessSignedTaskResponse(req *core.SignedAgentSlashTaskR
 	d.tasks[taskIndex] = &req.Balance
 	d.tasksMu.Unlock()
 
-	taskResponseDigest, err := req.Balance.GetAgentSlashHeader()
+	taskResponseDigest, err := req.Balance.GetHeaderHash()
 
 	if err != nil {
 		d.logger.Error("Error getting taskResponseDigest", "err", err)
@@ -168,7 +184,7 @@ func (d *SlashProcess) ProcessSignedTaskResponse(req *core.SignedAgentSlashTaskR
 	}
 
 	err = d.service.BlsAggregationService.ProcessNewSignature(
-		context.Background(), taskIndex, taskResponseDigest,
+		context.Background(), taskIndex, taskResponseDigest.UnderlyingType(),
 		&req.BlsSignature, req.OperatorId,
 	)
 
@@ -179,7 +195,7 @@ func (d *SlashProcess) ProcessSignedTaskResponse(req *core.SignedAgentSlashTaskR
 	return &core.SignedTaskRespResponse{}, nil
 }
 
-func (d *SlashProcess) sendNewTask(reqHash string, taskIndex uint32, refBlock uint64, reqId *big.Int, agentAddr common.Address) (*core.AgentSlashTaskInfo, error) {
+func (d *SlashProcess) sendNewTask(reqHash string, taskIndex uint32, refBlock uint64, txnId *big.Int, agentAddr common.Address) (*core.AgentSlashTaskInfo, error) {
 
 	quorumDetails, err := d.service.GetQuorumDetails(context.Background(), refBlock)
 
@@ -195,6 +211,7 @@ func (d *SlashProcess) sendNewTask(reqHash string, taskIndex uint32, refBlock ui
 		ReferenceBlockNumber:       refBlock,
 		AgentAddress:               agentAddr,
 		InsufficientBalance:        big.NewInt(0),
+		TxnId:                      txnId,
 	}
 
 	d.tasksMu.Lock()
@@ -245,7 +262,7 @@ func (d *SlashProcess) SendAggregatedResponseToContract(blsResp blsaggregator.BL
 			d.logger.Error("agg failed to find req hash")
 		}
 
-		d.SetFinishedTask(reqHash, &types.FinishedTaskStatus{
+		d.SetFinishedTask(reqHash, &types.FinishedSlashTaskStatus{
 			Message:          task,
 			TxHash:           res.TxHash,
 			BlockHash:        res.BlockHash,

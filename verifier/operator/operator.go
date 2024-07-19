@@ -8,11 +8,12 @@ import (
 
 	// "github.com/Cedro-Finance/CedroAVS/verifier/client/agents"
 	"github.com/Cedro-Finance/CedroAVS/api/graphql"
-	"github.com/Cedro-Finance/CedroAVS/core"
 	"github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
 	"github.com/Cedro-Finance/CedroAVS/verifier/common"
 	"github.com/Cedro-Finance/CedroAVS/verifier/config"
+	"github.com/Cedro-Finance/CedroAVS/verifier/opio"
 	"github.com/Cedro-Finance/CedroAVS/verifier/rpc"
+	"github.com/Cedro-Finance/CedroAVS/verifier/tasks"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/eth"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/wallet"
@@ -28,20 +29,12 @@ import (
 	sdklogging "github.com/Layr-Labs/eigensdk-go/logging"
 )
 
-var RegisteredClients = map[string]func(config.ChainConfig, sdklogging.Logger) common.IAgentPodClient{}
-var maxRetry = 5
-
-type OperatorDeviationTask struct {
-	req     *avs.Request
-	reqInfo *core.BalanceTaskInfo
-	retries uint64
-}
+var RegisteredClients = map[string]func(config.ChainConfig, sdklogging.Logger, *avs.AvsReader) common.IAgentPodClient{}
 
 type Operator struct {
 	avs        *avs.AVSClient
 	blsKeyPair *bls.KeyPair
 
-	agentManager              *avs.AgentManager
 	operatorId                sdktypes.OperatorId
 	txMgr                     txmgr.TxManager
 	logger                    sdklogging.Logger
@@ -50,40 +43,8 @@ type Operator struct {
 	chainAgents               map[string]common.IAgentPodClient
 	graphClient               *graphql.GraphQLClient
 
-	balanceTasks     map[sdktypes.TaskIndex](*OperatorDeviationTask)
-	balanceTaskMutex sync.RWMutex
-
-	balanceReqCh chan *avs.Request
-	errCh        chan *DeviationError
-
-	signatureCh chan *core.SignedTaskRespRequest
-}
-
-func (o *Operator) GetTaskByIndex(taskIndex sdktypes.TaskIndex) *OperatorDeviationTask {
-	o.balanceTaskMutex.RLock()
-	defer o.balanceTaskMutex.RUnlock()
-
-	res := o.balanceTasks[taskIndex]
-
-	return res
-}
-
-func (o *Operator) CreateOperatorTask(taskInfo *core.BalanceTaskInfo, req *avs.Request) (*OperatorDeviationTask, error) {
-	task := o.GetTaskByIndex(taskInfo.TaskIndex)
-
-	if task == nil {
-		o.balanceTaskMutex.Lock()
-		task = &OperatorDeviationTask{
-			req:     req,
-			retries: 0,
-			reqInfo: taskInfo,
-		}
-		o.balanceTasks[taskInfo.TaskIndex] = task
-		o.balanceTaskMutex.Unlock()
-
-	}
-
-	return task, nil
+	deviateProcessor *tasks.BalanceTaskProcessor
+	slashProcessor   *tasks.SlashTaskProcessor
 }
 
 func NewOperator(cfg config.Config) (*Operator, error) {
@@ -172,18 +133,11 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 		return nil, err
 	}
 
-	agentManager, err := avs.NewAgentManager(&cfg, logger, ethRpcClient)
-
-	if err != nil {
-		logger.Error("cannot get agent manager", err)
-		return nil, err
-	}
-
 	regAgents := make(map[string]common.IAgentPodClient)
 
 	for _, cfg := range cfg.Agents {
 		if RegisteredClients[cfg.ChainId] != nil {
-			regAgents[cfg.ChainId] = RegisteredClients[cfg.ChainId](cfg, logger)
+			regAgents[cfg.ChainId] = RegisteredClients[cfg.ChainId](cfg, logger, avsClient.AvsReader)
 		}
 	}
 
@@ -196,6 +150,12 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 
 	graphQLClient := graphql.NewGraphQLClient(cfg.GraphQLUrl, logger)
 
+	opIoClient := opio.NewOpeartorIO(txMgr, cfg.BlsPrivateKey, gRpc, graphQLClient)
+
+	deviationProcessor := tasks.NewBalanceTask(opIoClient, regAgents, logger)
+
+	slashProcessor := tasks.NewSlashTask(opIoClient, logger)
+
 	return &Operator{
 		avs:                       avsClient,
 		blsKeyPair:                cfg.BlsPrivateKey,
@@ -203,15 +163,13 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 		txMgr:                     txMgr,
 		logger:                    logger,
 		gRPCAggreagatorIpPortAddr: cfg.GRpcAggregatorIpAddr,
-		agentManager:              agentManager,
-		chainAgents:               regAgents,
-		gRpcClient:                gRpc,
-		graphClient:               graphQLClient,
-		balanceTasks:              make(map[uint32]*OperatorDeviationTask),
 
-		balanceReqCh: make(chan *avs.Request),
-		errCh:        make(chan *DeviationError),
-		signatureCh:  make(chan *core.SignedTaskRespRequest, 10),
+		chainAgents: regAgents,
+		gRpcClient:  gRpc,
+		graphClient: graphQLClient,
+
+		deviateProcessor: deviationProcessor,
+		slashProcessor:   slashProcessor,
 	}, nil
 
 }
@@ -243,63 +201,50 @@ func Start(ctx context.Context, cfg *config.Config) {
 
 	op.logger.Infof("Init operator to aggregator succeed")
 
-	// go op.agentManager.PollEvents(ctx, op.balanceReqCh, op.avs.AvsReader.AvsServiceBindings.ServiceManager)
+	//Listen Ethereum Agent manager event
 
-	go op.StartOffChainDeviationCheck(ctx)
+	for _, client := range op.chainAgents {
 
-	for {
-		select {
-		case <-ctx.Done():
-			return
+		// deviationReqCh := make(chan *avs.DeviationRequest)
+		// slashReqCh := make(chan *avs.AgentSlashRequest)
 
-		case reqEvent := <-op.balanceReqCh:
-			op.logger.Debug("Event Received", "req", reqEvent.ReqId, "agent", reqEvent.AgentAddress.Hex(), "offchain", reqEvent.IsOffChain)
+		// go func() {
+		// 	for req := range op.deviateProcessor.GetRequestCh() {
+		// 		dr, ok := req.(*avs.DeviationRequest)
 
-			// RETRY_LOOP:
-			// 	for {
-			reqInfo, err := op.gRpcClient.CreateBalanceTaskToAggregator(reqEvent)
+		// 		if !ok {
+		// 			continue
+		// 		}
 
-			if err != nil {
-				op.logger.Error("Create Task To Aggregator Failed. Trying again", "err", err)
-				continue
+		// 		deviationReqCh <- dr
 
-				// break RETRY_LOOP
-			}
+		// 	}
+		// }()
 
-			task, err := op.CreateOperatorTask(reqInfo, reqEvent)
+		// go func() {
+		// 	for req := range op.slashProcessor.GetRequestCh() {
+		// 		dr, ok := req.(*avs.AgentSlashRequest)
 
-			if err != nil {
-				op.logger.Error("Create task in the ooerator side threw isseu")
-				continue
-			}
+		// 		if !ok {
+		// 			continue
+		// 		}
 
-			if task.req.IsOffChain {
-				go op.ProcessOffchainDeviationCheckRequest(ctx, task)
-				continue
-			}
+		// 		slashReqCh <- dr
 
-			go op.ProcessDeviationCheckRequest(ctx, task)
-			// }
+		// 	}
+		// }()
 
-		case err := <-op.errCh:
-			op.logger.Error("Error occured while performing the task", err.Error)
-
-			task := op.GetTaskByIndex(err.TaskIndex)
-
-			//TODO: Remove Hardcode value
-			if task.retries < uint64(maxRetry) {
-				op.logger.Info("Retrying the request again", "reqId", task.req.ReqId, "agent", task.req.AgentAddress.Hex())
-
-				task.retries += 1
-
-				op.balanceReqCh <- task.req
-			}
-
-		case signReq := <-op.signatureCh:
-			op.logger.Info("Signature Receive")
-
-			go op.SendSignedTaskToAggregator(ctx, signReq)
-
-		}
+		go client.PollEvents(ctx, op.deviateProcessor.GetRequestCh(), op.slashProcessor.GetRequestCh())
 	}
+
+	//Start Task Processors
+
+	var wg sync.WaitGroup
+
+	wg.Add(2)
+
+	go op.deviateProcessor.Start(ctx, &wg)
+	go op.slashProcessor.Start(ctx, &wg)
+
+	wg.Wait()
 }

@@ -50,10 +50,25 @@ func NewDeviationProcessor(c *config.Config, logger logging.Logger, avsWriter *a
 	}, nil
 }
 
+func (d *DeviationProcess) Start(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case res := <-d.service.GetResponseChannel():
+			d.SendAggregatedResponseToContract(res)
+		}
+	}
+}
+
+func (d *DeviationProcess) GetResponseChannel() <-chan blsaggregator.BLSAggregationServiceResponse {
+	return d.service.GetResponseChannel()
+}
+
 func (d *DeviationProcess) GetTaskByIndex(taskIndex sdktypes.TaskIndex) *core.BalanceTaskInfo {
 
 	d.tasksMu.RLock()
-	defer d.tasksMu.Unlock()
+	defer d.tasksMu.RUnlock()
 
 	res := d.tasks[taskIndex]
 
@@ -72,7 +87,7 @@ func (d *DeviationProcess) NewIndex() sdktypes.TaskIndex {
 
 func (d *DeviationProcess) GetTaskByRequestHash(reqHash string) *core.BalanceTaskInfo {
 	d.tasksMu.RLock()
-	defer d.tasksMu.Unlock()
+	defer d.tasksMu.RUnlock()
 
 	for _, task := range d.tasks {
 		hash, err := core.GetRequestHash(task.ReqId, task.AgentAddress)
@@ -104,7 +119,7 @@ func (d *DeviationProcess) SetFinishedTask(reqHash string, finished *types.Finis
 }
 
 func (d *DeviationProcess) CreateTask(req *core.CreateDeviationTaskRequest) (*core.CreateDeviationTaskResponse, error) {
-	d.logger.Infof("Received Create Task", "reqId", req.ReqId, "Agent", req.AgentAddress)
+	d.logger.Info("Received Create Task", "reqId", req.ReqId, "Agent", req.AgentAddress)
 
 	reqHash, err := req.GetHash()
 
@@ -152,7 +167,7 @@ func (d *DeviationProcess) ProcessSignedTaskResponse(req *core.SignedDeviationTa
 	d.tasks[taskIndex] = &req.Balance
 	d.tasksMu.Unlock()
 
-	taskResponseDigest, err := req.Balance.GetBalanceHeaderHash()
+	taskResponseDigest, err := req.Balance.GetHeaderHash()
 
 	if err != nil {
 		d.logger.Error("Error getting taskResponseDigest", "err", err)
@@ -167,7 +182,7 @@ func (d *DeviationProcess) ProcessSignedTaskResponse(req *core.SignedDeviationTa
 	}
 
 	err = d.service.BlsAggregationService.ProcessNewSignature(
-		context.Background(), taskIndex, taskResponseDigest,
+		context.Background(), taskIndex, taskResponseDigest.UnderlyingType(),
 		&req.BlsSignature, req.OperatorId,
 	)
 

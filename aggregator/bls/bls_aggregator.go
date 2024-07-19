@@ -100,18 +100,7 @@ type QuorumAttestation struct {
 	TotalStakePerQuorum map[types.QuorumNum]*big.Int
 }
 
-// aggregatedOperators is meant to be used as a value in a map
-// map[taskResponseDigest]aggregatedOperators
-type aggregatedOperators struct {
-	// aggregate g2 pubkey of all operatos who signed on this taskResponseDigest
-	signersApkG2 *bls.G2Point
-	// aggregate signature of all operators who signed on this taskResponseDigest
-	signersAggSigG1 map[types.QuorumNum]*bls.Signature
-	// aggregate stake of all operators who signed on this header for each quorum
-	signersTotalStakePerQuorum map[types.QuorumNum]*big.Int
-	// set of OperatorId of operators who signed on this header
-	signersOperatorIdsSet map[types.OperatorId]bool
-}
+
 
 type BLSAggregatorService struct {
 	logger    logging.Logger
@@ -165,10 +154,14 @@ func (b *BLSAggregatorService) ProcessNewSignature(ctx context.Context,
 	taskResponse types.Bytes32,
 	blsSignature *bls.Signature,
 	operatorId types.OperatorId) error {
+
+	b.logger.Info("Signature Received for Processing", "opId", operatorId, "taskIndex", taskIndex, "taskResponse", taskResponse)
+
 	b.taskChansMutex.Lock()
 	taskC, taskInitialized := b.signedTaskRespsCs[taskIndex]
 	b.taskChansMutex.Unlock()
 	if !taskInitialized {
+		b.logger.Info("Task not initilized")
 		return TaskNotFoundErrorFn(taskIndex)
 	}
 
@@ -211,7 +204,7 @@ func (b *BLSAggregatorService) singleTaskAggregatorGoroutineFunc(
 	operatorsAvsStateDict, err := b.avsReader.GetOperatorsAvsStateAtBlock(context.Background(), quorumNumbers, taskCreatedBlock)
 	if err != nil {
 		b.aggregatedResponsesC <- BLSAggregationServiceResponse{
-			Err:       TaskInitializationErrorFn(fmt.Errorf("AggregatorService failed to get operators state from avs registry at blockNum %d: %w", taskCreatedBlock, err), taskIndex),
+			Err:       TaskInitializationErrorFn(fmt.Errorf("aggregatorService failed to get operators state from avs registry at blockNum %d: %w", taskCreatedBlock, err), taskIndex),
 			TaskIndex: taskIndex,
 		}
 		return
@@ -220,7 +213,7 @@ func (b *BLSAggregatorService) singleTaskAggregatorGoroutineFunc(
 	quorumsAvsStakeDict, err := b.avsReader.GetQuorumsAvsStateAtBlock(context.Background(), quorumNumbers, taskCreatedBlock)
 	if err != nil {
 		b.aggregatedResponsesC <- BLSAggregationServiceResponse{
-			Err:       TaskInitializationErrorFn(fmt.Errorf("Aggregator failed to get quorums state from avs registry: %w", err), taskIndex),
+			Err:       TaskInitializationErrorFn(fmt.Errorf("aggregator failed to get quorums state from avs registry: %w", err), taskIndex),
 			TaskIndex: taskIndex,
 		}
 		return
@@ -281,7 +274,6 @@ func (b *BLSAggregatorService) singleTaskAggregatorGoroutineFunc(
 
 				aggSigs[quorumNum].Add(signedTaskResponseDigest.BlsSignature)
 				aggPubKeys[quorumNum].Add(operatorsAvsStateDict[signedTaskResponseDigest.OperatorId].OperatorInfo.Pubkeys.G2Pubkey)
-
 			}
 
 			if checkIfStakeThresholdsMet(b.logger, stakeSigned, totalStakePerQuorum, quorumThresholdPercentagesMap) {
@@ -372,6 +364,8 @@ func (b *BLSAggregatorService) singleTaskAggregatorGoroutineFunc(
 				b.aggregatedResponsesC <- blsAggregationServiceResponse
 				taskExpiredTimer.Stop()
 				return
+			} else {
+				continue
 			}
 		case <-taskExpiredTimer.C:
 			b.aggregatedResponsesC <- BLSAggregationServiceResponse{
@@ -388,6 +382,8 @@ func (b *BLSAggregatorService) closeTaskGoroutine(taskIndex types.TaskIndex) {
 	b.taskChansMutex.Lock()
 	delete(b.signedTaskRespsCs, taskIndex)
 	b.taskChansMutex.Unlock()
+
+	b.logger.Info("Closed single goroutine", "taskIndex", taskIndex)
 }
 
 func (a *BLSAggregatorService) verifySignature(

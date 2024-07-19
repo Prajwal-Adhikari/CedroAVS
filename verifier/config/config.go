@@ -38,14 +38,16 @@ type AVSConfigRaw struct {
 }
 
 type ChainConfig struct {
-	Name           string `yaml:"name"`
-	Chain          string `yaml:"chain"`
-	ChainId        string `yaml:"chain_id"`
-	ContactAddress string `yaml:"contract_address"`
-	NodeUrl        string `yaml:"node_url"`
-	BlockFinality  uint64 `yaml:"block_finality"`
-	BlockTime      uint64 `yaml:"block_time"` //in second
-	GraphqlUrl     string `yaml:"graphql_url"`
+	Name                    string `yaml:"name"`
+	Chain                   string `yaml:"chain"`
+	ChainId                 string `yaml:"chain_id"`
+	ContactAddress          string `yaml:"contract_address"`
+	NodeUrl                 string `yaml:"node_url"`
+	BlockFinality           uint64 `yaml:"block_finality"`
+	BlockTime               uint64 `yaml:"block_time"` //in second
+	GraphqlUrl              string `yaml:"graphql_url"`
+	AgentManager            string `yaml:"agent_manager"`
+	AgentManagerStartHeight uint64 `yaml:"agent_manager_start_height"`
 }
 
 type ConfigRaw struct {
@@ -56,9 +58,6 @@ type ConfigRaw struct {
 	Mode                     string        `yaml:"mode"`
 	KeyStore                 *KeyStore     `yaml:"keystore"`
 	GRpcAggregatorIPAddr     string        `yaml:"gRpc_aggregator_addr"`
-	AgentManager             string        `yaml:"agent_manager"`
-	AgentManagerStartHeight  uint64        `yaml:"agent_manager_start_height"`
-	AgentManagerPollDuration uint64        `yaml:"agent_manager_poll_duration"`
 	GraphAPIURL              string        `yaml:"graphql_url"`
 }
 
@@ -82,10 +81,7 @@ type Config struct {
 	KeyStore                 *KeyStore
 	GRpcAggregatorIpAddr     string
 	Agents                   []ChainConfig
-	AgentManagerAddr         common.Address
 	EthConfig                EthConfig
-	AgentManagerStartHeight  uint64
-	AgentManagerPollDuration uint64
 	GraphQLUrl               string
 }
 
@@ -118,7 +114,6 @@ func LoadConfig(path string) (*Config, error) {
 		panic("could not unmarshal config")
 	}
 
-
 	blsKeypair, err := bls.ReadPrivateKeyFromFile(configRaw.KeyStore.BlsPath, configRaw.KeyStore.BlsPassword)
 
 	if err != nil {
@@ -148,9 +143,6 @@ func LoadConfig(path string) (*Config, error) {
 		Agents:                   configRaw.Chains,
 		GRpcAggregatorIpAddr:     configRaw.GRpcAggregatorIPAddr,
 		KeyStore:                 configRaw.KeyStore,
-		AgentManagerAddr:         common.HexToAddress(configRaw.AgentManager),
-		AgentManagerStartHeight:  configRaw.AgentManagerStartHeight,
-		AgentManagerPollDuration: configRaw.AgentManagerPollDuration,
 		GraphQLUrl:               configRaw.GraphAPIURL,
 		EthConfig: EthConfig{
 			RpcUrl:        configRaw.EthConfig.RpcUrl,

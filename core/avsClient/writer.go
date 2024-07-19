@@ -64,7 +64,7 @@ func (w *AvsWriter) SendConfirmationBatch(ctx context.Context, balanceHeader *co
 		return nil, err
 	}
 
-	parsedHeader := balanceHeader.ToCedroServiceManagerBalanceHeader()
+	parsedHeader := balanceHeader.ToCedroServiceManagerHeader()
 
 	w.logger.Info("Submitting Batch COnfirmation", "bal", parsedHeader)
 
@@ -89,7 +89,7 @@ func (w *AvsWriter) SendConfirmationAgentSlash(ctx context.Context, slashHeader 
 		return nil, err
 	}
 
-	parsedHeader := slashHeader.ToCedroServiceManagerAgentSlashHeader()
+	parsedHeader := slashHeader.ToCedroServiceManagerHeader()
 
 	w.logger.Info("Submitting Batch Confirmation for Agent Slash", "agent", slashHeader.AgentAddress)
 

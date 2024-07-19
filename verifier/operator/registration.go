@@ -15,7 +15,7 @@ import (
 func (o *Operator) RegisterOperatorWithAVS(operatorEcdsaKeyPair *ecdsa.PrivateKey) error {
 
 	// hardcode these things for now
-	quorumNumbers := []byte{1}
+	quorumNumbers := []byte{0,1}
 	socket := ""
 
 	fmt.Println(core.ConvertToBN254G1Point(o.blsKeyPair.GetPubKeyG1()))
@@ -66,7 +66,7 @@ func (o *Operator) RegisterOperatorWithAVS(operatorEcdsaKeyPair *ecdsa.PrivateKe
 }
 
 func (o *Operator) DeregisterOperatorWithAVS(operatorEcdsaKeypair *ecdsa.PrivateKey) error {
-	quorumNumbers := []byte{0}
+	quorumNumbers := []byte{1}
 
 	o.logger.Info(
 		"DeregisterOperatorInQuorumWithAVSRegistryCoordinator",

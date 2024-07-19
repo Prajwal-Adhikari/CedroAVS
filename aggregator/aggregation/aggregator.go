@@ -27,8 +27,10 @@ type Aggregator struct {
 	logger               sdklogging.Logger
 	grpcServerIpPortAddr string
 	gRpc                 *rpc.GRpcHandler
+	avsWriter            *avs.AvsWriter
 
-	avsWriter *avs.AvsWriter
+	deviator *taskprocessor.DeviationProcess
+	slasher  *taskprocessor.SlashProcess
 }
 
 func NewAggregator(cfg *config.Config) (*Aggregator, error) {
@@ -127,6 +129,8 @@ func NewAggregator(cfg *config.Config) (*Aggregator, error) {
 		gRpc:                 grpc,
 		grpcServerIpPortAddr: cfg.GRpcAggregatorIpAddr,
 		avsWriter:            avsWriter,
+		deviator:             deviator,
+		slasher:              slasher,
 	}, nil
 }
 
@@ -139,15 +143,6 @@ func (a *Aggregator) Start(ctx context.Context, wg *sync.WaitGroup) error {
 
 	go a.gRpc.Start(ctx, a.grpcServerIpPortAddr)
 
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-
-			// case blsAggServiceResp := <-a.service.GetResponseChannel():
-			// 	a.logger.Info("Received response from blsAggregationService", "blsAggServiceResp", blsAggServiceResp)
-			// a.sendAggregatedResponseToContract(blsAggServiceResp)
-		}
-	}
+	return nil
 
 }

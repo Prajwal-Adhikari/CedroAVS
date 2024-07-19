@@ -41,11 +41,15 @@ func (ag *AggregatorRpcHandler) CreateTask(task string, req interface{}) (interf
 	switch task {
 	case "deviation":
 		devreq := req.(*core.CreateDeviationTaskRequest)
-		return ag.deviator.CreateTask(devreq)
+		task, err := ag.deviator.CreateTask(devreq)
+
+		return task, err
 
 	case "agentslash":
 		sreq := req.(*core.CreateAgentSlashTaskRequest)
-		return ag.slasher.CreateTask(sreq)
+		task, err := ag.slasher.CreateTask(sreq)
+
+		return task, err
 
 	default:
 		return nil, fmt.Errorf("invalid task type")
@@ -56,14 +60,17 @@ func (ag *AggregatorRpcHandler) ProcessSignedTask(task string, signed interface{
 	switch task {
 	case "deviation":
 		devsign := signed.(*core.SignedDeviationTaskRespRequest)
-		return ag.deviator.ProcessSignedTaskResponse(devsign)
+		resp, err := ag.deviator.ProcessSignedTaskResponse(devsign)
+
+		return resp, err
 
 	case "agentslash":
 		ssign := signed.(*core.SignedAgentSlashTaskRespRequest)
-		return ag.slasher.ProcessSignedTaskResponse(ssign)
+		resp, err := ag.slasher.ProcessSignedTaskResponse(ssign)
+
+		return resp, err
 
 	default:
-
 		return nil, fmt.Errorf("invalid task type")
 	}
 }

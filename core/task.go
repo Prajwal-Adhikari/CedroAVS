@@ -6,7 +6,6 @@ import (
 	"math/big"
 
 	// "fmt"
-	"log/slog"
 
 	// aggregator "github.com/Cedro-Finance/CedroAVS/api/grpc"
 	aggregator "github.com/Cedro-Finance/CedroAVS/api/grpc"
@@ -18,26 +17,17 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-type Bytes32 [32]byte
-
-func (m Bytes32) LogValue() slog.Value {
-	return slog.StringValue(m.String())
-}
-
-func (m Bytes32) String() string {
-	return hex.EncodeToString(m[:])
-}
-
-func (m *Bytes32) UnderlyingType() [32]byte {
-	return *m
-}
-
 // type TaskInfo struct {
 // 	QuorumNumbers              sdktypes.QuorumNums
 // 	QuorumThresholdPercentages sdktypes.QuorumThresholdPercentages
 // 	TaskIndex                  uint32
 // 	ReferenceBlockNumber       uint64
 // }
+
+const (
+	AgentDeviationTask = "deviation"
+	AgentSlashTask     = "agentslash"
+)
 
 type BalanceTaskInfo struct {
 	QuorumNumbers              sdktypes.QuorumNums
@@ -89,8 +79,8 @@ func (r BalanceTaskInfo) ToPbType() *aggregator.BalanceTaskInfo {
 	}
 }
 
-func (r BalanceTaskInfo) ToCedroServiceManagerBalanceHeader() cedroservicemanager.DATADeviationBalanceHeader {
-	return cedroservicemanager.DATADeviationBalanceHeader{
+func (r BalanceTaskInfo) ToCedroServiceManagerHeader() cedroservicemanager.CedroServiceDataDeviationBalanceHeader {
+	return cedroservicemanager.CedroServiceDataDeviationBalanceHeader{
 		AgentAddress:               r.AgentAddress,
 		ReferenceBlockNumber:       uint32(r.ReferenceBlockNumber),
 		QuorumNumbers:              r.QuorumNumbers.UnderlyingType(),
@@ -159,18 +149,18 @@ func (r *BalanceTaskInfo) EncodeSignHash() ([]byte, error) {
 	return bytes, nil
 }
 
-func (r BalanceTaskInfo) GetBalanceHeaderHash() ([32]byte, error) {
+func (r BalanceTaskInfo) GetHeaderHash() (Bytes32, error) {
 	headerByte, err := r.EncodeSignHash()
 	if err != nil {
-		return [32]byte{}, err
+		return Bytes32{}, err
 	}
 
-	var headerHash [32]byte
+	var headerHash Bytes32
 	hasher := sha3.NewLegacyKeccak256()
 	hasher.Write(headerByte)
 	copy(headerHash[:], hasher.Sum(nil)[:32])
 
-	return headerHash, nil
+	return headerHash.UnderlyingType(), nil
 }
 
 // The init operator request
@@ -322,13 +312,16 @@ type AgentSlashTaskInfo struct {
 	InsufficientBalance        *big.Int
 	ReferenceBlockNumber       uint64
 	AgentAddress               common.Address
+	TxnId                      *big.Int
 }
 
 func NewAgentSlashTaskInfo(req *aggregator.AgentSlashTaskInfo) (*AgentSlashTaskInfo, error) {
 
 	insufBalance := new(big.Int)
+	txnId := new(big.Int)
 
 	insufBalance = insufBalance.SetBytes(req.GetInsufficientBalance())
+	txnId = txnId.SetBytes(req.GetTxnId())
 
 	res := &AgentSlashTaskInfo{
 		QuorumNumbers:              ConvertQuorumNumbersFromBytes(req.GetQuorumNumbers()),
@@ -337,6 +330,7 @@ func NewAgentSlashTaskInfo(req *aggregator.AgentSlashTaskInfo) (*AgentSlashTaskI
 		ReferenceBlockNumber:       req.GetReferenceBlockNumber(),
 		AgentAddress:               common.HexToAddress(req.GetAgentAddress()),
 		InsufficientBalance:        insufBalance,
+		TxnId:                      txnId,
 	}
 
 	return res, nil
@@ -351,16 +345,19 @@ func (r AgentSlashTaskInfo) ToPbType() *aggregator.AgentSlashTaskInfo {
 		ReferenceBlockNumber:       r.ReferenceBlockNumber,
 		AgentAddress:               r.AgentAddress.Hex(),
 		InsufficientBalance:        r.InsufficientBalance.Bytes(),
+		TxnId:                      r.TxnId.Bytes(),
 	}
 }
 
-func (r AgentSlashTaskInfo) ToCedroServiceManagerAgentSlashHeader() cedroservicemanager.DATAFraudBalanceHeader {
-	return cedroservicemanager.DATAFraudBalanceHeader{
+func (r AgentSlashTaskInfo) ToCedroServiceManagerHeader() cedroservicemanager.CedroServiceDataFraudBalanceHeader {
+	return cedroservicemanager.CedroServiceDataFraudBalanceHeader{
 		AgentAddress:               r.AgentAddress,
 		ReferenceBlockNumber:       uint32(r.ReferenceBlockNumber),
 		QuorumNumbers:              r.QuorumNumbers.UnderlyingType(),
 		QuorumThresholdPercentages: r.QuorumThresholdPercentages.UnderlyingType(),
+		TransactionId:              r.TxnId,
 		InsufficientAmount:         r.InsufficientBalance,
+
 	}
 }
 
@@ -376,6 +373,10 @@ func (r *AgentSlashTaskInfo) EncodeSignHash() ([]byte, error) {
 			Type: "uint32",
 		},
 		{
+			Name: "transactionId",
+			Type: "uint256",
+		},
+		{
 			Name: "insufficientAmount",
 			Type: "uint256",
 		},
@@ -388,10 +389,12 @@ func (r *AgentSlashTaskInfo) EncodeSignHash() ([]byte, error) {
 	s := struct {
 		AgentAddress         common.Address
 		ReferenceBlockNumber uint32
+		TransactionId        *big.Int
 		InsufficientAmount   *big.Int
 	}{
 		AgentAddress:         r.AgentAddress,
 		ReferenceBlockNumber: uint32(r.ReferenceBlockNumber),
+		TransactionId:        r.TxnId,
 		InsufficientAmount:   r.InsufficientBalance,
 	}
 
@@ -410,37 +413,42 @@ func (r *AgentSlashTaskInfo) EncodeSignHash() ([]byte, error) {
 	return bytes, nil
 }
 
-func (r AgentSlashTaskInfo) GetAgentSlashHeader() ([32]byte, error) {
+func (r AgentSlashTaskInfo) GetHeaderHash() (Bytes32, error) {
 	headerByte, err := r.EncodeSignHash()
 	if err != nil {
-		return [32]byte{}, err
+		return Bytes32{}, err
 	}
 
-	var headerHash [32]byte
+	var headerHash Bytes32
 	hasher := sha3.NewLegacyKeccak256()
 	hasher.Write(headerByte)
 	copy(headerHash[:], hasher.Sum(nil)[:32])
 
-	return headerHash, nil
+	return headerHash.UnderlyingType(), nil
 }
 
 type CreateAgentSlashTaskRequest struct {
-	ReqId                *big.Int
+	TxnId                *big.Int
 	ReferenceBlockNumber uint64
 	AgentAddress         common.Address
 }
 
 func NewCreateAgentSlashTaskRequest(req *aggregator.CreateAgentSlashTaskRequest) (*CreateAgentSlashTaskRequest, error) {
+
+	z := new(big.Int)
+
+	reqId := z.SetBytes(req.GetTxnId())
 	res := &CreateAgentSlashTaskRequest{
 		ReferenceBlockNumber: req.GetReferenceBlockNumber(),
 		AgentAddress:         common.HexToAddress(req.GetAgentAddress()),
+		TxnId:                reqId,
 	}
 
 	return res, nil
 }
 
 func (t *CreateAgentSlashTaskRequest) GetHash() (string, error) {
-	hash, err := GetRequestHash(t.ReqId, t.AgentAddress)
+	hash, err := GetRequestHash(t.TxnId, t.AgentAddress)
 
 	return hash, err
 }

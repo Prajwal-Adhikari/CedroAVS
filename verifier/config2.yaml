@@ -6,6 +6,8 @@ chains:
     block_finality: 1
     block_time: 12
     graphql_url: https://api.studio.thegraph.com/query/41099/cedro-avs/v0.0.4x
+    agent_manager: 0xD0621425d41cb00989d44D84FE10eF35FB0D879B
+    agent_manager_start_height: 1950994
 
 
   - name: ethereum-sepolia
@@ -15,6 +17,8 @@ chains:
     block_finality: 1
     block_time: 12
     graphql_url: https://api.studio.thegraph.com/query/41099/avs-sepolia/v0.0.4s
+    agent_manager: 0x4425A318eFB46437278496d6AE29Ad2F0f701f1A
+    agent_manager_start_height: 6236720
 
   
   - name: binance
@@ -24,6 +28,8 @@ chains:
     block_finality: 1
     block_time: 12
     graphql_url: https://api.studio.thegraph.com/query/41099/avs-bsc/v0.0.4s
+    agent_manager: 0x7Bf9126F5A4727BC2652D0E52149CD6586442363
+    agent_manager_start_height: 42160935
   
 
 
@@ -44,7 +50,7 @@ ethereum:
 
 agent_manager: "0xD0621425d41cb00989d44D84FE10eF35FB0D879B"
 agent_manager_poll_duration: 10
-agent_manager_start_height: 1855768
+agent_manager_start_height: 1855466
 graphql_url: https://api.studio.thegraph.com/query/41099/cedro-avs/v0.0.4v
 
 

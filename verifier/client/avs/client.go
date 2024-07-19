@@ -58,10 +58,28 @@ func NewAVSClient(cfg *config.Config, logger logging.Logger, txMgr txmgr.TxManag
 	}
 }
 
-type Request struct {
+type TaskRequest interface {
+	GetReqHash() string
+}
+
+type DeviationRequest struct {
 	ReqId                *big.Int
 	ReferenceBlockNumber uint64
 	AgentAddress         ethCommon.Address
 	Timestamp            uint64
-	IsOffChain           bool
+}
+
+func (d *DeviationRequest) GetReqHash() string {
+	return d.AgentAddress.Hex()
+}
+
+type AgentSlashRequest struct {
+	TxnId                *big.Int
+	ReferenceBlockNumber uint64
+	AgentAddress         ethCommon.Address
+	InsufficientBalance  *big.Int
+}
+
+func (a *AgentSlashRequest) GetReqHash() string {
+	return a.AgentAddress.Hex()
 }

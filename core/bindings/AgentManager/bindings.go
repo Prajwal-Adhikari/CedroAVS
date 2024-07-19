@@ -31,7 +31,7 @@ var (
 
 // AgentManagerMetaData contains all meta data concerning the AgentManager contract.
 var AgentManagerMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"}],\"name\":\"AIAgentAlreadyExists\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"contractTAG\",\"type\":\"string\"}],\"name\":\"ArgumentsMismatch\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"bondAmount\",\"type\":\"uint256\"}],\"name\":\"BondAmountLessThanThreshold\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deviationPercentage\",\"type\":\"uint256\"}],\"name\":\"DeviationAlreadySet\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InsufficientFees\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"}],\"name\":\"NotAnAgent\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializing\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"requestID\",\"type\":\"uint256\"}],\"name\":\"PreviousDeviationInProgress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ReentrancyGuardReentrantCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"requestID\",\"type\":\"uint256\"}],\"name\":\"SlashingTimeLimitExceeded\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32[]\",\"name\":\"chainIDs\",\"type\":\"bytes32[]\"}],\"name\":\"AgentPodChainList\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"chainID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agentContract\",\"type\":\"address\"}],\"name\":\"AgentPodCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"bondAmount\",\"type\":\"uint256\"}],\"name\":\"BondAmount\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"requestID\",\"type\":\"uint256\"}],\"name\":\"DeviationCheck\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"acceptedAssetList\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"adapter\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"addressToBytes32\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"agentContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"agents\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"_assets\",\"type\":\"bytes32[]\"}],\"name\":\"approveAsset\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"bondAmount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"bondThreshold\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"chainID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_agent\",\"type\":\"address\"}],\"name\":\"delistAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"deviationPercentage\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"_chainIDs\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"fees\",\"type\":\"uint256[]\"}],\"name\":\"enrollAgent\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAssetList\",\"outputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"\",\"type\":\"bytes32[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_agent\",\"type\":\"address\"}],\"name\":\"invokeDeviationCheck\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"isAgent\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_agent\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_agentContract\",\"type\":\"address\"}],\"name\":\"mapAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"oracle\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"pools\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"enable\",\"type\":\"bool\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_agent\",\"type\":\"address\"}],\"name\":\"receivedResponse\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"requestFulfilled\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"requestID\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"requestTimestamp\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"route\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_adapter\",\"type\":\"address\"}],\"name\":\"setAdapter\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_bondThreshold\",\"type\":\"uint256\"}],\"name\":\"setBondThreshold\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_chainID\",\"type\":\"bytes32\"}],\"name\":\"setChainID\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_deviationPercentage\",\"type\":\"uint256\"}],\"name\":\"setDeviationPercentage\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_oracle\",\"type\":\"address\"}],\"name\":\"setOracle\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"_id\",\"type\":\"bytes32[]\"},{\"internalType\":\"address[]\",\"name\":\"_token\",\"type\":\"address[]\"},{\"internalType\":\"bool[]\",\"name\":\"_enable\",\"type\":\"bool[]\"}],\"name\":\"setPools\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_route\",\"type\":\"address\"}],\"name\":\"setRoute\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_agent\",\"type\":\"address\"}],\"name\":\"slashAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"slashingTimeThreshold\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"updateBondAmount\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]message.txt16KB",
+	ABI: "[{\"inputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"}],\"name\":\"AIAgentAlreadyExists\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"contractTAG\",\"type\":\"string\"}],\"name\":\"ArgumentsMismatch\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"bondAmount\",\"type\":\"uint256\"}],\"name\":\"BondAmountLessThanThreshold\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"deviationPercentage\",\"type\":\"uint256\"}],\"name\":\"DeviationAlreadySet\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InsufficientFees\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidInitialization\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"}],\"name\":\"NotAnAgent\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"NotInitializing\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"requestID\",\"type\":\"uint256\"}],\"name\":\"PreviousDeviationInProgress\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ReentrancyGuardReentrantCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"requestID\",\"type\":\"uint256\"}],\"name\":\"SlashingTimeLimitExceeded\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"TransferEthFailed\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32[]\",\"name\":\"chainIDs\",\"type\":\"bytes32[]\"}],\"name\":\"AgentPodChainList\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"chainID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agentContract\",\"type\":\"address\"}],\"name\":\"AgentPodCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"bondAmount\",\"type\":\"uint256\"}],\"name\":\"BondAmount\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"txnId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"depositor\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32[]\",\"name\":\"assets\",\"type\":\"bytes32[]\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"},{\"indexed\":false,\"internalType\":\"enumData.STATUS\",\"name\":\"status\",\"type\":\"uint8\"}],\"name\":\"Claim\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"txnID\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"depositor\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"asset\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"principalAmount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"timeInterval\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"interestRate\",\"type\":\"uint256\"}],\"name\":\"Deposit\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"requestID\",\"type\":\"uint256\"}],\"name\":\"DeviationCheck\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"version\",\"type\":\"uint64\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"agent\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amountToSlash\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"chainID\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"txnId\",\"type\":\"uint256\"}],\"name\":\"SlashAgent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"acceptedAssetList\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"adapter\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_addr\",\"type\":\"address\"}],\"name\":\"addressToBytes32\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"agentContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"agents\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"bondAmount\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"bondThreshold\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"chainID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_agent\",\"type\":\"address\"}],\"name\":\"delistAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"deviationPercentage\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_agent\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_txnId\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_depositor\",\"type\":\"address\"},{\"internalType\":\"bytes32[]\",\"name\":\"_assets\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"_amounts\",\"type\":\"uint256[]\"},{\"internalType\":\"enumData.STATUS\",\"name\":\"_status\",\"type\":\"uint8\"}],\"name\":\"emitClaim\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_agent\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_txnID\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_depositor\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"_asset\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_principalAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_timeInterval\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_interestRate\",\"type\":\"uint256\"}],\"name\":\"emitDeposit\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_agent\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_amountToSlash\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"_chainID\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"_txnId\",\"type\":\"uint256\"}],\"name\":\"emitSlash\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"_chainIDs\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint256[]\",\"name\":\"_fees\",\"type\":\"uint256[]\"}],\"name\":\"enrollAgent\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_agent\",\"type\":\"address\"}],\"name\":\"invokeDeviationCheck\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"isAgent\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_agent\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_agentContract\",\"type\":\"address\"}],\"name\":\"mapAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"oracle\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"pools\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"enable\",\"type\":\"bool\"},{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_agent\",\"type\":\"address\"}],\"name\":\"receivedResponse\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"requestFulfilled\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"requestID\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"requestTimestamp\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"route\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_adapter\",\"type\":\"address\"}],\"name\":\"setAdapter\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_bondThreshold\",\"type\":\"uint256\"}],\"name\":\"setBondThreshold\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"_chainID\",\"type\":\"bytes32\"}],\"name\":\"setChainID\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_deviationPercentage\",\"type\":\"uint256\"}],\"name\":\"setDeviationPercentage\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_oracle\",\"type\":\"address\"}],\"name\":\"setOracle\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32[]\",\"name\":\"_id\",\"type\":\"bytes32[]\"},{\"internalType\":\"address[]\",\"name\":\"_token\",\"type\":\"address[]\"},{\"internalType\":\"bool[]\",\"name\":\"_enable\",\"type\":\"bool[]\"}],\"name\":\"setPools\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_route\",\"type\":\"address\"}],\"name\":\"setRoute\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_agent\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_slashAmount\",\"type\":\"uint256\"}],\"name\":\"slashAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"slashingTimeThreshold\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"updateBondAmount\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"}]",
 }
 
 // AgentManagerABI is the input ABI used to generate the binding from.
@@ -244,10 +244,10 @@ func (_AgentManager *AgentManagerCallerSession) Adapter() (common.Address, error
 
 // AddressToBytes32 is a free data retrieval call binding the contract method 0x82c947b7.
 //
-// Solidity: function addressToBytes32(address addr) pure returns(bytes32)
-func (_AgentManager *AgentManagerCaller) AddressToBytes32(opts *bind.CallOpts, addr common.Address) ([32]byte, error) {
+// Solidity: function addressToBytes32(address _addr) pure returns(bytes32)
+func (_AgentManager *AgentManagerCaller) AddressToBytes32(opts *bind.CallOpts, _addr common.Address) ([32]byte, error) {
 	var out []interface{}
-	err := _AgentManager.contract.Call(opts, &out, "addressToBytes32", addr)
+	err := _AgentManager.contract.Call(opts, &out, "addressToBytes32", _addr)
 
 	if err != nil {
 		return *new([32]byte), err
@@ -261,16 +261,16 @@ func (_AgentManager *AgentManagerCaller) AddressToBytes32(opts *bind.CallOpts, a
 
 // AddressToBytes32 is a free data retrieval call binding the contract method 0x82c947b7.
 //
-// Solidity: function addressToBytes32(address addr) pure returns(bytes32)
-func (_AgentManager *AgentManagerSession) AddressToBytes32(addr common.Address) ([32]byte, error) {
-	return _AgentManager.Contract.AddressToBytes32(&_AgentManager.CallOpts, addr)
+// Solidity: function addressToBytes32(address _addr) pure returns(bytes32)
+func (_AgentManager *AgentManagerSession) AddressToBytes32(_addr common.Address) ([32]byte, error) {
+	return _AgentManager.Contract.AddressToBytes32(&_AgentManager.CallOpts, _addr)
 }
 
 // AddressToBytes32 is a free data retrieval call binding the contract method 0x82c947b7.
 //
-// Solidity: function addressToBytes32(address addr) pure returns(bytes32)
-func (_AgentManager *AgentManagerCallerSession) AddressToBytes32(addr common.Address) ([32]byte, error) {
-	return _AgentManager.Contract.AddressToBytes32(&_AgentManager.CallOpts, addr)
+// Solidity: function addressToBytes32(address _addr) pure returns(bytes32)
+func (_AgentManager *AgentManagerCallerSession) AddressToBytes32(_addr common.Address) ([32]byte, error) {
+	return _AgentManager.Contract.AddressToBytes32(&_AgentManager.CallOpts, _addr)
 }
 
 // AgentContract is a free data retrieval call binding the contract method 0x4760f2e0.
@@ -457,37 +457,6 @@ func (_AgentManager *AgentManagerSession) DeviationPercentage(arg0 common.Addres
 // Solidity: function deviationPercentage(address ) view returns(uint256)
 func (_AgentManager *AgentManagerCallerSession) DeviationPercentage(arg0 common.Address) (*big.Int, error) {
 	return _AgentManager.Contract.DeviationPercentage(&_AgentManager.CallOpts, arg0)
-}
-
-// GetAssetList is a free data retrieval call binding the contract method 0x3765c0b8.
-//
-// Solidity: function getAssetList() view returns(bytes32[])
-func (_AgentManager *AgentManagerCaller) GetAssetList(opts *bind.CallOpts) ([][32]byte, error) {
-	var out []interface{}
-	err := _AgentManager.contract.Call(opts, &out, "getAssetList")
-
-	if err != nil {
-		return *new([][32]byte), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new([][32]byte)).(*[][32]byte)
-
-	return out0, err
-
-}
-
-// GetAssetList is a free data retrieval call binding the contract method 0x3765c0b8.
-//
-// Solidity: function getAssetList() view returns(bytes32[])
-func (_AgentManager *AgentManagerSession) GetAssetList() ([][32]byte, error) {
-	return _AgentManager.Contract.GetAssetList(&_AgentManager.CallOpts)
-}
-
-// GetAssetList is a free data retrieval call binding the contract method 0x3765c0b8.
-//
-// Solidity: function getAssetList() view returns(bytes32[])
-func (_AgentManager *AgentManagerCallerSession) GetAssetList() ([][32]byte, error) {
-	return _AgentManager.Contract.GetAssetList(&_AgentManager.CallOpts)
 }
 
 // IsAgent is a free data retrieval call binding the contract method 0x1ffbb064.
@@ -752,27 +721,6 @@ func (_AgentManager *AgentManagerCallerSession) SlashingTimeThreshold() (*big.In
 	return _AgentManager.Contract.SlashingTimeThreshold(&_AgentManager.CallOpts)
 }
 
-// ApproveAsset is a paid mutator transaction binding the contract method 0x76b47114.
-//
-// Solidity: function approveAsset(bytes32[] _assets) returns()
-func (_AgentManager *AgentManagerTransactor) ApproveAsset(opts *bind.TransactOpts, _assets [][32]byte) (*types.Transaction, error) {
-	return _AgentManager.contract.Transact(opts, "approveAsset", _assets)
-}
-
-// ApproveAsset is a paid mutator transaction binding the contract method 0x76b47114.
-//
-// Solidity: function approveAsset(bytes32[] _assets) returns()
-func (_AgentManager *AgentManagerSession) ApproveAsset(_assets [][32]byte) (*types.Transaction, error) {
-	return _AgentManager.Contract.ApproveAsset(&_AgentManager.TransactOpts, _assets)
-}
-
-// ApproveAsset is a paid mutator transaction binding the contract method 0x76b47114.
-//
-// Solidity: function approveAsset(bytes32[] _assets) returns()
-func (_AgentManager *AgentManagerTransactorSession) ApproveAsset(_assets [][32]byte) (*types.Transaction, error) {
-	return _AgentManager.Contract.ApproveAsset(&_AgentManager.TransactOpts, _assets)
-}
-
 // DelistAgent is a paid mutator transaction binding the contract method 0x8b24d351.
 //
 // Solidity: function delistAgent(address _agent) returns()
@@ -794,25 +742,88 @@ func (_AgentManager *AgentManagerTransactorSession) DelistAgent(_agent common.Ad
 	return _AgentManager.Contract.DelistAgent(&_AgentManager.TransactOpts, _agent)
 }
 
-// EnrollAgent is a paid mutator transaction binding the contract method 0x5aa0b067.
+// EmitClaim is a paid mutator transaction binding the contract method 0xcf10bff3.
 //
-// Solidity: function enrollAgent(bytes32[] _chainIDs, uint256[] fees) payable returns()
-func (_AgentManager *AgentManagerTransactor) EnrollAgent(opts *bind.TransactOpts, _chainIDs [][32]byte, fees []*big.Int) (*types.Transaction, error) {
-	return _AgentManager.contract.Transact(opts, "enrollAgent", _chainIDs, fees)
+// Solidity: function emitClaim(address _agent, uint256 _txnId, address _depositor, bytes32[] _assets, uint256[] _amounts, uint8 _status) returns()
+func (_AgentManager *AgentManagerTransactor) EmitClaim(opts *bind.TransactOpts, _agent common.Address, _txnId *big.Int, _depositor common.Address, _assets [][32]byte, _amounts []*big.Int, _status uint8) (*types.Transaction, error) {
+	return _AgentManager.contract.Transact(opts, "emitClaim", _agent, _txnId, _depositor, _assets, _amounts, _status)
+}
+
+// EmitClaim is a paid mutator transaction binding the contract method 0xcf10bff3.
+//
+// Solidity: function emitClaim(address _agent, uint256 _txnId, address _depositor, bytes32[] _assets, uint256[] _amounts, uint8 _status) returns()
+func (_AgentManager *AgentManagerSession) EmitClaim(_agent common.Address, _txnId *big.Int, _depositor common.Address, _assets [][32]byte, _amounts []*big.Int, _status uint8) (*types.Transaction, error) {
+	return _AgentManager.Contract.EmitClaim(&_AgentManager.TransactOpts, _agent, _txnId, _depositor, _assets, _amounts, _status)
+}
+
+// EmitClaim is a paid mutator transaction binding the contract method 0xcf10bff3.
+//
+// Solidity: function emitClaim(address _agent, uint256 _txnId, address _depositor, bytes32[] _assets, uint256[] _amounts, uint8 _status) returns()
+func (_AgentManager *AgentManagerTransactorSession) EmitClaim(_agent common.Address, _txnId *big.Int, _depositor common.Address, _assets [][32]byte, _amounts []*big.Int, _status uint8) (*types.Transaction, error) {
+	return _AgentManager.Contract.EmitClaim(&_AgentManager.TransactOpts, _agent, _txnId, _depositor, _assets, _amounts, _status)
+}
+
+// EmitDeposit is a paid mutator transaction binding the contract method 0x44f11d9e.
+//
+// Solidity: function emitDeposit(address _agent, uint256 _txnID, address _depositor, bytes32 _asset, uint256 _amount, uint256 _principalAmount, uint256 _timeInterval, uint256 _interestRate) returns()
+func (_AgentManager *AgentManagerTransactor) EmitDeposit(opts *bind.TransactOpts, _agent common.Address, _txnID *big.Int, _depositor common.Address, _asset [32]byte, _amount *big.Int, _principalAmount *big.Int, _timeInterval *big.Int, _interestRate *big.Int) (*types.Transaction, error) {
+	return _AgentManager.contract.Transact(opts, "emitDeposit", _agent, _txnID, _depositor, _asset, _amount, _principalAmount, _timeInterval, _interestRate)
+}
+
+// EmitDeposit is a paid mutator transaction binding the contract method 0x44f11d9e.
+//
+// Solidity: function emitDeposit(address _agent, uint256 _txnID, address _depositor, bytes32 _asset, uint256 _amount, uint256 _principalAmount, uint256 _timeInterval, uint256 _interestRate) returns()
+func (_AgentManager *AgentManagerSession) EmitDeposit(_agent common.Address, _txnID *big.Int, _depositor common.Address, _asset [32]byte, _amount *big.Int, _principalAmount *big.Int, _timeInterval *big.Int, _interestRate *big.Int) (*types.Transaction, error) {
+	return _AgentManager.Contract.EmitDeposit(&_AgentManager.TransactOpts, _agent, _txnID, _depositor, _asset, _amount, _principalAmount, _timeInterval, _interestRate)
+}
+
+// EmitDeposit is a paid mutator transaction binding the contract method 0x44f11d9e.
+//
+// Solidity: function emitDeposit(address _agent, uint256 _txnID, address _depositor, bytes32 _asset, uint256 _amount, uint256 _principalAmount, uint256 _timeInterval, uint256 _interestRate) returns()
+func (_AgentManager *AgentManagerTransactorSession) EmitDeposit(_agent common.Address, _txnID *big.Int, _depositor common.Address, _asset [32]byte, _amount *big.Int, _principalAmount *big.Int, _timeInterval *big.Int, _interestRate *big.Int) (*types.Transaction, error) {
+	return _AgentManager.Contract.EmitDeposit(&_AgentManager.TransactOpts, _agent, _txnID, _depositor, _asset, _amount, _principalAmount, _timeInterval, _interestRate)
+}
+
+// EmitSlash is a paid mutator transaction binding the contract method 0x689b94be.
+//
+// Solidity: function emitSlash(address _agent, uint256 _amountToSlash, bytes32 _chainID, uint256 _txnId) returns()
+func (_AgentManager *AgentManagerTransactor) EmitSlash(opts *bind.TransactOpts, _agent common.Address, _amountToSlash *big.Int, _chainID [32]byte, _txnId *big.Int) (*types.Transaction, error) {
+	return _AgentManager.contract.Transact(opts, "emitSlash", _agent, _amountToSlash, _chainID, _txnId)
+}
+
+// EmitSlash is a paid mutator transaction binding the contract method 0x689b94be.
+//
+// Solidity: function emitSlash(address _agent, uint256 _amountToSlash, bytes32 _chainID, uint256 _txnId) returns()
+func (_AgentManager *AgentManagerSession) EmitSlash(_agent common.Address, _amountToSlash *big.Int, _chainID [32]byte, _txnId *big.Int) (*types.Transaction, error) {
+	return _AgentManager.Contract.EmitSlash(&_AgentManager.TransactOpts, _agent, _amountToSlash, _chainID, _txnId)
+}
+
+// EmitSlash is a paid mutator transaction binding the contract method 0x689b94be.
+//
+// Solidity: function emitSlash(address _agent, uint256 _amountToSlash, bytes32 _chainID, uint256 _txnId) returns()
+func (_AgentManager *AgentManagerTransactorSession) EmitSlash(_agent common.Address, _amountToSlash *big.Int, _chainID [32]byte, _txnId *big.Int) (*types.Transaction, error) {
+	return _AgentManager.Contract.EmitSlash(&_AgentManager.TransactOpts, _agent, _amountToSlash, _chainID, _txnId)
 }
 
 // EnrollAgent is a paid mutator transaction binding the contract method 0x5aa0b067.
 //
-// Solidity: function enrollAgent(bytes32[] _chainIDs, uint256[] fees) payable returns()
-func (_AgentManager *AgentManagerSession) EnrollAgent(_chainIDs [][32]byte, fees []*big.Int) (*types.Transaction, error) {
-	return _AgentManager.Contract.EnrollAgent(&_AgentManager.TransactOpts, _chainIDs, fees)
+// Solidity: function enrollAgent(bytes32[] _chainIDs, uint256[] _fees) payable returns()
+func (_AgentManager *AgentManagerTransactor) EnrollAgent(opts *bind.TransactOpts, _chainIDs [][32]byte, _fees []*big.Int) (*types.Transaction, error) {
+	return _AgentManager.contract.Transact(opts, "enrollAgent", _chainIDs, _fees)
 }
 
 // EnrollAgent is a paid mutator transaction binding the contract method 0x5aa0b067.
 //
-// Solidity: function enrollAgent(bytes32[] _chainIDs, uint256[] fees) payable returns()
-func (_AgentManager *AgentManagerTransactorSession) EnrollAgent(_chainIDs [][32]byte, fees []*big.Int) (*types.Transaction, error) {
-	return _AgentManager.Contract.EnrollAgent(&_AgentManager.TransactOpts, _chainIDs, fees)
+// Solidity: function enrollAgent(bytes32[] _chainIDs, uint256[] _fees) payable returns()
+func (_AgentManager *AgentManagerSession) EnrollAgent(_chainIDs [][32]byte, _fees []*big.Int) (*types.Transaction, error) {
+	return _AgentManager.Contract.EnrollAgent(&_AgentManager.TransactOpts, _chainIDs, _fees)
+}
+
+// EnrollAgent is a paid mutator transaction binding the contract method 0x5aa0b067.
+//
+// Solidity: function enrollAgent(bytes32[] _chainIDs, uint256[] _fees) payable returns()
+func (_AgentManager *AgentManagerTransactorSession) EnrollAgent(_chainIDs [][32]byte, _fees []*big.Int) (*types.Transaction, error) {
+	return _AgentManager.Contract.EnrollAgent(&_AgentManager.TransactOpts, _chainIDs, _fees)
 }
 
 // Initialize is a paid mutator transaction binding the contract method 0x8129fc1c.
@@ -1046,25 +1057,25 @@ func (_AgentManager *AgentManagerTransactorSession) SetRoute(_route common.Addre
 	return _AgentManager.Contract.SetRoute(&_AgentManager.TransactOpts, _route)
 }
 
-// SlashAgent is a paid mutator transaction binding the contract method 0xb5a91e01.
+// SlashAgent is a paid mutator transaction binding the contract method 0x690aa3e6.
 //
-// Solidity: function slashAgent(address _agent) returns()
-func (_AgentManager *AgentManagerTransactor) SlashAgent(opts *bind.TransactOpts, _agent common.Address) (*types.Transaction, error) {
-	return _AgentManager.contract.Transact(opts, "slashAgent", _agent)
+// Solidity: function slashAgent(address _agent, uint256 _slashAmount) returns()
+func (_AgentManager *AgentManagerTransactor) SlashAgent(opts *bind.TransactOpts, _agent common.Address, _slashAmount *big.Int) (*types.Transaction, error) {
+	return _AgentManager.contract.Transact(opts, "slashAgent", _agent, _slashAmount)
 }
 
-// SlashAgent is a paid mutator transaction binding the contract method 0xb5a91e01.
+// SlashAgent is a paid mutator transaction binding the contract method 0x690aa3e6.
 //
-// Solidity: function slashAgent(address _agent) returns()
-func (_AgentManager *AgentManagerSession) SlashAgent(_agent common.Address) (*types.Transaction, error) {
-	return _AgentManager.Contract.SlashAgent(&_AgentManager.TransactOpts, _agent)
+// Solidity: function slashAgent(address _agent, uint256 _slashAmount) returns()
+func (_AgentManager *AgentManagerSession) SlashAgent(_agent common.Address, _slashAmount *big.Int) (*types.Transaction, error) {
+	return _AgentManager.Contract.SlashAgent(&_AgentManager.TransactOpts, _agent, _slashAmount)
 }
 
-// SlashAgent is a paid mutator transaction binding the contract method 0xb5a91e01.
+// SlashAgent is a paid mutator transaction binding the contract method 0x690aa3e6.
 //
-// Solidity: function slashAgent(address _agent) returns()
-func (_AgentManager *AgentManagerTransactorSession) SlashAgent(_agent common.Address) (*types.Transaction, error) {
-	return _AgentManager.Contract.SlashAgent(&_AgentManager.TransactOpts, _agent)
+// Solidity: function slashAgent(address _agent, uint256 _slashAmount) returns()
+func (_AgentManager *AgentManagerTransactorSession) SlashAgent(_agent common.Address, _slashAmount *big.Int) (*types.Transaction, error) {
+	return _AgentManager.Contract.SlashAgent(&_AgentManager.TransactOpts, _agent, _slashAmount)
 }
 
 // UpdateBondAmount is a paid mutator transaction binding the contract method 0x03d53713.
@@ -1494,6 +1505,286 @@ func (_AgentManager *AgentManagerFilterer) ParseBondAmount(log types.Log) (*Agen
 	return event, nil
 }
 
+// AgentManagerClaimIterator is returned from FilterClaim and is used to iterate over the raw logs and unpacked data for Claim events raised by the AgentManager contract.
+type AgentManagerClaimIterator struct {
+	Event *AgentManagerClaim // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AgentManagerClaimIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AgentManagerClaim)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AgentManagerClaim)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AgentManagerClaimIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AgentManagerClaimIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AgentManagerClaim represents a Claim event raised by the AgentManager contract.
+type AgentManagerClaim struct {
+	Agent     common.Address
+	TxnId     *big.Int
+	Depositor common.Address
+	Assets    [][32]byte
+	Amounts   []*big.Int
+	Status    uint8
+	Raw       types.Log // Blockchain specific contextual infos
+}
+
+// FilterClaim is a free log retrieval operation binding the contract event 0x94b0c7d9c701cfb2c134cf1ab079f0909bab7d2c63bcae89962eeda04db30766.
+//
+// Solidity: event Claim(address agent, uint256 txnId, address depositor, bytes32[] assets, uint256[] amounts, uint8 status)
+func (_AgentManager *AgentManagerFilterer) FilterClaim(opts *bind.FilterOpts) (*AgentManagerClaimIterator, error) {
+
+	logs, sub, err := _AgentManager.contract.FilterLogs(opts, "Claim")
+	if err != nil {
+		return nil, err
+	}
+	return &AgentManagerClaimIterator{contract: _AgentManager.contract, event: "Claim", logs: logs, sub: sub}, nil
+}
+
+// WatchClaim is a free log subscription operation binding the contract event 0x94b0c7d9c701cfb2c134cf1ab079f0909bab7d2c63bcae89962eeda04db30766.
+//
+// Solidity: event Claim(address agent, uint256 txnId, address depositor, bytes32[] assets, uint256[] amounts, uint8 status)
+func (_AgentManager *AgentManagerFilterer) WatchClaim(opts *bind.WatchOpts, sink chan<- *AgentManagerClaim) (event.Subscription, error) {
+
+	logs, sub, err := _AgentManager.contract.WatchLogs(opts, "Claim")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AgentManagerClaim)
+				if err := _AgentManager.contract.UnpackLog(event, "Claim", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseClaim is a log parse operation binding the contract event 0x94b0c7d9c701cfb2c134cf1ab079f0909bab7d2c63bcae89962eeda04db30766.
+//
+// Solidity: event Claim(address agent, uint256 txnId, address depositor, bytes32[] assets, uint256[] amounts, uint8 status)
+func (_AgentManager *AgentManagerFilterer) ParseClaim(log types.Log) (*AgentManagerClaim, error) {
+	event := new(AgentManagerClaim)
+	if err := _AgentManager.contract.UnpackLog(event, "Claim", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AgentManagerDepositIterator is returned from FilterDeposit and is used to iterate over the raw logs and unpacked data for Deposit events raised by the AgentManager contract.
+type AgentManagerDepositIterator struct {
+	Event *AgentManagerDeposit // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AgentManagerDepositIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AgentManagerDeposit)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AgentManagerDeposit)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AgentManagerDepositIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AgentManagerDepositIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AgentManagerDeposit represents a Deposit event raised by the AgentManager contract.
+type AgentManagerDeposit struct {
+	Agent           common.Address
+	TxnID           *big.Int
+	Depositor       common.Address
+	Asset           [32]byte
+	Amount          *big.Int
+	PrincipalAmount *big.Int
+	TimeInterval    *big.Int
+	InterestRate    *big.Int
+	Raw             types.Log // Blockchain specific contextual infos
+}
+
+// FilterDeposit is a free log retrieval operation binding the contract event 0xe068c2883f642d3a15746539679861ccbcfff0bf292b987ff8ef90ff9ce628e2.
+//
+// Solidity: event Deposit(address agent, uint256 txnID, address depositor, bytes32 asset, uint256 amount, uint256 principalAmount, uint256 timeInterval, uint256 interestRate)
+func (_AgentManager *AgentManagerFilterer) FilterDeposit(opts *bind.FilterOpts) (*AgentManagerDepositIterator, error) {
+
+	logs, sub, err := _AgentManager.contract.FilterLogs(opts, "Deposit")
+	if err != nil {
+		return nil, err
+	}
+	return &AgentManagerDepositIterator{contract: _AgentManager.contract, event: "Deposit", logs: logs, sub: sub}, nil
+}
+
+// WatchDeposit is a free log subscription operation binding the contract event 0xe068c2883f642d3a15746539679861ccbcfff0bf292b987ff8ef90ff9ce628e2.
+//
+// Solidity: event Deposit(address agent, uint256 txnID, address depositor, bytes32 asset, uint256 amount, uint256 principalAmount, uint256 timeInterval, uint256 interestRate)
+func (_AgentManager *AgentManagerFilterer) WatchDeposit(opts *bind.WatchOpts, sink chan<- *AgentManagerDeposit) (event.Subscription, error) {
+
+	logs, sub, err := _AgentManager.contract.WatchLogs(opts, "Deposit")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AgentManagerDeposit)
+				if err := _AgentManager.contract.UnpackLog(event, "Deposit", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseDeposit is a log parse operation binding the contract event 0xe068c2883f642d3a15746539679861ccbcfff0bf292b987ff8ef90ff9ce628e2.
+//
+// Solidity: event Deposit(address agent, uint256 txnID, address depositor, bytes32 asset, uint256 amount, uint256 principalAmount, uint256 timeInterval, uint256 interestRate)
+func (_AgentManager *AgentManagerFilterer) ParseDeposit(log types.Log) (*AgentManagerDeposit, error) {
+	event := new(AgentManagerDeposit)
+	if err := _AgentManager.contract.UnpackLog(event, "Deposit", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
 // AgentManagerDeviationCheckIterator is returned from FilterDeviationCheck and is used to iterate over the raw logs and unpacked data for DeviationCheck events raised by the AgentManager contract.
 type AgentManagerDeviationCheckIterator struct {
 	Event *AgentManagerDeviationCheck // Event containing the contract specifics and raw log
@@ -1757,6 +2048,143 @@ func (_AgentManager *AgentManagerFilterer) WatchInitialized(opts *bind.WatchOpts
 func (_AgentManager *AgentManagerFilterer) ParseInitialized(log types.Log) (*AgentManagerInitialized, error) {
 	event := new(AgentManagerInitialized)
 	if err := _AgentManager.contract.UnpackLog(event, "Initialized", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// AgentManagerSlashAgentIterator is returned from FilterSlashAgent and is used to iterate over the raw logs and unpacked data for SlashAgent events raised by the AgentManager contract.
+type AgentManagerSlashAgentIterator struct {
+	Event *AgentManagerSlashAgent // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *AgentManagerSlashAgentIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(AgentManagerSlashAgent)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(AgentManagerSlashAgent)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *AgentManagerSlashAgentIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *AgentManagerSlashAgentIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// AgentManagerSlashAgent represents a SlashAgent event raised by the AgentManager contract.
+type AgentManagerSlashAgent struct {
+	Agent         common.Address
+	AmountToSlash *big.Int
+	ChainID       [32]byte
+	TxnId         *big.Int
+	Raw           types.Log // Blockchain specific contextual infos
+}
+
+// FilterSlashAgent is a free log retrieval operation binding the contract event 0xc01e2e0defd55e48b29c6b1c0abaa6e53cf62dd50601aadb27e0b2706d3da2ea.
+//
+// Solidity: event SlashAgent(address agent, uint256 amountToSlash, bytes32 chainID, uint256 txnId)
+func (_AgentManager *AgentManagerFilterer) FilterSlashAgent(opts *bind.FilterOpts) (*AgentManagerSlashAgentIterator, error) {
+
+	logs, sub, err := _AgentManager.contract.FilterLogs(opts, "SlashAgent")
+	if err != nil {
+		return nil, err
+	}
+	return &AgentManagerSlashAgentIterator{contract: _AgentManager.contract, event: "SlashAgent", logs: logs, sub: sub}, nil
+}
+
+// WatchSlashAgent is a free log subscription operation binding the contract event 0xc01e2e0defd55e48b29c6b1c0abaa6e53cf62dd50601aadb27e0b2706d3da2ea.
+//
+// Solidity: event SlashAgent(address agent, uint256 amountToSlash, bytes32 chainID, uint256 txnId)
+func (_AgentManager *AgentManagerFilterer) WatchSlashAgent(opts *bind.WatchOpts, sink chan<- *AgentManagerSlashAgent) (event.Subscription, error) {
+
+	logs, sub, err := _AgentManager.contract.WatchLogs(opts, "SlashAgent")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(AgentManagerSlashAgent)
+				if err := _AgentManager.contract.UnpackLog(event, "SlashAgent", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseSlashAgent is a log parse operation binding the contract event 0xc01e2e0defd55e48b29c6b1c0abaa6e53cf62dd50601aadb27e0b2706d3da2ea.
+//
+// Solidity: event SlashAgent(address agent, uint256 amountToSlash, bytes32 chainID, uint256 txnId)
+func (_AgentManager *AgentManagerFilterer) ParseSlashAgent(log types.Log) (*AgentManagerSlashAgent, error) {
+	event := new(AgentManagerSlashAgent)
+	if err := _AgentManager.contract.UnpackLog(event, "SlashAgent", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

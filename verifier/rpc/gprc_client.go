@@ -64,10 +64,10 @@ func (cl *AggregatorGRpcClient) InitOperatorToAggregator() error {
 	defer cancel()
 
 	request := &aggregator.InitOperatorRequest{
-		OperatorId:                 cl.operatorId[:],
-		OperatorAddress:            cl.operatorAddr.Hex(),
-		OperatorStateRetrieverAddr: cl.config.AVS.OperatorStateRetrieverAddr.Hex(),
-		RegistryCoordinatorAddr:    cl.config.AVS.RegistryCoordinatorAddr.Hex(),
+		OperatorId:                    cl.operatorId[:],
+		OperatorAddress:               cl.operatorAddr.Hex(),
+		OperatorStateRetrieverAddress: cl.config.AVS.OperatorStateRetrieverAddr.Hex(),
+		RegistryCoordinatorAddress:    cl.config.AVS.RegistryCoordinatorAddr.Hex(),
 	}
 
 	cl.logger.Info("Init operator to aggregator", "req", fmt.Sprintf("%#v", request))
@@ -84,7 +84,7 @@ func (cl *AggregatorGRpcClient) InitOperatorToAggregator() error {
 	return nil
 }
 
-func (cl *AggregatorGRpcClient) CreateBalanceTaskToAggregator(req *avs.Request) (*core.BalanceTaskInfo, error) {
+func (cl *AggregatorGRpcClient) CreateBalanceTaskToAggregator(req *avs.DeviationRequest) (*core.BalanceTaskInfo, error) {
 	conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {
@@ -97,7 +97,7 @@ func (cl *AggregatorGRpcClient) CreateBalanceTaskToAggregator(req *avs.Request) 
 
 	defer cancel()
 
-	request := &aggregator.CreateTaskRequest{
+	request := &aggregator.CreateDeviationTaskRequest{
 		ReqId:                req.ReqId.Bytes(),
 		ReferenceBlockNumber: req.ReferenceBlockNumber,
 		AgentAddress:         req.AgentAddress.Hex(),
@@ -105,7 +105,7 @@ func (cl *AggregatorGRpcClient) CreateBalanceTaskToAggregator(req *avs.Request) 
 
 	cl.logger.Info("CreateAlertTask to aggregator", "req", fmt.Sprintf("%#v", request))
 
-	reply, err := n.CreateTask(nodeCtx, request)
+	reply, err := n.CreateDeviationTask(nodeCtx, request)
 	if err != nil {
 		return nil, fmt.Errorf("call CreateAlertTask failed: %v", err.Error())
 	}
@@ -118,7 +118,72 @@ func (cl *AggregatorGRpcClient) CreateBalanceTaskToAggregator(req *avs.Request) 
 	return info, nil
 }
 
-func (cl *AggregatorGRpcClient) SendSignedTaskResponse(signedTaskResponse *core.SignedTaskRespRequest) (*aggregator.SignedTaskRespResponse, error) {
+func (cl *AggregatorGRpcClient) SendSignedTaskResponse(ctx context.Context, signedTaskResponse *core.SignedDeviationTaskRespRequest) (*aggregator.SignedTaskRespResponse, error) {
+	conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+	if err != nil {
+		return nil, fmt.Errorf("dial initOperatorToAggregator connection failed: %v", err.Error())
+	}
+
+	n := aggregator.NewAggregatorClient(conn)
+
+	nodeCtx, cancel := context.WithTimeout(ctx, cl.timeout)
+	defer cancel()
+
+	cl.logger.Debug("Sending Signed Task", "taskResponse", signedTaskResponse.Balance)
+
+	request := &aggregator.SignedDeviationTaskRespRequest{
+		OperatorId:               cl.operatorId[:],
+		OperatorRequestSignature: signedTaskResponse.BlsSignature.Serialize(),
+		BalanceHeader:            signedTaskResponse.Balance.ToPbType(),
+	}
+
+	response, err := n.ProcessSignedDeviationTaskResponse(nodeCtx, request)
+
+	if err != nil {
+		cl.logger.Error("Error while sending signed response to aggregator", "err", err)
+		return nil, err
+	}
+
+	return response, nil
+}
+
+func (cl *AggregatorGRpcClient) CreateAgentSlashTaskToAggregator(req *avs.AgentSlashRequest) (*core.AgentSlashTaskInfo, error) {
+	conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+	if err != nil {
+		return nil, fmt.Errorf("dial initOperatorToAggregator connection failed: %v", err.Error())
+	}
+
+	n := aggregator.NewAggregatorClient(conn)
+
+	nodeCtx, cancel := context.WithTimeout(context.Background(), cl.timeout)
+
+	defer cancel()
+
+	request := &aggregator.CreateAgentSlashTaskRequest{
+		// ReqId:                req.ReqId.Bytes(),
+		ReferenceBlockNumber: req.ReferenceBlockNumber,
+		AgentAddress:         req.AgentAddress.Hex(),
+		TxnId:                req.TxnId.Bytes(),
+	}
+
+	cl.logger.Info("CreateAlertTask to aggregator", "req", req)
+
+	reply, err := n.CreateAgentSlashTask(nodeCtx, request)
+	if err != nil {
+		return nil, fmt.Errorf("call CreateAlertTask failed: %v", err.Error())
+	}
+
+	info, err := core.NewAgentSlashTaskInfo(reply.GetInfo())
+	if err != nil {
+		return nil, fmt.Errorf("call CreateAlertTask failed by decode alert info: %v", err.Error())
+	}
+
+	return info, nil
+}
+
+func (cl *AggregatorGRpcClient) SendSignedAgentSlashTaskResponse(signedTaskResponse *core.SignedAgentSlashTaskRespRequest) (*aggregator.SignedTaskRespResponse, error) {
 	conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {
@@ -132,13 +197,13 @@ func (cl *AggregatorGRpcClient) SendSignedTaskResponse(signedTaskResponse *core.
 
 	cl.logger.Debug("Sending Signed Task", "taskResponse", signedTaskResponse.Balance)
 
-	request := &aggregator.SignedTaskRespRequest{
+	request := &aggregator.SignedAgentSlashTaskRespRequest{
 		OperatorId:               cl.operatorId[:],
 		OperatorRequestSignature: signedTaskResponse.BlsSignature.Serialize(),
-		BalanceHeader:            signedTaskResponse.Balance.ToPbType(),
+		FraudHeader:              signedTaskResponse.Balance.ToPbType(),
 	}
 
-	response, err := n.ProcessSignedTaskResponse(nodeCtx, request)
+	response, err := n.ProcessSignedAgentSlashTaskResponse(nodeCtx, request)
 
 	if err != nil {
 		cl.logger.Error("Error while sending signed response to aggregator", "err", err)
