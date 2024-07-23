@@ -1,16 +1,24 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Context.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "../operator/interfaces/IRoute.sol";
 import "../operator/interfaces/IAgentManager.sol";
+
 import {AgentPod} from "./AgentPod.sol";
 
 string constant TAG = "Adapter";
 
-contract Adapter is Context, ReentrancyGuard {
+contract Adapter is Initializable, ContextUpgradeable {
     address public route;
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize() public initializer {}
 
     /**
      * @notice Configures route
@@ -28,13 +36,11 @@ contract Adapter is Context, ReentrancyGuard {
         bytes32[] memory chainIDs,
         uint256[] memory fees
     ) public payable {
-      
         AgentPod AIInstance = new AgentPod(agentManager, agent, oracle);
         IAgentManager(agentManager).mapAgent(agent, address(AIInstance));
-        
+
         bytes memory payload = abi.encodePacked(addressToBytes32(agent));
         IRoute(route).send{value: msg.value}(payload, chainIDs, fees, agent);
- 
     }
 
     function enrollAgent(
