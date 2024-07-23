@@ -3,7 +3,7 @@ package types
 import (
 	"math/big"
 
-	"github.com/Cedro-Finance/CedroAVS/core"
+	"github.com/Cedro-Finance/CedroAVS/core/tasks"
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -12,16 +12,10 @@ type CreateTaskReq interface{}
 type CreateTaskReqResp interface{}
 
 type SignedTaskResRequest interface{}
-type ITaskInfo interface {
-	ToPbType() interface{}
-	ToCedroServiceManagerHeader() interface{}
 
-	EncodeSignHash() ([]byte, error)
-	GetHeaderHash() (core.Bytes32, error)
-}
 
 type FinishedTaskStatus struct {
-	Message          *core.BalanceTaskInfo
+	Message          tasks.ITaskInfo
 	TxHash           common.Hash
 	BlockHash        common.Hash `json:"blockHash,omitempty"`
 	BlockNumber      *big.Int    `json:"blockNumber,omitempty"`
@@ -29,7 +23,7 @@ type FinishedTaskStatus struct {
 }
 
 type FinishedSlashTaskStatus struct{
-	Message          *core.AgentSlashTaskInfo
+	Message          *tasks.AgentSlashTaskInfo
 	TxHash           common.Hash
 	BlockHash        common.Hash `json:"blockHash,omitempty"`
 	BlockNumber      *big.Int    `json:"blockNumber,omitempty"`
@@ -42,13 +36,13 @@ type OperatorStatus struct {
 }
 
 type ITaskProcessor interface {
-	GetTaskByIndex(taskIndex sdktypes.TaskIndex) ITaskInfo
+	GetTaskByIndex(taskIndex sdktypes.TaskIndex) tasks.ITaskInfo
 	NewIndex() sdktypes.TaskIndex
-	GetTaskByRequestHash() ITaskInfo
-	GetFinishedTaskByRequestHash() ITaskInfo
+	GetTaskByRequestHash() tasks.ITaskInfo
+	GetFinishedTaskByRequestHash() tasks.ITaskInfo
 	SetFinishedTask(reqHash string, finished *FinishedTaskStatus)
 
 	CreateTask(req CreateTaskReq) (CreateTaskReqResp, error)
 
-	ProcessSignedTaskResponse(req SignedTaskResRequest) (*core.SignedTaskRespResponse, error)
+	ProcessSignedTaskResponse(req SignedTaskResRequest) (*tasks.SignedTaskRespResponse, error)
 }

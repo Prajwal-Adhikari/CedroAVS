@@ -3,10 +3,9 @@ package avs
 import (
 	// "github.com/Cedro-Finance/CedroAVS/verifier/config"
 	"context"
-
-	"github.com/Cedro-Finance/CedroAVS/core"
 	cedroservicemanager "github.com/Cedro-Finance/CedroAVS/core/bindings/CedroServiceManager"
 	"github.com/Cedro-Finance/CedroAVS/core/config"
+	"github.com/Cedro-Finance/CedroAVS/core/tasks"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/avsregistry"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/eth"
 	"github.com/Layr-Labs/eigensdk-go/logging"
@@ -57,7 +56,7 @@ func NewAvsWriter(c *config.Config, txMgr txmgr.TxManager, ethClient eth.Client,
 
 }
 
-func (w *AvsWriter) SendConfirmationBatch(ctx context.Context, balanceHeader *core.BalanceTaskInfo, nonSignerStakeSignature cedroservicemanager.IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Receipt, error) {
+func (w *AvsWriter) SendConfirmationBatch(ctx context.Context, balanceHeader *tasks.BalanceTaskInfo, nonSignerStakeSignature cedroservicemanager.IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Receipt, error) {
 	txOpts, err := w.TxMgr.GetNoSendTxOpts()
 	if err != nil {
 		w.logger.Errorf("Error getting tx opts")
@@ -81,7 +80,7 @@ func (w *AvsWriter) SendConfirmationBatch(ctx context.Context, balanceHeader *co
 	return receipt, nil
 }
 
-func (w *AvsWriter) SendConfirmationAgentSlash(ctx context.Context, slashHeader *core.AgentSlashTaskInfo, nonSignerStakeSignature cedroservicemanager.IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Receipt, error) {
+func (w *AvsWriter) SendConfirmationAgentSlash(ctx context.Context, slashHeader *tasks.AgentSlashTaskInfo, nonSignerStakeSignature cedroservicemanager.IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Receipt, error) {
 	txOpts, err := w.TxMgr.GetNoSendTxOpts()
 
 	if err != nil {

@@ -1,51 +1,65 @@
 package taskprocessor
 
 import (
-	// "context"
-
 	"context"
 	"fmt"
+	"sync"
+	"time"
 
 	blsaggregator "github.com/Cedro-Finance/CedroAVS/aggregator/bls"
+	"github.com/Cedro-Finance/CedroAVS/aggregator/types"
 	"github.com/Cedro-Finance/CedroAVS/api/graphql"
 	"github.com/Cedro-Finance/CedroAVS/core"
 	avs "github.com/Cedro-Finance/CedroAVS/core/avsClient"
 	cedroservicemanager "github.com/Cedro-Finance/CedroAVS/core/bindings/CedroServiceManager"
 	"github.com/Cedro-Finance/CedroAVS/core/config"
+	"github.com/Cedro-Finance/CedroAVS/core/tasks"
 	sdkclients "github.com/Layr-Labs/eigensdk-go/chainio/clients"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/eth"
 	"github.com/Layr-Labs/eigensdk-go/crypto/bls"
 	sdkEcdsa "github.com/Layr-Labs/eigensdk-go/crypto/ecdsa"
 	"github.com/Layr-Labs/eigensdk-go/logging"
-	"github.com/Layr-Labs/eigensdk-go/types"
+	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
 )
 
-type AggregatorService struct {
-	logger                logging.Logger
-	ethClient             eth.Client
-	avsReader             *avs.AvsReader
-	BlsAggregationService *blsaggregator.BLSAggregatorService
+type TaskProcessor struct {
+	tasks   map[sdktypes.TaskIndex]tasks.ITaskInfo
+	tasksMu sync.RWMutex
 
-	cfg *config.Config
+	finishedTasks   map[string]*types.FinishedTaskStatus
+	finishedTasksMu sync.RWMutex
 
+	nextTaskIndex   sdktypes.TaskIndex
+	nextTaskIndexMu sync.RWMutex
+
+	//Aggregator service
+
+	logger    logging.Logger
+	ethClient eth.Client
+	avsReader *avs.AvsReader
+
+	blsAggrService *blsaggregator.BLSAggregatorService
+
+	cfg         *config.Config
 	graphClient *graphql.GraphQLClient
 }
 
-func NewAggregatorService(c *config.Config, logger logging.Logger) (*AggregatorService, error) {
+func NewTaskProcessorService(c *config.Config, logger logging.Logger) (*TaskProcessor, error) {
 
 	ethClient, err := eth.NewClient(c.EthConfig.RpcUrl)
 
 	if err != nil {
-		logger.Errorf("Error while creating Eth client", "err", err)
+		logger.Error("Error while creating eth client", "err", err)
 		return nil, err
 	}
 
-	graphClient := graphql.NewGraphQLClient(c.GraphQLUrl, logger)
+	graphClinet := graphql.NewGraphQLClient(c.GraphQLUrl, logger)
 
-	avsReader, err := avs.NewAvsReader(c.AVS, ethClient, logger, graphClient)
+	avsReader, err := avs.NewAvsReader(c.AVS, ethClient, logger, graphClinet)
 
 	if err != nil {
-		logger.Errorf("Error while creating Avs reader", "err", err)
+		logger.Error("error while creating avs reader", "err", err)
+		return nil, err
 	}
 
 	privateKey, err := sdkEcdsa.ReadKey(c.KeyStore.Path, c.KeyStore.Password)
@@ -71,27 +85,79 @@ func NewAggregatorService(c *config.Config, logger logging.Logger) (*AggregatorS
 
 	blsAggregationService := blsaggregator.NewBlsAggregatorService(avsReader, logger)
 
-	return &AggregatorService{
-		logger:                logger,
-		avsReader:             avsReader,
-		ethClient:             clients.EthHttpClient,
-		BlsAggregationService: blsAggregationService,
-		cfg:                   c,
-		graphClient:           graphClient,
+	return &TaskProcessor{
+		tasks:         make(map[uint32]tasks.ITaskInfo),
+		finishedTasks: make(map[string]*types.FinishedTaskStatus),
+
+		logger:         logger,
+		avsReader:      avsReader,
+		ethClient:      clients.EthHttpClient,
+		blsAggrService: blsAggregationService,
+		cfg:            c,
+		graphClient:    graphClinet,
 	}, nil
 
 }
 
-func (agg *AggregatorService) GetResponseChannel() <-chan blsaggregator.BLSAggregationServiceResponse {
-	return agg.BlsAggregationService.GetResponseChannel()
+func (t *TaskProcessor) GetTaskByIndex(taskIndex sdktypes.TaskIndex) interface{} {
+	t.tasksMu.RLock()
+	defer t.tasksMu.RUnlock()
+
+	res := t.tasks[taskIndex]
+
+	return res
+}
+
+func (t *TaskProcessor) NewIndex() sdktypes.TaskIndex {
+	t.nextTaskIndexMu.Lock()
+	defer t.nextTaskIndexMu.Unlock()
+
+	res := t.nextTaskIndex
+	t.nextTaskIndex += 1
+
+	return res
+}
+
+func (d *TaskProcessor) GetTaskByRequestHash(reqHash string) tasks.ITaskInfo {
+
+	d.tasksMu.RLock()
+	defer d.tasksMu.RUnlock()
+
+	for _, task := range d.tasks {
+		hash, err := task.GetHeaderHash()
+
+		if err != nil {
+			return nil
+		}
+
+		if hash.String() == reqHash {
+			return task
+		}
+	}
+
+	return nil
+}
+
+func (t *TaskProcessor) GetFinishedTaskByRequestHash(reqHash string) *types.FinishedTaskStatus {
+	t.finishedTasksMu.RLock()
+	defer t.finishedTasksMu.RUnlock()
+
+	return t.finishedTasks[reqHash]
+}
+
+func (t *TaskProcessor) SetFinishedTask(reqHash string, finished *types.FinishedTaskStatus) {
+	t.finishedTasksMu.Lock()
+	defer t.finishedTasksMu.Unlock()
+
+	t.finishedTasks[reqHash] = finished
 }
 
 type QuorumDetails struct {
-	QuorumNums                 types.QuorumNums
-	QuorumThresholdPercentages types.QuorumThresholdPercentages
+	QuorumNums                 sdktypes.QuorumNums
+	QuorumThresholdPercentages sdktypes.QuorumThresholdPercentages
 }
 
-func (agg *AggregatorService) GetQuorumDetails(ctx context.Context, refBlock uint64) (*QuorumDetails, error) {
+func (agg *TaskProcessor) GetQuorumDetails(ctx context.Context, refBlock uint64) (*QuorumDetails, error) {
 
 	var err error
 
@@ -122,7 +188,26 @@ func (agg *AggregatorService) GetQuorumDetails(ctx context.Context, refBlock uin
 	}, nil
 }
 
-func (agg *AggregatorService) ReceiveAggregatedSignatures(blsAggServiceResp blsaggregator.BLSAggregationServiceResponse) (cedroservicemanager.IBLSSignatureCheckerNonSignerStakesAndSignature, error) {
+func (agg *TaskProcessor) InitializeNewTask(ctx context.Context, taskIndex sdktypes.TaskIndex, task tasks.ITaskInfo, quorumDetails QuorumDetails, refBlock uint64) error {
+
+	agg.tasksMu.Lock()
+	agg.tasks[taskIndex] = task
+	agg.tasksMu.Unlock()
+
+	taskTimeToExpiry := time.Duration(10) * time.Minute
+
+	err := agg.blsAggrService.InitializeNewTask(
+		taskIndex,
+		uint32(refBlock),
+		quorumDetails.QuorumNums,
+		quorumDetails.QuorumThresholdPercentages,
+		taskTimeToExpiry,
+	)
+
+	return err
+}
+
+func (agg *TaskProcessor) ReceiveAggregatedSignatures(blsAggServiceResp blsaggregator.BLSAggregationServiceResponse) (cedroservicemanager.IBLSSignatureCheckerNonSignerStakesAndSignature, error) {
 	// TODO: check if blsAggServiceResp contains an err
 	if blsAggServiceResp.Err != nil {
 		agg.logger.Error("BlsAggregationServiceResponse contains an error", "err", blsAggServiceResp.Err)

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/Cedro-Finance/CedroAVS/api/graphql"
-	"github.com/Cedro-Finance/CedroAVS/core"
+	"github.com/Cedro-Finance/CedroAVS/core/tasks"
 	"github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
 	"github.com/Cedro-Finance/CedroAVS/verifier/common"
 	"github.com/Cedro-Finance/CedroAVS/verifier/opio"
@@ -32,7 +32,7 @@ type BalanceTaskProcessor struct {
 	tasks  map[ethcommon.Address](*OperatorDeviationTask)
 	taskMu sync.RWMutex
 
-	signCh chan *core.SignedDeviationTaskRespRequest
+	signCh chan *tasks.SignedDeviationTaskRespRequest
 	errCh  chan *DeviationError
 
 	agClients map[string]common.IAgentPodClient
@@ -47,7 +47,7 @@ var _ Taskprocessor = (*BalanceTaskProcessor)(nil)
 func NewBalanceTask(opioClient *opio.OperatorIO, agClients map[string]common.IAgentPodClient, logger logging.Logger) *BalanceTaskProcessor {
 	return &BalanceTaskProcessor{
 		tasks:     make(map[ethcommon.Address]*OperatorDeviationTask),
-		signCh:    make(chan *core.SignedDeviationTaskRespRequest, 10),
+		signCh:    make(chan *tasks.SignedDeviationTaskRespRequest, 10),
 		agClients: agClients,
 		logger:    logger,
 		reqCh:     make(chan avs.TaskRequest),
@@ -93,7 +93,7 @@ func (r *BalanceTaskProcessor) GetRequestCh() chan avs.TaskRequest {
 	return r.reqCh
 }
 
-func (r *BalanceTaskProcessor) GetSignatureCh() chan *core.SignedDeviationTaskRespRequest {
+func (r *BalanceTaskProcessor) GetSignatureCh() chan *tasks.SignedDeviationTaskRespRequest {
 	return r.signCh
 }
 
@@ -168,7 +168,7 @@ func (b *BalanceTaskProcessor) processDeviationCheckRequest(ctx context.Context,
 
 	// deviationPercentage := big.NewInt(0)
 
-	reqInfo := &core.BalanceTaskInfo{}
+	reqInfo := &tasks.BalanceTaskInfo{}
 	var err error
 	//Offchain Request
 	if !b.isOffchainTrigger(task.req.ReqId) {
@@ -358,7 +358,7 @@ func CalculateInterest(depositInfo *graphql.DepositInfo, timestamp uint64) *big.
 	return interest
 }
 
-func (b *BalanceTaskProcessor) signBalanceRespnse(balHeader *core.BalanceTaskInfo) {
+func (b *BalanceTaskProcessor) signBalanceRespnse(balHeader *tasks.BalanceTaskInfo) {
 	b.logger.Info("Sending Balance Header", "header", balHeader)
 
 	hash, err := balHeader.GetHeaderHash()
@@ -371,13 +371,13 @@ func (b *BalanceTaskProcessor) signBalanceRespnse(balHeader *core.BalanceTaskInf
 
 	b.logger.Info("Signed the message", signature)
 
-	b.signCh <- &core.SignedDeviationTaskRespRequest{
+	b.signCh <- &tasks.SignedDeviationTaskRespRequest{
 		Balance:      *balHeader,
 		BlsSignature: *signature,
 	}
 }
 
-func (b *BalanceTaskProcessor) sendSignedTaskToAggregator(ctx context.Context, req *core.SignedDeviationTaskRespRequest) {
+func (b *BalanceTaskProcessor) sendSignedTaskToAggregator(ctx context.Context, req *tasks.SignedDeviationTaskRespRequest) {
 	maxRetry := 10
 	retries := 0
 

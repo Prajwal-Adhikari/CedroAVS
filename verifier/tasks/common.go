@@ -10,5 +10,4 @@ import (
 type Taskprocessor interface {
 	Start(ctx context.Context, wg *sync.WaitGroup)
 	GetRequestCh() chan avs.TaskRequest
-	// GetType() string
 }

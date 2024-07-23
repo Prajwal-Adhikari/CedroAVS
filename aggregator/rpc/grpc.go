@@ -7,13 +7,13 @@ import (
 	"sync"
 
 	pb "github.com/Cedro-Finance/CedroAVS/api/grpc"
-	"github.com/Cedro-Finance/CedroAVS/core"
+	"github.com/Cedro-Finance/CedroAVS/core/tasks"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	"google.golang.org/grpc"
 )
 
 type IAggregatorRpcHandler interface {
-	InitOperator(req *core.InitOperatorRequest) (*core.InitOperatorResponse, error)
+	InitOperator(req *tasks.InitOperatorRequest) (*tasks.InitOperatorResponse, error)
 
 	CreateTask(task string, req interface{}) (interface{}, error)
 
@@ -63,7 +63,7 @@ func (g *GRpcHandler) Start(ctx context.Context, addr string) {
 // Send Init operator to aggregator from operator, will check if the config is matching
 func (s *GRpcHandler) InitOperator(ctx context.Context, req *pb.InitOperatorRequest) (*pb.InitOperatorResponse, error) {
 
-	reqs, err := core.NewInitOperatorRequest(req)
+	reqs, err := tasks.NewInitOperatorRequest(req)
 
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func (s *GRpcHandler) InitOperator(ctx context.Context, req *pb.InitOperatorRequ
 
 // Create a alert task
 func (s *GRpcHandler) CreateDeviationTask(ctx context.Context, req *pb.CreateDeviationTaskRequest) (*pb.CreateDeviationTaskResponse, error) {
-	msg, err := core.NewCreateDeviationTaskRequest(req)
+	msg, err := tasks.NewCreateDeviationTaskRequest(req)
 	if err != nil {
 		return nil, fmt.Errorf("createTask message convert error: %v", err.Error())
 	}
@@ -89,14 +89,14 @@ func (s *GRpcHandler) CreateDeviationTask(ctx context.Context, req *pb.CreateDev
 		return nil, fmt.Errorf("createTask handler error: %v", err.Error())
 	}
 
-	response := resp.(*core.CreateDeviationTaskResponse)
+	response := resp.(*tasks.CreateDeviationTaskResponse)
 
 	return response.ToPbType(), nil
 }
 
 // Create a alert task
 func (s *GRpcHandler) CreateAgentSlashTask(ctx context.Context, req *pb.CreateAgentSlashTaskRequest) (*pb.CreateAgentSlashTaskResponse, error) {
-	msg, err := core.NewCreateAgentSlashTaskRequest(req)
+	msg, err := tasks.NewCreateAgentSlashTaskRequest(req)
 	if err != nil {
 		return nil, fmt.Errorf("createTask message convert error: %v", err.Error())
 	}
@@ -106,14 +106,14 @@ func (s *GRpcHandler) CreateAgentSlashTask(ctx context.Context, req *pb.CreateAg
 		return nil, fmt.Errorf("createTask handler error: %v", err.Error())
 	}
 
-	response := resp.(*core.CreateAgentSlashTaskResponse)
+	response := resp.(*tasks.CreateAgentSlashTaskResponse)
 
 	return response.ToPbType(), nil
 }
 
 // Send signed task for alert
 func (s *GRpcHandler) ProcessSignedDeviationTaskResponse(ctx context.Context, req *pb.SignedDeviationTaskRespRequest) (*pb.SignedTaskRespResponse, error) {
-	msg, err := core.NewSignedDeviationTaskRespRequest(req)
+	msg, err := tasks.NewSignedDeviationTaskRespRequest(req)
 	if err != nil {
 		return nil, fmt.Errorf("processSignedTaskResponse message convert error: %v", err.Error())
 	}
@@ -123,13 +123,13 @@ func (s *GRpcHandler) ProcessSignedDeviationTaskResponse(ctx context.Context, re
 		return nil, fmt.Errorf("processSignedTaskResponse handler error: %v", err.Error())
 	}
 
-	response := resp.(*core.SignedTaskRespResponse)
+	response := resp.(*tasks.SignedTaskRespResponse)
 
 	return response.ToPbType(), nil
 }
 
 func (s *GRpcHandler) ProcessSignedAgentSlashTaskResponse(ctx context.Context, req *pb.SignedAgentSlashTaskRespRequest) (*pb.SignedTaskRespResponse, error) {
-	msg, err := core.NewSignedAgentSlashTaskRespRequest(req)
+	msg, err := tasks.NewSignedAgentSlashTaskRespRequest(req)
 	if err != nil {
 		return nil, fmt.Errorf("processSignedTaskResponse message convert error: %v", err.Error())
 	}
@@ -139,7 +139,7 @@ func (s *GRpcHandler) ProcessSignedAgentSlashTaskResponse(ctx context.Context, r
 		return nil, fmt.Errorf("processSignedTaskResponse handler error: %v", err.Error())
 	}
 
-	response := resp.(*core.SignedTaskRespResponse)
+	response := resp.(*tasks.SignedTaskRespResponse)
 
 	return response.ToPbType(), nil
 }

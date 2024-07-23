@@ -4,49 +4,37 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"sync"
-	"time"
 
 	blsaggregator "github.com/Cedro-Finance/CedroAVS/aggregator/bls"
 	"github.com/Cedro-Finance/CedroAVS/aggregator/types"
-	"github.com/Cedro-Finance/CedroAVS/core"
 	avs "github.com/Cedro-Finance/CedroAVS/core/avsClient"
 	"github.com/Cedro-Finance/CedroAVS/core/config"
+	"github.com/Cedro-Finance/CedroAVS/core/tasks"
 	"github.com/Layr-Labs/eigensdk-go/logging"
-	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 type DeviationProcess struct {
-	tasks   map[sdktypes.TaskIndex]*core.BalanceTaskInfo
-	tasksMu sync.RWMutex
-
-	finishedTasks   map[string]*types.FinishedTaskStatus
-	finishedTasksMu sync.RWMutex
-
-	nextTaskIndex   sdktypes.TaskIndex
-	nextTaskIndexMu sync.RWMutex
-
-	service *AggregatorService
-	logger  logging.Logger
+	taskProcessor *TaskProcessor
+	logger        logging.Logger
 
 	avsWriter *avs.AvsWriter
 }
 
 func NewDeviationProcessor(c *config.Config, logger logging.Logger, avsWriter *avs.AvsWriter) (*DeviationProcess, error) {
-
-	aggService, err := NewAggregatorService(c, logger)
+	aggService, err := NewTaskProcessorService(c, logger)
 
 	if err != nil {
 		panic(err)
 	}
 
 	return &DeviationProcess{
-		tasks:         make(map[sdktypes.TaskIndex]*core.BalanceTaskInfo),
-		finishedTasks: make(map[string]*types.FinishedTaskStatus),
-		service:       aggService,
-		logger:        logger,
-		avsWriter:     avsWriter,
+		// tasks:         make(map[sdktypes.TaskIndex]*tasks.BalanceTaskInfo),
+		// finishedTasks: make(map[string]*types.FinishedTaskStatus),
+		taskProcessor: aggService,
+
+		logger:    logger,
+		avsWriter: avsWriter,
 	}, nil
 }
 
@@ -55,70 +43,13 @@ func (d *DeviationProcess) Start(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case res := <-d.service.GetResponseChannel():
+		case res := <-d.taskProcessor.blsAggrService.GetResponseChannel():
 			d.SendAggregatedResponseToContract(res)
 		}
 	}
 }
 
-func (d *DeviationProcess) GetResponseChannel() <-chan blsaggregator.BLSAggregationServiceResponse {
-	return d.service.GetResponseChannel()
-}
-
-func (d *DeviationProcess) GetTaskByIndex(taskIndex sdktypes.TaskIndex) *core.BalanceTaskInfo {
-
-	d.tasksMu.RLock()
-	defer d.tasksMu.RUnlock()
-
-	res := d.tasks[taskIndex]
-
-	return res
-}
-
-func (d *DeviationProcess) NewIndex() sdktypes.TaskIndex {
-	d.nextTaskIndexMu.Lock()
-	defer d.nextTaskIndexMu.Unlock()
-
-	res := d.nextTaskIndex
-	d.nextTaskIndex += 1
-
-	return res
-}
-
-func (d *DeviationProcess) GetTaskByRequestHash(reqHash string) *core.BalanceTaskInfo {
-	d.tasksMu.RLock()
-	defer d.tasksMu.RUnlock()
-
-	for _, task := range d.tasks {
-		hash, err := core.GetRequestHash(task.ReqId, task.AgentAddress)
-
-		if err != nil {
-			return nil
-		}
-
-		if hash == reqHash {
-			return task
-		}
-	}
-
-	return nil
-}
-
-func (d *DeviationProcess) GetFinishedTaskByRequestHash(reqHash string) *types.FinishedTaskStatus {
-	d.finishedTasksMu.RLock()
-	defer d.finishedTasksMu.Unlock()
-
-	return d.finishedTasks[reqHash]
-}
-
-func (d *DeviationProcess) SetFinishedTask(reqHash string, finished *types.FinishedTaskStatus) {
-	d.finishedTasksMu.Lock()
-	defer d.finishedTasksMu.Unlock()
-
-	d.finishedTasks[reqHash] = finished
-}
-
-func (d *DeviationProcess) CreateTask(req *core.CreateDeviationTaskRequest) (*core.CreateDeviationTaskResponse, error) {
+func (d *DeviationProcess) CreateTask(req *tasks.CreateDeviationTaskRequest) (*tasks.CreateDeviationTaskResponse, error) {
 	d.logger.Info("Received Create Task", "reqId", req.ReqId, "Agent", req.AgentAddress)
 
 	reqHash, err := req.GetHash()
@@ -128,7 +59,7 @@ func (d *DeviationProcess) CreateTask(req *core.CreateDeviationTaskRequest) (*co
 		return nil, err
 	}
 
-	finishedTask := d.GetFinishedTaskByRequestHash(reqHash)
+	finishedTask := d.taskProcessor.GetFinishedTaskByRequestHash(reqHash)
 
 	if finishedTask != nil {
 		d.logger.Error("Task already finished", "reqId", req.ReqId.String(), "agent", req.AgentAddress.Hex())
@@ -136,24 +67,26 @@ func (d *DeviationProcess) CreateTask(req *core.CreateDeviationTaskRequest) (*co
 		return nil, err
 	}
 
-	task := d.GetTaskByRequestHash(reqHash)
+	task := d.taskProcessor.GetTaskByRequestHash(reqHash)
+
+	taskres := task.(*tasks.BalanceTaskInfo)
 
 	if task == nil {
-		taskIndex := d.NewIndex()
-		task, err = d.sendNewTask(reqHash, taskIndex, req.ReferenceBlockNumber, req.ReqId, req.AgentAddress)
+		taskIndex := d.taskProcessor.NewIndex()
+		task, err = d.sendNewTask(taskIndex, req.ReferenceBlockNumber, req.ReqId, req.AgentAddress)
 
 		if err != nil {
 			d.logger.Error("send new task failed", "err", err)
 			return nil, err
 		}
 	}
-	return &core.CreateDeviationTaskResponse{Info: *task}, nil
+	return &tasks.CreateDeviationTaskResponse{Info: *taskres}, nil
 }
 
-func (d *DeviationProcess) ProcessSignedTaskResponse(req *core.SignedDeviationTaskRespRequest) (*core.SignedTaskRespResponse, error) {
+func (d *DeviationProcess) ProcessSignedTaskResponse(req *tasks.SignedDeviationTaskRespRequest) (*tasks.SignedTaskRespResponse, error) {
 	d.logger.Info("New Signature Received from operator", "signature", req.BlsSignature.Serialize(), "operatorId", req.OperatorId, "balance", req.Balance)
 
-	reqHash, err := core.GetRequestHash(req.Balance.ReqId, req.Balance.AgentAddress)
+	reqHash, err := tasks.GetRequestHash(req.Balance.ReqId, req.Balance.AgentAddress)
 
 	if err != nil {
 		d.logger.Errorf("Error while creating request hash", "err", fmt.Sprintf("%#f", err))
@@ -163,9 +96,9 @@ func (d *DeviationProcess) ProcessSignedTaskResponse(req *core.SignedDeviationTa
 
 	taskIndex := req.Balance.TaskIndex
 
-	d.tasksMu.Lock()
-	d.tasks[taskIndex] = &req.Balance
-	d.tasksMu.Unlock()
+	d.taskProcessor.tasksMu.Lock()
+	d.taskProcessor.tasks[taskIndex] = &req.Balance
+	d.taskProcessor.tasksMu.Unlock()
 
 	taskResponseDigest, err := req.Balance.GetHeaderHash()
 
@@ -174,14 +107,14 @@ func (d *DeviationProcess) ProcessSignedTaskResponse(req *core.SignedDeviationTa
 		return nil, err
 	}
 
-	task := d.GetTaskByRequestHash(reqHash)
+	task := d.taskProcessor.GetTaskByRequestHash(reqHash)
 
 	if task == nil {
 		d.logger.Errorf("Task doesn't exist for given request hash", "err", fmt.Sprintf("%#f", err))
 		return nil, err
 	}
 
-	err = d.service.BlsAggregationService.ProcessNewSignature(
+	err = d.taskProcessor.blsAggrService.ProcessNewSignature(
 		context.Background(), taskIndex, taskResponseDigest.UnderlyingType(),
 		&req.BlsSignature, req.OperatorId,
 	)
@@ -190,19 +123,19 @@ func (d *DeviationProcess) ProcessSignedTaskResponse(req *core.SignedDeviationTa
 		d.logger.Error("ProcessNewSignature error", "err", err)
 	}
 
-	return &core.SignedTaskRespResponse{}, nil
+	return &tasks.SignedTaskRespResponse{}, nil
 }
 
-func (d *DeviationProcess) sendNewTask(reqHash string, taskIndex uint32, refBlock uint64, reqId *big.Int, agentAddr common.Address) (*core.BalanceTaskInfo, error) {
+func (d *DeviationProcess) sendNewTask(taskIndex uint32, refBlock uint64, reqId *big.Int, agentAddr common.Address) (*tasks.BalanceTaskInfo, error) {
 
-	quorumDetails, err := d.service.GetQuorumDetails(context.Background(), refBlock)
+	quorumDetails, err := d.taskProcessor.GetQuorumDetails(context.Background(), refBlock)
 
 	if err != nil {
 		d.logger.Error("error while getting quorum details")
 		return nil, err
 	}
 
-	newTask := &core.BalanceTaskInfo{
+	newTask := &tasks.BalanceTaskInfo{
 		QuorumNumbers:              quorumDetails.QuorumNums,
 		QuorumThresholdPercentages: quorumDetails.QuorumThresholdPercentages,
 		TaskIndex:                  taskIndex,
@@ -213,21 +146,8 @@ func (d *DeviationProcess) sendNewTask(reqHash string, taskIndex uint32, refBloc
 		AgentAddress:               agentAddr,
 	}
 
-	d.tasksMu.Lock()
-	d.tasks[taskIndex] = newTask
-	d.tasksMu.Unlock()
+	err = d.taskProcessor.InitializeNewTask(context.Background(), taskIndex, newTask, *quorumDetails, refBlock)
 
-	taskTimeToExpiry := time.Duration(10) * time.Minute
-
-	d.logger.Infof("InitializeNewTask %v %v", taskIndex, taskTimeToExpiry)
-
-	err = d.service.BlsAggregationService.InitializeNewTask(
-		taskIndex,
-		uint32(newTask.ReferenceBlockNumber),
-		newTask.QuorumNumbers,
-		newTask.QuorumThresholdPercentages,
-		taskTimeToExpiry,
-	)
 	if err != nil {
 		d.logger.Error("InitializeNewTask failed", "err", err)
 		return nil, err
@@ -238,16 +158,18 @@ func (d *DeviationProcess) sendNewTask(reqHash string, taskIndex uint32, refBloc
 
 func (d *DeviationProcess) SendAggregatedResponseToContract(blsResp blsaggregator.BLSAggregationServiceResponse) {
 
-	nonSignerStakes, err := d.service.ReceiveAggregatedSignatures(blsResp)
+	nonSignerStakes, err := d.taskProcessor.ReceiveAggregatedSignatures(blsResp)
 
 	if err != nil {
 		d.logger.Error("error while building non signer stake signatures")
 		return
 	}
 
-	task := d.GetTaskByIndex(blsResp.TaskIndex)
+	task := d.taskProcessor.GetTaskByIndex(blsResp.TaskIndex)
 
-	res, err := d.avsWriter.SendConfirmationBatch(context.Background(), task, nonSignerStakes)
+	taskres := task.(*tasks.BalanceTaskInfo)
+
+	res, err := d.avsWriter.SendConfirmationBatch(context.Background(), taskres, nonSignerStakes)
 
 	if err != nil {
 		d.logger.Error("aggregator failed to respond to task", "err", err)
@@ -255,14 +177,14 @@ func (d *DeviationProcess) SendAggregatedResponseToContract(blsResp blsaggregato
 	}
 
 	if res != nil {
-		reqHash, err := core.GetRequestHash(task.ReqId, task.AgentAddress)
+		reqHash, err := tasks.GetRequestHash(taskres.ReqId, taskres.AgentAddress)
 
 		if err != nil {
 			d.logger.Error("agg failed to find req hash")
 		}
 
-		d.SetFinishedTask(reqHash, &types.FinishedTaskStatus{
-			Message:          task,
+		d.taskProcessor.SetFinishedTask(reqHash, &types.FinishedTaskStatus{
+			Message:          taskres,
 			TxHash:           res.TxHash,
 			BlockHash:        res.BlockHash,
 			BlockNumber:      res.BlockNumber,

@@ -63,43 +63,6 @@ type BLSAggregationServiceResponse struct {
 	NonSignerStakeIndices        [][]uint32
 }
 
-// SignatureAggregation contains the results of aggregating signatures from a set of operators across multiple quorums
-type SignatureAggregation struct {
-	// NonSigners contains the public keys of the operators that did not sign the message
-	NonSigners []*bls.G1Point
-	// QuorumAggPubKeys contains the aggregated public keys for all of the operators each quorum,
-	// Including those that did not sign
-	QuorumAggPubKeys map[types.QuorumNum]*bls.G1Point
-	// AggPubKey is the aggregated public key for all of the operators that signed the message,
-	// further aggregated across the quorums; operators signing for multiple quorums will be included in
-	// the aggregation multiple times
-	AggPubKey *bls.G2Point
-	// AggSignature is the aggregated signature for all of the operators that signed the message, mirroring the
-	// AggPubKey.
-	AggSignature *bls.Signature
-	// QuorumResults contains the quorum ID and the amount signed for each quorum
-	QuorumResults map[types.QuorumNum]*types.QuorumAvsState
-}
-
-// QuorumAttestation contains the results of aggregating signatures from a set of operators by quorums
-// It also returns map of all signers across all quorums
-type QuorumAttestation struct {
-	// QuorumAggPubKeys contains the aggregated public keys for all of the operators each quorum,
-	// including those that did not sign
-	QuorumAggPubKey map[types.QuorumNum]*bls.G1Point
-	// SignersAggPubKey is the aggregated public key for all of the operators that signed the message by each quorum
-	SignersAggPubKey map[types.QuorumNum]*bls.G2Point
-	// AggSignature is the aggregated signature for all of the operators that signed the message for each quorum, mirroring the
-	// SignersAggPubKey.
-	AggSignature map[types.QuorumNum]*bls.Signature
-	// QuorumResults contains the quorum ID and the amount signed for each quorum
-	QuorumResults map[types.QuorumNum]*types.QuorumAvsState
-	// SignerMap contains the operator IDs that signed the message
-	SignerMap map[types.QuorumNum]bool
-
-	TotalStakePerQuorum map[types.QuorumNum]*big.Int
-}
-
 
 
 type BLSAggregatorService struct {

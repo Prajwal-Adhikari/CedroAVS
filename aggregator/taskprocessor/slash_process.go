@@ -4,30 +4,18 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"sync"
-	"time"
 
 	blsaggregator "github.com/Cedro-Finance/CedroAVS/aggregator/bls"
 	"github.com/Cedro-Finance/CedroAVS/aggregator/types"
-	"github.com/Cedro-Finance/CedroAVS/core"
 	avs "github.com/Cedro-Finance/CedroAVS/core/avsClient"
 	"github.com/Cedro-Finance/CedroAVS/core/config"
+	"github.com/Cedro-Finance/CedroAVS/core/tasks"
 	"github.com/Layr-Labs/eigensdk-go/logging"
-	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 type SlashProcess struct {
-	tasks   map[sdktypes.TaskIndex]*core.AgentSlashTaskInfo
-	tasksMu sync.RWMutex
-
-	finishedTasks   map[string]*types.FinishedSlashTaskStatus
-	finishedTasksMu sync.RWMutex
-
-	nextTaskIndex   sdktypes.TaskIndex
-	nextTaskIndexMu sync.RWMutex
-
-	service *AggregatorService
+	taskProcessor *TaskProcessor
 
 	logger logging.Logger
 
@@ -36,19 +24,16 @@ type SlashProcess struct {
 
 func NewSlashProcessor(c *config.Config, logger logging.Logger, avsWriter *avs.AvsWriter) (*SlashProcess, error) {
 
-	aggService, err := NewAggregatorService(c, logger)
+	aggService, err := NewTaskProcessorService(c, logger)
 
 	if err != nil {
 		panic(err)
 	}
 
 	return &SlashProcess{
-		tasks:         make(map[sdktypes.TaskIndex]*core.AgentSlashTaskInfo),
-		finishedTasks: make(map[string]*types.FinishedSlashTaskStatus),
-		service:       aggService,
+		taskProcessor: aggService,
 		logger:        logger,
 		avsWriter:     avsWriter,
-		nextTaskIndex: 0,
 	}, nil
 }
 
@@ -57,67 +42,13 @@ func (d *SlashProcess) Start(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-		case res := <-d.service.GetResponseChannel():
+		case res := <-d.taskProcessor.blsAggrService.GetResponseChannel():
 			d.SendAggregatedResponseToContract(res)
 		}
 	}
 }
 
-
-func (d *SlashProcess) GetTaskByIndex(taskIndex sdktypes.TaskIndex) *core.AgentSlashTaskInfo {
-
-	d.tasksMu.RLock()
-	defer d.tasksMu.RUnlock()
-
-	res := d.tasks[taskIndex]
-
-	return res
-}
-
-func (d *SlashProcess) NewIndex() sdktypes.TaskIndex {
-	d.nextTaskIndexMu.Lock()
-	defer d.nextTaskIndexMu.Unlock()
-
-	res := d.nextTaskIndex
-	d.nextTaskIndex += 1
-
-	return res
-}
-
-func (d *SlashProcess) GetTaskByRequestHash(reqHash string) *core.AgentSlashTaskInfo {
-	d.tasksMu.RLock()
-	defer d.tasksMu.RUnlock()
-
-	for _, task := range d.tasks {
-		hash, err := core.GetRequestHash(task.TxnId, task.AgentAddress)
-
-		if err != nil {
-			return nil
-		}
-
-		if hash == reqHash {
-			return task
-		}
-	}
-
-	return nil
-}
-
-func (d *SlashProcess) GetFinishedTaskByRequestHash(hash string) *types.FinishedSlashTaskStatus {
-	d.finishedTasksMu.RLock()
-	defer d.finishedTasksMu.RUnlock()
-
-	return d.finishedTasks[hash]
-}
-
-func (d *SlashProcess) SetFinishedTask(reqHash string, finished *types.FinishedSlashTaskStatus) {
-	d.finishedTasksMu.Lock()
-	defer d.finishedTasksMu.Unlock()
-
-	d.finishedTasks[reqHash] = finished
-}
-
-func (d *SlashProcess) CreateTask(req *core.CreateAgentSlashTaskRequest) (*core.CreateAgentSlashTaskResponse, error) {
+func (d *SlashProcess) CreateTask(req *tasks.CreateAgentSlashTaskRequest) (*tasks.CreateAgentSlashTaskResponse, error) {
 	// d.tasksMu.Lock()
 	// defer d.tasksMu.Unlock()
 
@@ -130,7 +61,7 @@ func (d *SlashProcess) CreateTask(req *core.CreateAgentSlashTaskRequest) (*core.
 		return nil, err
 	}
 
-	finishedTask := d.GetFinishedTaskByRequestHash(reqHash)
+	finishedTask := d.taskProcessor.GetFinishedTaskByRequestHash(reqHash)
 
 	if finishedTask != nil {
 		d.logger.Error("Task already finished", "reqId", req.TxnId.String(), "agent", req.AgentAddress.Hex())
@@ -138,24 +69,26 @@ func (d *SlashProcess) CreateTask(req *core.CreateAgentSlashTaskRequest) (*core.
 		return nil, err
 	}
 
-	task := d.GetTaskByRequestHash(reqHash)
+	task := d.taskProcessor.GetTaskByRequestHash(reqHash)
+
+	taskres := task.(*tasks.AgentSlashTaskInfo)
 
 	if task == nil {
-		taskIndex := d.NewIndex()
-		task, err = d.sendNewTask(reqHash, taskIndex, req.ReferenceBlockNumber, req.TxnId, req.AgentAddress)
+		taskIndex := d.taskProcessor.NewIndex()
+		task, err = d.sendNewTask(taskIndex, req.ReferenceBlockNumber, req.TxnId, req.AgentAddress)
 
 		if err != nil {
 			d.logger.Error("send new task failed", "err", err)
 			return nil, err
 		}
 	}
-	return &core.CreateAgentSlashTaskResponse{Info: *task}, nil
+	return &tasks.CreateAgentSlashTaskResponse{Info: *taskres}, nil
 }
 
-func (d *SlashProcess) ProcessSignedTaskResponse(req *core.SignedAgentSlashTaskRespRequest) (*core.SignedTaskRespResponse, error) {
+func (d *SlashProcess) ProcessSignedTaskResponse(req *tasks.SignedAgentSlashTaskRespRequest) (*tasks.SignedTaskRespResponse, error) {
 	d.logger.Info("New Signature Received from operator", "signature", req.BlsSignature.Serialize(), "operatorId", req.OperatorId, "balance", req.Balance)
 
-	reqHash, err := core.GetRequestHash(req.Balance.TxnId, req.Balance.AgentAddress)
+	reqHash, err := tasks.GetRequestHash(req.Balance.TxnId, req.Balance.AgentAddress)
 
 	if err != nil {
 		d.logger.Errorf("Error while creating request hash", "err", fmt.Sprintf("%#f", err))
@@ -165,9 +98,9 @@ func (d *SlashProcess) ProcessSignedTaskResponse(req *core.SignedAgentSlashTaskR
 
 	taskIndex := req.Balance.TaskIndex
 
-	d.tasksMu.Lock()
-	d.tasks[taskIndex] = &req.Balance
-	d.tasksMu.Unlock()
+	d.taskProcessor.tasksMu.Lock()
+	d.taskProcessor.tasks[taskIndex] = &req.Balance
+	d.taskProcessor.tasksMu.Unlock()
 
 	taskResponseDigest, err := req.Balance.GetHeaderHash()
 
@@ -176,14 +109,14 @@ func (d *SlashProcess) ProcessSignedTaskResponse(req *core.SignedAgentSlashTaskR
 		return nil, err
 	}
 
-	task := d.GetTaskByRequestHash(reqHash)
+	task := d.taskProcessor.GetTaskByRequestHash(reqHash)
 
 	if task == nil {
 		d.logger.Errorf("Task doesn't exist for given request hash", "err", fmt.Sprintf("%#f", err))
 		return nil, err
 	}
 
-	err = d.service.BlsAggregationService.ProcessNewSignature(
+	err = d.taskProcessor.blsAggrService.ProcessNewSignature(
 		context.Background(), taskIndex, taskResponseDigest.UnderlyingType(),
 		&req.BlsSignature, req.OperatorId,
 	)
@@ -192,19 +125,19 @@ func (d *SlashProcess) ProcessSignedTaskResponse(req *core.SignedAgentSlashTaskR
 		d.logger.Error("ProcessNewSignature error", "err", err)
 	}
 
-	return &core.SignedTaskRespResponse{}, nil
+	return &tasks.SignedTaskRespResponse{}, nil
 }
 
-func (d *SlashProcess) sendNewTask(reqHash string, taskIndex uint32, refBlock uint64, txnId *big.Int, agentAddr common.Address) (*core.AgentSlashTaskInfo, error) {
+func (d *SlashProcess) sendNewTask(taskIndex uint32, refBlock uint64, txnId *big.Int, agentAddr common.Address) (*tasks.AgentSlashTaskInfo, error) {
 
-	quorumDetails, err := d.service.GetQuorumDetails(context.Background(), refBlock)
+	quorumDetails, err := d.taskProcessor.GetQuorumDetails(context.Background(), refBlock)
 
 	if err != nil {
 		d.logger.Error("error while getting quorum details")
 		return nil, err
 	}
 
-	newTask := &core.AgentSlashTaskInfo{
+	newTask := &tasks.AgentSlashTaskInfo{
 		QuorumNumbers:              quorumDetails.QuorumNums,
 		QuorumThresholdPercentages: quorumDetails.QuorumThresholdPercentages,
 		TaskIndex:                  taskIndex,
@@ -214,21 +147,8 @@ func (d *SlashProcess) sendNewTask(reqHash string, taskIndex uint32, refBlock ui
 		TxnId:                      txnId,
 	}
 
-	d.tasksMu.Lock()
-	d.tasks[taskIndex] = newTask
-	d.tasksMu.Unlock()
+	err = d.taskProcessor.InitializeNewTask(context.Background(), taskIndex, newTask, *quorumDetails, refBlock)
 
-	taskTimeToExpiry := time.Duration(10) * time.Minute
-
-	d.logger.Infof("InitializeNewTask %v %v", taskIndex, taskTimeToExpiry)
-
-	err = d.service.BlsAggregationService.InitializeNewTask(
-		taskIndex,
-		uint32(newTask.ReferenceBlockNumber),
-		newTask.QuorumNumbers,
-		newTask.QuorumThresholdPercentages,
-		taskTimeToExpiry,
-	)
 	if err != nil {
 		d.logger.Error("InitializeNewTask failed", "err", err)
 		return nil, err
@@ -239,16 +159,18 @@ func (d *SlashProcess) sendNewTask(reqHash string, taskIndex uint32, refBlock ui
 
 func (d *SlashProcess) SendAggregatedResponseToContract(blsResp blsaggregator.BLSAggregationServiceResponse) {
 
-	nonSignerStakes, err := d.service.ReceiveAggregatedSignatures(blsResp)
+	nonSignerStakes, err := d.taskProcessor.ReceiveAggregatedSignatures(blsResp)
 
 	if err != nil {
 		d.logger.Error("error while building non signer stake signatures")
 		return
 	}
 
-	task := d.GetTaskByIndex(blsResp.TaskIndex)
+	task := d.taskProcessor.GetTaskByIndex(blsResp.TaskIndex)
 
-	res, err := d.avsWriter.SendConfirmationAgentSlash(context.Background(), task, nonSignerStakes)
+	taskres := task.(*tasks.AgentSlashTaskInfo)
+
+	res, err := d.avsWriter.SendConfirmationAgentSlash(context.Background(), taskres, nonSignerStakes)
 
 	if err != nil {
 		d.logger.Error("aggregator failed to respond to task", "err", err)
@@ -256,14 +178,14 @@ func (d *SlashProcess) SendAggregatedResponseToContract(blsResp blsaggregator.BL
 	}
 
 	if res != nil {
-		reqHash, err := core.GetRequestHash(big.NewInt(0), task.AgentAddress)
+		reqHash, err := tasks.GetRequestHash(big.NewInt(0), taskres.AgentAddress)
 
 		if err != nil {
 			d.logger.Error("agg failed to find req hash")
 		}
 
-		d.SetFinishedTask(reqHash, &types.FinishedSlashTaskStatus{
-			Message:          task,
+		d.taskProcessor.SetFinishedTask(reqHash, &types.FinishedTaskStatus{
+			Message:          taskres,
 			TxHash:           res.TxHash,
 			BlockHash:        res.BlockHash,
 			BlockNumber:      res.BlockNumber,

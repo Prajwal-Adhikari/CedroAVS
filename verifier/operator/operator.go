@@ -202,38 +202,7 @@ func Start(ctx context.Context, cfg *config.Config) {
 	op.logger.Infof("Init operator to aggregator succeed")
 
 	//Listen Ethereum Agent manager event
-
 	for _, client := range op.chainAgents {
-
-		// deviationReqCh := make(chan *avs.DeviationRequest)
-		// slashReqCh := make(chan *avs.AgentSlashRequest)
-
-		// go func() {
-		// 	for req := range op.deviateProcessor.GetRequestCh() {
-		// 		dr, ok := req.(*avs.DeviationRequest)
-
-		// 		if !ok {
-		// 			continue
-		// 		}
-
-		// 		deviationReqCh <- dr
-
-		// 	}
-		// }()
-
-		// go func() {
-		// 	for req := range op.slashProcessor.GetRequestCh() {
-		// 		dr, ok := req.(*avs.AgentSlashRequest)
-
-		// 		if !ok {
-		// 			continue
-		// 		}
-
-		// 		slashReqCh <- dr
-
-		// 	}
-		// }()
-
 		go client.PollEvents(ctx, op.deviateProcessor.GetRequestCh(), op.slashProcessor.GetRequestCh())
 	}
 

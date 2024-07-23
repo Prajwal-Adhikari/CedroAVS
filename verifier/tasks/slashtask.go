@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/Cedro-Finance/CedroAVS/core"
+	"github.com/Cedro-Finance/CedroAVS/core/tasks"
 	"github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
 	"github.com/Cedro-Finance/CedroAVS/verifier/opio"
 	"github.com/Layr-Labs/eigensdk-go/logging"
@@ -23,7 +23,7 @@ type SlashTaskProcessor struct {
 
 	logger logging.Logger
 
-	signCh chan *core.SignedAgentSlashTaskRespRequest
+	signCh chan *tasks.SignedAgentSlashTaskRespRequest
 
 	reqCh chan avs.TaskRequest
 
@@ -35,7 +35,7 @@ var _ Taskprocessor = (*SlashTaskProcessor)(nil)
 func NewSlashTask(opio *opio.OperatorIO, logger logging.Logger) *SlashTaskProcessor {
 	return &SlashTaskProcessor{
 		tasks:  make(map[*big.Int]*OperatorAgentSlashTask),
-		signCh: make(chan *core.SignedAgentSlashTaskRespRequest, 10),
+		signCh: make(chan *tasks.SignedAgentSlashTaskRespRequest, 10),
 		opio:   opio,
 		logger: logger,
 		reqCh:  make(chan avs.TaskRequest),
@@ -118,11 +118,11 @@ func (r *SlashTaskProcessor) GetRequestCh() chan avs.TaskRequest {
 	return r.reqCh
 }
 
-func (r *SlashTaskProcessor) GetSignatureCh() chan *core.SignedAgentSlashTaskRespRequest {
+func (r *SlashTaskProcessor) GetSignatureCh() chan *tasks.SignedAgentSlashTaskRespRequest {
 	return r.signCh
 }
 
-func (s *SlashTaskProcessor) signSlashResponse(agentHeader *core.AgentSlashTaskInfo) {
+func (s *SlashTaskProcessor) signSlashResponse(agentHeader *tasks.AgentSlashTaskInfo) {
 	s.logger.Info("Sending Agent Slash", "header", agentHeader)
 
 	hash, err := agentHeader.GetHeaderHash()
@@ -135,13 +135,13 @@ func (s *SlashTaskProcessor) signSlashResponse(agentHeader *core.AgentSlashTaskI
 
 	s.logger.Info("Signed the message", "sign", signature)
 
-	s.signCh <- &core.SignedAgentSlashTaskRespRequest{
+	s.signCh <- &tasks.SignedAgentSlashTaskRespRequest{
 		Balance:      *agentHeader,
 		BlsSignature: *signature,
 	}
 }
 
-func (s *SlashTaskProcessor) sendSignedTaskToAggregator(req *core.SignedAgentSlashTaskRespRequest) {
+func (s *SlashTaskProcessor) sendSignedTaskToAggregator(req *tasks.SignedAgentSlashTaskRespRequest) {
 	maxRetry := 10
 	retries := 0
 

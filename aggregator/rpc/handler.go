@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Cedro-Finance/CedroAVS/aggregator/taskprocessor"
-	"github.com/Cedro-Finance/CedroAVS/core"
+	"github.com/Cedro-Finance/CedroAVS/core/tasks"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 )
 
@@ -23,8 +23,8 @@ func NewAggregatorRpcHandler(logger logging.Logger, deviator *taskprocessor.Devi
 	}, nil
 }
 
-func (ag *AggregatorRpcHandler) InitOperator(req *core.InitOperatorRequest) (*core.InitOperatorResponse, error) {
-	reply := &core.InitOperatorResponse{
+func (ag *AggregatorRpcHandler) InitOperator(req *tasks.InitOperatorRequest) (*tasks.InitOperatorResponse, error) {
+	reply := &tasks.InitOperatorResponse{
 		Ok: false,
 	}
 
@@ -40,13 +40,13 @@ func (ag *AggregatorRpcHandler) InitOperator(req *core.InitOperatorRequest) (*co
 func (ag *AggregatorRpcHandler) CreateTask(task string, req interface{}) (interface{}, error) {
 	switch task {
 	case "deviation":
-		devreq := req.(*core.CreateDeviationTaskRequest)
+		devreq := req.(*tasks.CreateDeviationTaskRequest)
 		task, err := ag.deviator.CreateTask(devreq)
 
 		return task, err
 
 	case "agentslash":
-		sreq := req.(*core.CreateAgentSlashTaskRequest)
+		sreq := req.(*tasks.CreateAgentSlashTaskRequest)
 		task, err := ag.slasher.CreateTask(sreq)
 
 		return task, err
@@ -59,13 +59,13 @@ func (ag *AggregatorRpcHandler) CreateTask(task string, req interface{}) (interf
 func (ag *AggregatorRpcHandler) ProcessSignedTask(task string, signed interface{}) (interface{}, error) {
 	switch task {
 	case "deviation":
-		devsign := signed.(*core.SignedDeviationTaskRespRequest)
+		devsign := signed.(*tasks.SignedDeviationTaskRespRequest)
 		resp, err := ag.deviator.ProcessSignedTaskResponse(devsign)
 
 		return resp, err
 
 	case "agentslash":
-		ssign := signed.(*core.SignedAgentSlashTaskRespRequest)
+		ssign := signed.(*tasks.SignedAgentSlashTaskRespRequest)
 		resp, err := ag.slasher.ProcessSignedTaskResponse(ssign)
 
 		return resp, err

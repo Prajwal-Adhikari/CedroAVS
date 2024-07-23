@@ -8,7 +8,7 @@ import (
 	"time"
 
 	aggregator "github.com/Cedro-Finance/CedroAVS/api/grpc"
-	"github.com/Cedro-Finance/CedroAVS/core"
+	"github.com/Cedro-Finance/CedroAVS/core/tasks"
 	"github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
 	"github.com/Cedro-Finance/CedroAVS/verifier/config"
 	"github.com/Layr-Labs/eigensdk-go/logging"
@@ -84,7 +84,7 @@ func (cl *AggregatorGRpcClient) InitOperatorToAggregator() error {
 	return nil
 }
 
-func (cl *AggregatorGRpcClient) CreateBalanceTaskToAggregator(req *avs.DeviationRequest) (*core.BalanceTaskInfo, error) {
+func (cl *AggregatorGRpcClient) CreateBalanceTaskToAggregator(req *avs.DeviationRequest) (*tasks.BalanceTaskInfo, error) {
 	conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {
@@ -110,7 +110,7 @@ func (cl *AggregatorGRpcClient) CreateBalanceTaskToAggregator(req *avs.Deviation
 		return nil, fmt.Errorf("call CreateAlertTask failed: %v", err.Error())
 	}
 
-	info, err := core.NewBalanceTaskInfo(reply.GetInfo())
+	info, err := tasks.NewBalanceTaskInfo(reply.GetInfo())
 	if err != nil {
 		return nil, fmt.Errorf("call CreateAlertTask failed by decode alert info: %v", err.Error())
 	}
@@ -118,7 +118,7 @@ func (cl *AggregatorGRpcClient) CreateBalanceTaskToAggregator(req *avs.Deviation
 	return info, nil
 }
 
-func (cl *AggregatorGRpcClient) SendSignedTaskResponse(ctx context.Context, signedTaskResponse *core.SignedDeviationTaskRespRequest) (*aggregator.SignedTaskRespResponse, error) {
+func (cl *AggregatorGRpcClient) SendSignedTaskResponse(ctx context.Context, signedTaskResponse *tasks.SignedDeviationTaskRespRequest) (*aggregator.SignedTaskRespResponse, error) {
 	conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {
@@ -148,7 +148,7 @@ func (cl *AggregatorGRpcClient) SendSignedTaskResponse(ctx context.Context, sign
 	return response, nil
 }
 
-func (cl *AggregatorGRpcClient) CreateAgentSlashTaskToAggregator(req *avs.AgentSlashRequest) (*core.AgentSlashTaskInfo, error) {
+func (cl *AggregatorGRpcClient) CreateAgentSlashTaskToAggregator(req *avs.AgentSlashRequest) (*tasks.AgentSlashTaskInfo, error) {
 	conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {
@@ -175,7 +175,7 @@ func (cl *AggregatorGRpcClient) CreateAgentSlashTaskToAggregator(req *avs.AgentS
 		return nil, fmt.Errorf("call CreateAlertTask failed: %v", err.Error())
 	}
 
-	info, err := core.NewAgentSlashTaskInfo(reply.GetInfo())
+	info, err := tasks.NewAgentSlashTaskInfo(reply.GetInfo())
 	if err != nil {
 		return nil, fmt.Errorf("call CreateAlertTask failed by decode alert info: %v", err.Error())
 	}
@@ -183,7 +183,7 @@ func (cl *AggregatorGRpcClient) CreateAgentSlashTaskToAggregator(req *avs.AgentS
 	return info, nil
 }
 
-func (cl *AggregatorGRpcClient) SendSignedAgentSlashTaskResponse(signedTaskResponse *core.SignedAgentSlashTaskRespRequest) (*aggregator.SignedTaskRespResponse, error) {
+func (cl *AggregatorGRpcClient) SendSignedAgentSlashTaskResponse(signedTaskResponse *tasks.SignedAgentSlashTaskRespRequest) (*aggregator.SignedTaskRespResponse, error) {
 	conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {
