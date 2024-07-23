@@ -1,8 +1,6 @@
 package rpc
 
 import (
-	"fmt"
-
 	"github.com/Cedro-Finance/CedroAVS/aggregator/taskprocessor"
 	"github.com/Cedro-Finance/CedroAVS/core/tasks"
 	"github.com/Layr-Labs/eigensdk-go/logging"
@@ -11,15 +9,13 @@ import (
 type AggregatorRpcHandler struct {
 	logger logging.Logger
 
-	deviator *taskprocessor.DeviationProcess
-	slasher  *taskprocessor.SlashProcess
+	taskprocessors map[string]*taskprocessor.TaskProcessor
 }
 
-func NewAggregatorRpcHandler(logger logging.Logger, deviator *taskprocessor.DeviationProcess, slasher *taskprocessor.SlashProcess) (*AggregatorRpcHandler, error) {
+func NewAggregatorRpcHandler(logger logging.Logger, tps map[string]*taskprocessor.TaskProcessor) (*AggregatorRpcHandler, error) {
 	return &AggregatorRpcHandler{
-		logger:   logger,
-		deviator: deviator,
-		slasher:  slasher,
+		logger:         logger,
+		taskprocessors: tps,
 	}, nil
 }
 
@@ -37,40 +33,15 @@ func (ag *AggregatorRpcHandler) InitOperator(req *tasks.InitOperatorRequest) (*t
 	return reply, nil
 }
 
-func (ag *AggregatorRpcHandler) CreateTask(task string, req interface{}) (interface{}, error) {
-	switch task {
-	case "deviation":
-		devreq := req.(*tasks.CreateDeviationTaskRequest)
-		task, err := ag.deviator.CreateTask(devreq)
+func (ag *AggregatorRpcHandler) CreateTask(task string, req tasks.ICreateTaskRequest) (tasks.ICreateTaskResponse, error) {
+	res, err := ag.taskprocessors[task].CreateTask(req)
 
-		return task, err
-
-	case "agentslash":
-		sreq := req.(*tasks.CreateAgentSlashTaskRequest)
-		task, err := ag.slasher.CreateTask(sreq)
-
-		return task, err
-
-	default:
-		return nil, fmt.Errorf("invalid task type")
-	}
+	return res, err
 }
 
-func (ag *AggregatorRpcHandler) ProcessSignedTask(task string, signed interface{}) (interface{}, error) {
-	switch task {
-	case "deviation":
-		devsign := signed.(*tasks.SignedDeviationTaskRespRequest)
-		resp, err := ag.deviator.ProcessSignedTaskResponse(devsign)
+func (ag *AggregatorRpcHandler) ProcessSignedTask(task string, signed *tasks.CreateSignedTaskResRequest) (*tasks.SignedTaskRespResponse, error) {
 
-		return resp, err
+	res, err := ag.taskprocessors[task].ProcessSignedTaskResponse(signed)
 
-	case "agentslash":
-		ssign := signed.(*tasks.SignedAgentSlashTaskRespRequest)
-		resp, err := ag.slasher.ProcessSignedTaskResponse(ssign)
-
-		return resp, err
-
-	default:
-		return nil, fmt.Errorf("invalid task type")
-	}
+	return res, err
 }

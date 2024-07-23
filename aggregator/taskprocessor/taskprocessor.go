@@ -23,6 +23,8 @@ import (
 )
 
 type TaskProcessor struct {
+	taskType string
+
 	tasks   map[sdktypes.TaskIndex]tasks.ITaskInfo
 	tasksMu sync.RWMutex
 
@@ -42,9 +44,11 @@ type TaskProcessor struct {
 
 	cfg         *config.Config
 	graphClient *graphql.GraphQLClient
+
+	avsWriter *avs.AvsWriter
 }
 
-func NewTaskProcessorService(c *config.Config, logger logging.Logger) (*TaskProcessor, error) {
+func NewTaskProcessorService(taskType string, c *config.Config, logger logging.Logger, avsWriter *avs.AvsWriter) (*TaskProcessor, error) {
 
 	ethClient, err := eth.NewClient(c.EthConfig.RpcUrl)
 
@@ -95,11 +99,112 @@ func NewTaskProcessorService(c *config.Config, logger logging.Logger) (*TaskProc
 		blsAggrService: blsAggregationService,
 		cfg:            c,
 		graphClient:    graphClinet,
+		avsWriter:      avsWriter,
+		taskType:       taskType,
 	}, nil
 
 }
 
-func (t *TaskProcessor) GetTaskByIndex(taskIndex sdktypes.TaskIndex) interface{} {
+func (t *TaskProcessor) Start(ctx context.Context) {
+	t.logger.Infof("%s taskprocessor started", t.taskType)
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case res := <-t.blsAggrService.GetResponseChannel():
+			t.SendAggregatedResponseToContract(res)
+		}
+	}
+}
+
+func (t *TaskProcessor) CreateTask(req tasks.ICreateTaskRequest) (tasks.ICreateTaskResponse, error) {
+	t.logger.Info("Received Create Task", "reqId", req.GetIdentifier().String(), "Agent", req.GetAgent().Hex(), "task", t.taskType)
+
+	reqHash, err := req.GetHash()
+
+	if err != nil {
+		t.logger.Error("error getting request hash", "err", err)
+		return tasks.ICreateTaskResponse{}, err
+
+	}
+
+	finishedTask := t.GetFinishedTaskByRequestHash(reqHash)
+
+	if finishedTask != nil {
+		t.logger.Error("Task already finished", "reqId", req.GetIdentifier().String(), "agent", req.GetAgent().Hex())
+
+		return tasks.ICreateTaskResponse{}, fmt.Errorf("task already done")
+	}
+
+	task := t.GetTaskByRequestHash(reqHash)
+
+	if task == nil {
+		taskIndex := t.NewIndex()
+
+		quorumDetails, err := t.GetQuorumDetails(context.TODO(), req.GetRefBlock())
+
+		if err != nil {
+			t.logger.Error("error while getting quorum details")
+			return tasks.ICreateTaskResponse{}, nil
+		}
+
+		task = req.GetTaskInfo(taskIndex, quorumDetails.QuorumNums, quorumDetails.QuorumThresholdPercentages)
+
+		err = t.InitializeNewTask(context.Background(), taskIndex, task, quorumDetails, req.GetRefBlock())
+
+		if err != nil {
+			t.logger.Error("InitializeNewTask failed", "err", err)
+			return tasks.ICreateTaskResponse{}, err
+		}
+
+	}
+
+	return tasks.ICreateTaskResponse{Info: task}, nil
+
+}
+
+func (t *TaskProcessor) ProcessSignedTaskResponse(req *tasks.CreateSignedTaskResRequest) (*tasks.SignedTaskRespResponse, error) {
+	t.logger.Info("New Signature Received from operator for task", "tasktype", t.taskType, "signature", req.BlsSignature.Serialize(), "task", req.Task)
+
+	//TODO
+	reqHash := req.Task.GetUniqueHash()
+
+	// if err != nil {
+	// 	t.logger.Info("error while getting header hash", "err", err)
+	// 	return nil, err
+	// }
+
+	taskIndex := req.Task.GetTaskIndex()
+
+	t.tasksMu.Lock()
+	t.tasks[taskIndex] = req.Task
+	t.tasksMu.Unlock()
+
+	taskResponseDigest, err := req.Task.GetHeaderHash()
+
+	if err != nil {
+		t.logger.Error("errro getting taskresponse digest", "err", err)
+		return nil, err
+	}
+
+	task := t.GetTaskByRequestHash(reqHash)
+
+	if task == nil {
+		t.logger.Error("task doesn't exist for given request hash", "err", err)
+
+		return nil, err
+	}
+
+	err = t.blsAggrService.ProcessNewSignature(context.TODO(), taskIndex, taskResponseDigest.UnderlyingType(), &req.BlsSignature, req.OperatorId)
+	if err != nil {
+		t.logger.Error("ProcessNewSignature error", "err", err)
+	}
+
+	return &tasks.SignedTaskRespResponse{}, nil
+
+}
+
+func (t *TaskProcessor) GetTaskByIndex(taskIndex sdktypes.TaskIndex) tasks.ITaskInfo {
 	t.tasksMu.RLock()
 	defer t.tasksMu.RUnlock()
 
@@ -124,13 +229,13 @@ func (d *TaskProcessor) GetTaskByRequestHash(reqHash string) tasks.ITaskInfo {
 	defer d.tasksMu.RUnlock()
 
 	for _, task := range d.tasks {
-		hash, err := task.GetHeaderHash()
+		hash := task.GetUniqueHash()
 
-		if err != nil {
-			return nil
-		}
+		// if err != nil {
+		// 	return nil
+		// }
 
-		if hash.String() == reqHash {
+		if hash == reqHash {
 			return task
 		}
 	}
@@ -188,7 +293,7 @@ func (agg *TaskProcessor) GetQuorumDetails(ctx context.Context, refBlock uint64)
 	}, nil
 }
 
-func (agg *TaskProcessor) InitializeNewTask(ctx context.Context, taskIndex sdktypes.TaskIndex, task tasks.ITaskInfo, quorumDetails QuorumDetails, refBlock uint64) error {
+func (agg *TaskProcessor) InitializeNewTask(ctx context.Context, taskIndex sdktypes.TaskIndex, task tasks.ITaskInfo, quorumDetails *QuorumDetails, refBlock uint64) error {
 
 	agg.tasksMu.Lock()
 	agg.tasks[taskIndex] = task
@@ -254,4 +359,42 @@ func (agg *TaskProcessor) ReceiveAggregatedSignatures(blsAggServiceResp blsaggre
 	}
 
 	return nonSignerStakesAndSignature, nil
+}
+
+func (t *TaskProcessor) SendAggregatedResponseToContract(blsResp blsaggregator.BLSAggregationServiceResponse) {
+
+	nonSignerStakes, err := t.ReceiveAggregatedSignatures(blsResp)
+
+	if err != nil {
+		t.logger.Error("error while building non signer stake signatures")
+		return
+	}
+
+	task := t.GetTaskByIndex(blsResp.TaskIndex)
+
+	res, err := t.avsWriter.SendConfirmationBatch(context.Background(), task, nonSignerStakes)
+
+	if err != nil {
+		t.logger.Error("aggregator failed to respond to task", "err", err)
+		return
+	}
+
+	if res != nil {
+		reqHash, err := task.GetHeaderHash()
+
+		if err != nil {
+			t.logger.Error("agg failed to find req hash")
+		}
+
+		t.SetFinishedTask(reqHash.String(), &types.FinishedTaskStatus{
+			Message:          task,
+			TxHash:           res.TxHash,
+			BlockHash:        res.BlockHash,
+			BlockNumber:      res.BlockNumber,
+			TransactionIndex: res.TransactionIndex,
+		})
+	} else {
+		t.logger.Error("the send confirm aler threw error", "err", res)
+	}
+
 }

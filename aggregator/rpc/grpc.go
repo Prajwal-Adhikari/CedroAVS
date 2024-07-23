@@ -15,9 +15,9 @@ import (
 type IAggregatorRpcHandler interface {
 	InitOperator(req *tasks.InitOperatorRequest) (*tasks.InitOperatorResponse, error)
 
-	CreateTask(task string, req interface{}) (interface{}, error)
+	CreateTask(task string, req tasks.ICreateTaskRequest) (tasks.ICreateTaskResponse, error)
 
-	ProcessSignedTask(task string, signed interface{}) (interface{}, error)
+	ProcessSignedTask(task string, signed *tasks.CreateSignedTaskResRequest) (*tasks.SignedTaskRespResponse, error)
 }
 
 type GRpcHandler struct {
@@ -84,12 +84,16 @@ func (s *GRpcHandler) CreateDeviationTask(ctx context.Context, req *pb.CreateDev
 		return nil, fmt.Errorf("createTask message convert error: %v", err.Error())
 	}
 
-	resp, err := s.aggreagtor.CreateTask("deviation", msg)
+	resp, err := s.aggreagtor.CreateTask(tasks.AgentDeviationTask, msg)
 	if err != nil {
 		return nil, fmt.Errorf("createTask handler error: %v", err.Error())
 	}
 
-	response := resp.(*tasks.CreateDeviationTaskResponse)
+	taskInfo := resp.Info.(*tasks.BalanceTaskInfo)
+
+	response := &tasks.CreateDeviationTaskResponse{
+		Info: *taskInfo,
+	}
 
 	return response.ToPbType(), nil
 }
@@ -101,12 +105,16 @@ func (s *GRpcHandler) CreateAgentSlashTask(ctx context.Context, req *pb.CreateAg
 		return nil, fmt.Errorf("createTask message convert error: %v", err.Error())
 	}
 
-	resp, err := s.aggreagtor.CreateTask("agentslash", msg)
+	resp, err := s.aggreagtor.CreateTask(tasks.AgentSlashTask, msg)
 	if err != nil {
 		return nil, fmt.Errorf("createTask handler error: %v", err.Error())
 	}
 
-	response := resp.(*tasks.CreateAgentSlashTaskResponse)
+	taskInfo := resp.Info.(*tasks.AgentSlashTaskInfo)
+
+	response := &tasks.CreateAgentSlashTaskResponse{
+		Info: *taskInfo,
+	}
 
 	return response.ToPbType(), nil
 }
@@ -118,14 +126,12 @@ func (s *GRpcHandler) ProcessSignedDeviationTaskResponse(ctx context.Context, re
 		return nil, fmt.Errorf("processSignedTaskResponse message convert error: %v", err.Error())
 	}
 
-	resp, err := s.aggreagtor.ProcessSignedTask("deviation", msg)
+	resp, err := s.aggreagtor.ProcessSignedTask(tasks.AgentDeviationTask, msg)
 	if err != nil {
 		return nil, fmt.Errorf("processSignedTaskResponse handler error: %v", err.Error())
 	}
 
-	response := resp.(*tasks.SignedTaskRespResponse)
-
-	return response.ToPbType(), nil
+	return resp.ToPbType(), nil
 }
 
 func (s *GRpcHandler) ProcessSignedAgentSlashTaskResponse(ctx context.Context, req *pb.SignedAgentSlashTaskRespRequest) (*pb.SignedTaskRespResponse, error) {
@@ -134,12 +140,10 @@ func (s *GRpcHandler) ProcessSignedAgentSlashTaskResponse(ctx context.Context, r
 		return nil, fmt.Errorf("processSignedTaskResponse message convert error: %v", err.Error())
 	}
 
-	resp, err := s.aggreagtor.ProcessSignedTask("agentslash", msg)
+	resp, err := s.aggreagtor.ProcessSignedTask(tasks.AgentSlashTask, msg)
 	if err != nil {
 		return nil, fmt.Errorf("processSignedTaskResponse handler error: %v", err.Error())
 	}
 
-	response := resp.(*tasks.SignedTaskRespResponse)
-
-	return response.ToPbType(), nil
+	return resp.ToPbType(), nil
 }

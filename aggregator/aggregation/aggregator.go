@@ -9,6 +9,7 @@ import (
 	"github.com/Cedro-Finance/CedroAVS/aggregator/rpc"
 	"github.com/Cedro-Finance/CedroAVS/aggregator/taskprocessor"
 	avs "github.com/Cedro-Finance/CedroAVS/core/avsClient"
+	"github.com/Cedro-Finance/CedroAVS/core/tasks"
 
 	// cedroservicemanager "github.com/Cedro-Finance/CedroAVS/core/bindings/CedroServiceManager"
 	"github.com/Cedro-Finance/CedroAVS/core/config"
@@ -29,8 +30,7 @@ type Aggregator struct {
 	gRpc                 *rpc.GRpcHandler
 	avsWriter            *avs.AvsWriter
 
-	deviator *taskprocessor.DeviationProcess
-	slasher  *taskprocessor.SlashProcess
+	taskprocessors map[string]*taskprocessor.TaskProcessor
 }
 
 func NewAggregator(cfg *config.Config) (*Aggregator, error) {
@@ -101,21 +101,19 @@ func NewAggregator(cfg *config.Config) (*Aggregator, error) {
 		return nil, err
 	}
 
-	deviator, err := taskprocessor.NewDeviationProcessor(cfg, logger, avsWriter)
+	tps := make(map[string]*taskprocessor.TaskProcessor)
 
-	if err != nil {
-		logger.Errorf("Error while creating aggregator service", "err", err)
-		return nil, err
+	for _, tt := range tasks.TaskTypes {
+		tp, err := taskprocessor.NewTaskProcessorService(tt, cfg, logger, avsWriter)
+
+		if err != nil {
+			panic(err)
+		}
+
+		tps[tt] = tp
 	}
 
-	slasher, err := taskprocessor.NewSlashProcessor(cfg, logger, avsWriter)
-
-	if err != nil {
-		logger.Errorf("Error while creating aggregator service", "err", err)
-		return nil, err
-	}
-
-	aggGrpcHandler, err := rpc.NewAggregatorRpcHandler(logger, deviator, slasher)
+	aggGrpcHandler, err := rpc.NewAggregatorRpcHandler(logger, tps)
 
 	if err != nil {
 		logger.Errorf("Error while creating aggregator service", "err", err)
@@ -129,8 +127,7 @@ func NewAggregator(cfg *config.Config) (*Aggregator, error) {
 		gRpc:                 grpc,
 		grpcServerIpPortAddr: cfg.GRpcAggregatorIpAddr,
 		avsWriter:            avsWriter,
-		deviator:             deviator,
-		slasher:              slasher,
+		taskprocessors:       tps,
 	}, nil
 }
 
@@ -143,6 +140,13 @@ func (a *Aggregator) Start(ctx context.Context, wg *sync.WaitGroup) error {
 
 	go a.gRpc.Start(ctx, a.grpcServerIpPortAddr)
 
-	return nil
+	wg.Add(len(a.taskprocessors))
 
+	for _, tp := range a.taskprocessors {
+		go tp.Start(ctx)
+	}
+
+	wg.Wait()
+
+	return nil
 }
