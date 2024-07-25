@@ -18,6 +18,11 @@ interface IAgentManager {
      **/
     function setChainID(bytes32 _chainID) external;
 
+    function deviationPercentage(address _agent)
+        external
+        view
+        returns (uint256);
+
     /**
      * @notice Enrolls operator by service manager
      * This function can only be accessed by the account with role OPERATOR.
@@ -44,6 +49,33 @@ interface IAgentManager {
         bool[] memory _enable
     ) external;
 
+    function emitDeposit(
+        address agent,
+        uint256 txnID,
+        address depositor,
+        bytes32 asset,
+        uint256 amount,
+        uint256 principalAmount,
+        uint256 timeInterval,
+        uint256 interestRate
+    ) external;
+
+    function emitClaim(
+        address agent,
+        uint256 txnId,
+        address depositor,
+        bytes32[] memory assets,
+        uint256[] memory amounts,
+        Data.STATUS status
+    ) external;
+
+    function emitSlash(
+        address _agent,
+        uint256 _amountToSlash,
+        bytes32 _chainID,
+        uint256 _txnId
+    ) external;
+
     /**
      * @notice Returns the pool info of the asset
      * @param _assetId - id of the asset.
@@ -64,12 +96,17 @@ interface IAgentManager {
     function chainID() external view returns (bytes32);
 
     /**
-     * @notice Maps the agent to its corresponding operator
-     * This function can only be accessed by account with role OPERATOR.
+     * @notice Configures agents to their respective AgentPod contracts
+     * This function can only be accessed by the account with role Manager.
      * @param _agent - address of the agent.
-     * @param _agentPod - address of the agentPod contract.
+     * @param _chainIDs - chain keys
+     * @param _agentPods - address of AgentPod contracts
      **/
-    function mapAgent(address _agent, address _agentPod) external;
+    function mapAgent(
+        address _agent,
+        bytes32[] memory _chainIDs,
+        address[] memory _agentPods
+    ) external;
 
     /**
      * @notice Invoked after receiving responses from operator for deviation check
