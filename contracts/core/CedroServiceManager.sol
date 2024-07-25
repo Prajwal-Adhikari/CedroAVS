@@ -2,10 +2,6 @@
 pragma solidity 0.8.24;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {Pausable} from "./eigenContracts/Pausable.sol";
-import {IPauserRegistry} from "./eigenContracts/interfaces/IPauserRegistry.sol";
 import {ServiceManagerBase, IAVSDirectory, IRewardsCoordinator, IRegistryCoordinator, ISignatureUtils, IStakeRegistry} from "./eigenContracts/ServiceManagerBase.sol";
 import {BLSSignatureChecker} from "./eigenContracts/BLSSignatureChecker.sol";
 import {IServiceManager} from "./eigenContracts/interfaces/IServiceManager.sol";
@@ -13,8 +9,6 @@ import {IAgentManager} from "../operator/interfaces/IAgentManager.sol";
 import {IRoleManager} from "./interfaces/IRoleManager.sol";
 import {CedroServiceManagerStorage} from "./CedroServiceManagerStorage.sol";
 import {CedroServiceData} from "./libraries/CedroServiceData.sol";
-
-import "hardhat/console.sol";
 
 string constant TAG = "CedroServiceManager";
 
@@ -33,9 +27,10 @@ contract CedroServiceManager is
     error InvalidQuorumParam(string ContractTAG);
     error InvalidReferenceBlockNum(string ContractTAG);
     error InvalidRequestId(string ContractTAG);
+    error InsufficientThreshold(string ContractTAG);
+    error InvalidAmount(string ContractTAG);
     error InvalidQuorumThresholdPercentage(string ContractTAG);
     error InsufficientThresholdPercentages(string ContractTAG);
-    error InsufficientThreshold(string ContractTAG);
 
     event OperatorRegistered(address indexed operator);
     event OperatorDeRegistered(address indexed operator);
@@ -50,7 +45,6 @@ contract CedroServiceManager is
         require(!pausedStatus, "AVS System is paused");
         _;
     }
-
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -76,7 +70,7 @@ contract CedroServiceManager is
     //                          Operatoion Verifications                          //
     //////////////////////////////////////////////////////////////////////////////
 
-    // /**
+    /**
     //  * @notice Confirm the AI Agent Blance accross the chains and check if it is deviated
     //  * @param  deviationBalanceHeader -
     //  * @param nonSignerStakesAndSignature -
@@ -85,7 +79,6 @@ contract CedroServiceManager is
         CedroServiceData.DeviationBalanceHeader calldata deviationBalanceHeader,
         NonSignerStakesAndSignature memory nonSignerStakesAndSignature
     ) external onlyRoles(IRoleManager(roleManagerAddress).VERIFIER_ADMIN()) {
-      
         if (tx.origin != msg.sender) revert InvalidSender(TAG);
 
         if (deviationBalanceHeader.referenceBlockNumber >= block.number)
@@ -107,10 +100,6 @@ contract CedroServiceManager is
         bytes32 reducedBalanceHeaderHash = hashDeviationBalanceHeader(
             deviationBalanceHeader
         );
-
-        console.log();
-        console.log("Message Hash");
-        console.logBytes32(reducedBalanceHeaderHash);
 
         (
             QuorumStakeTotals memory quorumStakeTotals,
@@ -161,11 +150,10 @@ contract CedroServiceManager is
             )
         );
 
-        if (slashingAmount > 0)
-            agentManager.slashAgent(
-                deviationBalanceHeader.agentAddress,
-                slashingAmount
-            );
+        agentManager.slashAgent(
+            deviationBalanceHeader.agentAddress,
+            slashingAmount
+        );
 
         //calls to agent manager when check is not initiated offchain, request Id is sent max to denote it is offchain call
         if (deviationBalanceHeader.requestId != type(uint256).max) {
@@ -183,7 +171,8 @@ contract CedroServiceManager is
 
     /**
      * @notice Challenge Agent performance to process bond slashing
-     * @param fraudBalanceHeader - evidence of fraud.
+     * @param fraudBalanceHeader -
+     * @param nonSignerStakesAndSignature
      **/
     function confirmAgentFraud(
         CedroServiceData.FraudBalanceHeader calldata fraudBalanceHeader,
@@ -194,12 +183,15 @@ contract CedroServiceManager is
         if (fraudBalanceHeader.referenceBlockNumber >= block.number)
             revert InvalidReferenceBlockNum(TAG);
 
+        if (fraudBalanceHeader.insufficientAmount <= 0)
+            revert InvalidAmount(TAG);
+
         if (
-            fraudBalanceHeader.quorumNumbers.length ==
+            fraudBalanceHeader.quorumNumbers.length !=
             fraudBalanceHeader.quorumThresholdPercentages.length
         ) revert InvalidQuorumParam(TAG);
 
-        // calculate reducedBalancehHeaderHash which nodes signed
+        // calculate reducedFraudBalancehHeaderHash which nodes signed
         bytes32 reducedFraudBalanceHeaderHash = hashFraudBalanceHeader(
             fraudBalanceHeader
         );
@@ -246,10 +238,6 @@ contract CedroServiceManager is
         if (!success) {
             revert MessageHashAlreadyAdded(TAG);
         }
-
-        uint256 requestIdMemory = agentsFraudRequestId[
-            fraudBalanceHeader.agentAddress
-        ];
 
         if (fraudBalanceHeader.insufficientAmount > 0)
             agentManager.slashAgent(
@@ -387,6 +375,7 @@ contract CedroServiceManager is
             CedroServiceData.ReducedFraudHeader({
                 agentAddress: fraudBalanceHeader.agentAddress,
                 referenceBlockNumber: fraudBalanceHeader.referenceBlockNumber,
+                transactionId: fraudBalanceHeader.transactionId,
                 insufficientAmount: fraudBalanceHeader.insufficientAmount
             });
     }

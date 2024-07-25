@@ -57,7 +57,7 @@ contract AVSDirectoryMock is IAVSDirectory {
      
      
 
-        // Check that the signature is valid
+        // // Check that the signature is valid
         EIP1271SignatureUtils.checkSignature_EIP1271(
             operator,
             operatorRegistrationDigestHash,

@@ -18,6 +18,7 @@ library CedroServiceData {
         uint32 referenceBlockNumber;
         bytes quorumNumbers;
         bytes quorumThresholdPercentages;
+        uint256 transactionId;
         uint256 insufficientAmount;
     }
 
@@ -33,6 +34,7 @@ library CedroServiceData {
     struct ReducedFraudHeader {
         address agentAddress;
         uint32 referenceBlockNumber;
+        uint256 transactionId;
         uint256 insufficientAmount;
     }
 
