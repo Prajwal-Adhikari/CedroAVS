@@ -171,29 +171,35 @@ contract CedroServiceManager is
 
     /**
      * @notice Challenge Agent performance to process bond slashing
-     * @param fraudBalanceHeader -
+     * @param bankRunBalanceHeader -
      * @param nonSignerStakesAndSignature
      **/
-    function confirmAgentFraud(
-        CedroServiceData.FraudBalanceHeader calldata fraudBalanceHeader,
+    function confirmAgentBankRun(
+        CedroServiceData.BankRunBalanceHeader calldata bankRunBalanceHeader,
         NonSignerStakesAndSignature memory nonSignerStakesAndSignature
     ) external onlyRoles(IRoleManager(roleManagerAddress).VERIFIER_ADMIN()) {
         if (tx.origin != msg.sender) revert InvalidSender(TAG);
 
-        if (fraudBalanceHeader.referenceBlockNumber >= block.number)
+        if (bankRunBalanceHeader.referenceBlockNumber >= block.number)
             revert InvalidReferenceBlockNum(TAG);
 
-        if (fraudBalanceHeader.insufficientAmount <= 0)
+        if (bankRunBalanceHeader.insufficientAmount <= 0)
             revert InvalidAmount(TAG);
 
         if (
-            fraudBalanceHeader.quorumNumbers.length !=
-            fraudBalanceHeader.quorumThresholdPercentages.length
+            bankRunBalanceHeader.quorumNumbers.length !=
+            bankRunBalanceHeader.quorumThresholdPercentages.length
         ) revert InvalidQuorumParam(TAG);
+
+        if (
+            bankRunBalanceHeader.transactionId <=
+            agentsDeviationRequestId[bankRunBalanceHeader.agentAddress] ||
+            bankRunBalanceHeader.transactionId == 0
+        ) revert InvalidRequestId(TAG);
 
         // calculate reducedFraudBalancehHeaderHash which nodes signed
         bytes32 reducedFraudBalanceHeaderHash = hashFraudBalanceHeader(
-            fraudBalanceHeader
+            bankRunBalanceHeader
         );
 
         // check the signature
@@ -202,18 +208,18 @@ contract CedroServiceManager is
             bytes32 signatoryRecordHash
         ) = checkSignatures(
                 reducedFraudBalanceHeaderHash,
-                fraudBalanceHeader.quorumNumbers, // use list of uint8s instead of uint256 bitmap to not iterate 256 times
-                fraudBalanceHeader.referenceBlockNumber,
+                bankRunBalanceHeader.quorumNumbers, // use list of uint8s instead of uint256 bitmap to not iterate 256 times
+                bankRunBalanceHeader.referenceBlockNumber,
                 nonSignerStakesAndSignature
             );
 
         for (
             uint256 i = 0;
-            i < fraudBalanceHeader.quorumThresholdPercentages.length;
+            i < bankRunBalanceHeader.quorumThresholdPercentages.length;
             ++i
         ) {
             uint8 currentQuorumThresholdPercentages = uint8(
-                fraudBalanceHeader.quorumThresholdPercentages[i]
+                bankRunBalanceHeader.quorumThresholdPercentages[i]
             );
             if (currentQuorumThresholdPercentages > 100) {
                 revert InvalidQuorumThresholdPercentage(TAG);
@@ -235,19 +241,22 @@ contract CedroServiceManager is
         bool success = _resolvedMessageHashes.add(
             reducedFraudBalanceHeaderHash
         );
+
         if (!success) {
             revert MessageHashAlreadyAdded(TAG);
         }
 
-        if (fraudBalanceHeader.insufficientAmount > 0)
-            agentManager.slashAgent(
-                fraudBalanceHeader.agentAddress,
-                fraudBalanceHeader.insufficientAmount
-            );
+        agentManager.slashAgentForBankRun(
+            bankRunBalanceHeader.agentAddress,
+            bankRunBalanceHeader.insufficientAmount,
+            bankRunBalanceHeader.transactionId,
+            bankRunBalanceHeader.chainId,
+            bankRunBalanceHeader.agentContract
+        );
 
         emit AgentFraudConfirmed(
-            fraudBalanceHeader.agentAddress,
-            fraudBalanceHeader.insufficientAmount
+            bankRunBalanceHeader.agentAddress,
+            bankRunBalanceHeader.insufficientAmount
         );
     }
 
@@ -283,7 +292,7 @@ contract CedroServiceManager is
 
     /// @notice hash the fraud header
     function hashFraudBalanceHeader(
-        CedroServiceData.FraudBalanceHeader calldata deviationBalanceHeader
+        CedroServiceData.BankRunBalanceHeader calldata deviationBalanceHeader
     ) internal pure returns (bytes32) {
         return
             keccak256(
@@ -365,18 +374,20 @@ contract CedroServiceManager is
 
     /**
      * @notice converts a balance header to a reduced balance header
-     * @param fraudBalanceHeader the balance header to convert
+     * @param bankRunBalanceHeader the balance header to convert
      */
 
     function reduceFraudBalanceHeader(
-        CedroServiceData.FraudBalanceHeader calldata fraudBalanceHeader
-    ) internal pure returns (CedroServiceData.ReducedFraudHeader memory) {
+        CedroServiceData.BankRunBalanceHeader calldata bankRunBalanceHeader
+    ) internal pure returns (CedroServiceData.ReducedBankRunHeader memory) {
         return
-            CedroServiceData.ReducedFraudHeader({
-                agentAddress: fraudBalanceHeader.agentAddress,
-                referenceBlockNumber: fraudBalanceHeader.referenceBlockNumber,
-                transactionId: fraudBalanceHeader.transactionId,
-                insufficientAmount: fraudBalanceHeader.insufficientAmount
+            CedroServiceData.ReducedBankRunHeader({
+                agentAddress: bankRunBalanceHeader.agentAddress,
+                agentContract: bankRunBalanceHeader.agentContract,
+                referenceBlockNumber: bankRunBalanceHeader.referenceBlockNumber,
+                chainId: bankRunBalanceHeader.chainId,
+                transactionId: bankRunBalanceHeader.transactionId,
+                insufficientAmount: bankRunBalanceHeader.insufficientAmount
             });
     }
 

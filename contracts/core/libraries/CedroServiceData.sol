@@ -13,9 +13,11 @@ library CedroServiceData {
         uint256 idealAmount;
     }
 
-    struct FraudBalanceHeader {
+    struct BankRunBalanceHeader {
         address agentAddress;
+        address agentContract;
         uint32 referenceBlockNumber;
+        bytes32 chainId;
         bytes quorumNumbers;
         bytes quorumThresholdPercentages;
         uint256 transactionId;
@@ -28,12 +30,13 @@ library CedroServiceData {
         uint256 requestId;
         uint256 actualAmount;
         uint256 idealAmount;
-       
     }
 
-    struct ReducedFraudHeader {
+    struct ReducedBankRunHeader {
         address agentAddress;
+        address agentContract;
         uint32 referenceBlockNumber;
+        bytes32 chainId;
         uint256 transactionId;
         uint256 insufficientAmount;
     }
