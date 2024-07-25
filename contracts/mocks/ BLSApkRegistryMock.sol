@@ -6,7 +6,6 @@ import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import {BLSApkRegistry} from "../../contracts/core/eigenContracts/BLSApkRegistry.sol";
 import {BN254} from "../../contracts/core/eigenContracts/libraries/BN254.sol";
 
-import "hardhat/console.sol";
 
 // wrapper around the BLSApkRegistry contract that exposes internal functionality, for unit testing _other functionality_.
 contract BLSApkRegistryMock is ContextUpgradeable, BLSApkRegistry {
