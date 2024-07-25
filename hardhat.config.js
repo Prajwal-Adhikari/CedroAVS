@@ -29,7 +29,7 @@ module.exports = {
     ]
   },
   etherscan: {
-    apiKey: API_KEY,
+    apiKey: 'EJFFCD84CTTH4PDY8Q1JUCKJCNA1VRWBGC',
   },
   sourcify: {
     enabled: true
@@ -45,11 +45,16 @@ module.exports = {
       accounts: [`0x${PRIVATE_KEY}`],
     },
     bsc: {
-      url: `https://bsc-testnet-rpc.allthatnode.com`,
+      url: `https://bsc-testnet-rpc.publicnode.com`,
       // url: `https://bsc-rpc.publicnode.com`,
       accounts: [`0x${PRIVATE_KEY}`],
       gas: 4000000
-    }
+    },
+    sepolia: {
+      url: `https://eth-sepolia.public.blastapi.io`,
+      accounts: [`0x${PRIVATE_KEY}`],
+      gas: 4000000
+    },
    
   }
 };
