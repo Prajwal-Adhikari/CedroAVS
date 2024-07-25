@@ -63,11 +63,9 @@ type BLSAggregationServiceResponse struct {
 	NonSignerStakeIndices        [][]uint32
 }
 
-
-
 type BLSAggregatorService struct {
 	logger    logging.Logger
-	avsReader *avs.AvsReader
+	avsReader avs.IAVSReader
 
 	aggregatedResponsesC chan BLSAggregationServiceResponse
 
@@ -76,7 +74,7 @@ type BLSAggregatorService struct {
 	taskChansMutex sync.RWMutex
 }
 
-func NewBlsAggregatorService(avsReader *avs.AvsReader, logger logging.Logger) *BLSAggregatorService {
+func NewBlsAggregatorService(avsReader avs.IAVSReader, logger logging.Logger) *BLSAggregatorService {
 	return &BLSAggregatorService{
 		avsReader:            avsReader,
 		logger:               logger,
@@ -135,6 +133,8 @@ func (b *BLSAggregatorService) ProcessNewSignature(ctx context.Context,
 	select {
 	// we need to send this as part of select because if the goroutine is processing another SignedTaskResponseDigest
 	// and cannot receive this one, we want the context to be able to cancel the request
+	case <-ctx.Done():
+		return ctx.Err()
 	case taskC <- types.SignedTaskResponseDigest{
 		TaskResponseDigest:          taskResponse,
 		BlsSignature:                blsSignature,
@@ -143,9 +143,9 @@ func (b *BLSAggregatorService) ProcessNewSignature(ctx context.Context,
 	}:
 		// note that we need to wait synchronously here for this response because we want to
 		// send back an informative error message to the operator who sent his signature to the aggregator
-		return <-signatureVerificationErrorC
-	case <-ctx.Done():
-		return ctx.Err()
+		err := <-signatureVerificationErrorC
+		
+		return err
 	}
 }
 
@@ -301,6 +301,7 @@ func (b *BLSAggregatorService) singleTaskAggregatorGoroutineFunc(
 					}
 
 				}
+
 				indices, err := b.avsReader.GetCheckSignaturesIndices(&bind.CallOpts{}, taskCreatedBlock, quorumNumbers, nonSignersOperatorIds)
 				if err != nil {
 					b.aggregatedResponsesC <- BLSAggregationServiceResponse{
@@ -327,8 +328,6 @@ func (b *BLSAggregatorService) singleTaskAggregatorGoroutineFunc(
 				b.aggregatedResponsesC <- blsAggregationServiceResponse
 				taskExpiredTimer.Stop()
 				return
-			} else {
-				continue
 			}
 		case <-taskExpiredTimer.C:
 			b.aggregatedResponsesC <- BLSAggregationServiceResponse{

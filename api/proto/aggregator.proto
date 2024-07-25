@@ -3,76 +3,129 @@ syntax = "proto3";
 option go_package = "./main";
 package aggregator;
 
-// The Aggregator is for collection the bls signatures from operator and
-// then commit the task to AVS.
+// The Aggregator service collects BLS signatures from operators and commits tasks to AVS.
 service Aggregator {
-	// Send Init operator to aggregator from operator, will check if the config is matching
+	// Initialize an operator in the aggregator, checking if the configuration matches
 	rpc InitOperator(InitOperatorRequest) returns (InitOperatorResponse) {}
-	// Create a balance send task
-	rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse) {}
-	// Send signed task for balance response
-	rpc ProcessSignedTaskResponse(SignedTaskRespRequest) returns (SignedTaskRespResponse) {}
+
+	// Create a deviation task
+	rpc CreateDeviationTask(CreateDeviationTaskRequest) returns (CreateDeviationTaskResponse) {}
+
+	// Create an agent slash task
+	rpc CreateAgentSlashTask(CreateAgentSlashTaskRequest) returns (CreateAgentSlashTaskResponse) {}
+
+	// Process the signed deviation task response
+	rpc ProcessSignedDeviationTaskResponse(SignedDeviationTaskRespRequest) returns (SignedTaskRespResponse) {}
+
+	// Process the signed agent slash task response
+	rpc ProcessSignedAgentSlashTaskResponse(SignedAgentSlashTaskRespRequest) returns (SignedTaskRespResponse) {}
 }
 
 message InitOperatorRequest {
-	// The operator 's id
-	bytes operator_id = 2;
-	// The operator 's ecdsa address
-	string operator_address = 3;
-	// The operator_state_retriever_addr
-	string operator_state_retriever_addr = 4;
-	// The registry_coordinator_addr
-	string registry_coordinator_addr = 5;
+	// The operator's ID
+	bytes operator_id = 1;
+	// The operator's ECDSA address
+	string operator_address = 2;
+	// The address of the operator state retriever
+	string operator_state_retriever_address = 3;
+	// The address of the registry coordinator
+	string registry_coordinator_address = 4;
 }
 
 message InitOperatorResponse {
-	// If the operator 's state is ok
+	// Whether the operator's state is okay
 	bool ok = 1;
-	// Reason
+	// The reason for any failure
 	string reason = 2;
 }
 
-message CreateTaskRequest {
-	// The requestId of the deviation check
+message CreateDeviationTaskRequest {
+	// The request ID of the task
 	bytes req_id = 1;
-
-	
+	// Reference block number
+	uint64 reference_block_number = 2;
+	// Agent address
+	string agent_address = 3;
 }
 
-message CreateTaskResponse {
-	// The info of alert
+message CreateAgentSlashTaskRequest {
+	// Reference block number
+	uint64 reference_block_number = 1;
+	// Agent address
+	string agent_address = 2;
+
+	// txnId
+	bytes txn_id = 3;
+}
+
+message CreateDeviationTaskResponse {
+	// Information about the deviation task
 	BalanceTaskInfo info = 1;
 }
 
-message SignedTaskRespRequest {
-	// The alert
-	BalanceTaskInfo balanceHeader = 1;
+message CreateAgentSlashTaskResponse {
+	// Information about the agent slash task
+	AgentSlashTaskInfo info = 1;
+}
+
+message SignedDeviationTaskRespRequest {
+	// The deviation task information
+	BalanceTaskInfo balance_header = 1;
 	// The operator's BLS signature signed on the keccak256 hash
 	bytes operator_request_signature = 2;
-		// The operator 's id
+	// The operator's ID
+	bytes operator_id = 3;
+}
+
+message SignedAgentSlashTaskRespRequest {
+	// The agent slash task information
+	AgentSlashTaskInfo fraud_header = 1;
+	// The operator's BLS signature signed on the keccak256 hash
+	bytes operator_request_signature = 2;
+	// The operator's ID
 	bytes operator_id = 3;
 }
 
 message SignedTaskRespResponse {
-	// If need reply
+	// Whether a reply is needed
 	bool reply = 1;
-	// The tx hash of send
+	// The transaction hash of the send
 	bytes tx_hash = 2;
 }
 
-message BalanceTaskInfo {
-	// The hash of alert
 
-    bytes actual_balance = 1;
-    bytes ideal_balance = 2;
-    bytes req_id = 3;
-     
-	// QuorumNumbers of task
+message BalanceTaskInfo {
+	// The actual balance of the agent in that reference block number
+	bytes actual_balance = 1;
+	// The ideal balance that the agent should have
+	bytes ideal_balance = 2;
+	// The request ID of the deviation check
+	bytes req_id = 3;
+	// Quorum numbers for the task
 	bytes quorum_numbers = 4;
-	// QuorumThresholdPercentages of task
+	// Quorum threshold percentages for the task
 	bytes quorum_threshold_percentages = 5;
-	// TaskIndex
+	// Task index
 	uint32 task_index = 6;
-	// ReferenceBlockNumber
+	// Reference block number
 	uint64 reference_block_number = 7;
+	// Agent address
+	string agent_address = 8;
+}
+
+message AgentSlashTaskInfo {
+	// Insufficient balance
+	bytes insufficient_balance = 1;
+	// Quorum numbers for the task
+	bytes quorum_numbers = 2;
+	// Quorum threshold percentages for the task
+	bytes quorum_threshold_percentages = 3;
+	// Task index
+	uint32 task_index = 4;
+	// Reference block number
+	uint64 reference_block_number = 5;
+	// Agent address
+	string agent_address = 6;
+	//Txn Id
+	bytes txn_id = 7;
 }

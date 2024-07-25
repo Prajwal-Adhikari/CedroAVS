@@ -3,6 +3,8 @@ package avs
 import (
 	// "github.com/Cedro-Finance/CedroAVS/verifier/config"
 	"context"
+	"reflect"
+
 	cedroservicemanager "github.com/Cedro-Finance/CedroAVS/core/bindings/CedroServiceManager"
 	"github.com/Cedro-Finance/CedroAVS/core/config"
 	"github.com/Cedro-Finance/CedroAVS/core/tasks"
@@ -19,6 +21,8 @@ import (
 
 type IAvsWriter interface {
 	avsregistry.AvsRegistryWriter
+
+	SendConfirmationBatch(ctx context.Context, balanceHeader tasks.ITaskInfo, nonSignerStakeSignature cedroservicemanager.IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Receipt, error)
 }
 
 type AvsWriter struct {
@@ -31,7 +35,7 @@ type AvsWriter struct {
 
 var _ IAvsWriter = (*AvsWriter)(nil)
 
-func NewAvsWriter(c *config.Config, txMgr txmgr.TxManager, ethClient eth.Client, logger logging.Logger) (*AvsWriter, error) {
+func NewAvsWriter(c *config.Config, txMgr txmgr.TxManager, ethClient eth.Client, logger logging.Logger) (IAvsWriter, error) {
 	regrAddr := c.AVS.RegistryCoordinatorAddr
 	osAddr := c.AVS.OperatorStateRetrieverAddr
 
@@ -56,18 +60,36 @@ func NewAvsWriter(c *config.Config, txMgr txmgr.TxManager, ethClient eth.Client,
 
 }
 
-func (w *AvsWriter) SendConfirmationBatch(ctx context.Context, balanceHeader *tasks.BalanceTaskInfo, nonSignerStakeSignature cedroservicemanager.IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Receipt, error) {
+func (w *AvsWriter) SendConfirmationBatch(ctx context.Context, balanceHeader tasks.ITaskInfo, nonSignerStakeSignature cedroservicemanager.IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Receipt, error) {
 	txOpts, err := w.TxMgr.GetNoSendTxOpts()
 	if err != nil {
 		w.logger.Errorf("Error getting tx opts")
 		return nil, err
 	}
 
-	parsedHeader := balanceHeader.ToCedroServiceManagerHeader()
+	w.logger.Info("Submitting Batch COnfirmation", "bal", balanceHeader)
 
-	w.logger.Info("Submitting Batch COnfirmation", "bal", parsedHeader)
+	var tx *types.Transaction
 
-	tx, err := w.AvsContractBindings.ServiceManager.ConfirmAgentDeviation(txOpts, parsedHeader, nonSignerStakeSignature)
+	switch reflect.TypeOf(balanceHeader) {
+	case reflect.TypeOf(&tasks.BalanceTaskInfo{}):
+
+		balHeader := balanceHeader.(*tasks.BalanceTaskInfo)
+
+		parsedHeader := balHeader.ToCedroServiceManagerHeader()
+
+		tx, err = w.AvsContractBindings.ServiceManager.ConfirmAgentDeviation(txOpts, parsedHeader, nonSignerStakeSignature)
+
+	case reflect.TypeOf(&tasks.AgentSlashTaskInfo{}):
+
+		balHeader := balanceHeader.(*tasks.AgentSlashTaskInfo)
+
+		parsedHeader := balHeader.ToCedroServiceManagerHeader()
+
+		tx, err = w.AvsContractBindings.ServiceManager.ConfirmAgentFraud(txOpts, parsedHeader, nonSignerStakeSignature)
+
+	}
+
 	if err != nil {
 		w.logger.Error("Error submitting SubmitTaskResponse tx while calling respondToTask", "err", err)
 		return nil, err

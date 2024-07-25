@@ -22,6 +22,14 @@ import (
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
 )
 
+type ITaskProcessor interface {
+	Start(ctx context.Context)
+
+	CreateTask(req tasks.ICreateTaskRequest) (tasks.ICreateTaskResponse, error)
+
+	ProcessSignedTaskResponse(req *tasks.CreateSignedTaskResRequest) (*tasks.SignedTaskRespResponse, error)
+}
+
 type TaskProcessor struct {
 	taskType string
 
@@ -38,17 +46,17 @@ type TaskProcessor struct {
 
 	logger    logging.Logger
 	ethClient eth.Client
-	avsReader *avs.AvsReader
+	avsReader avs.IAVSReader
 
 	blsAggrService *blsaggregator.BLSAggregatorService
 
 	cfg         *config.Config
 	graphClient *graphql.GraphQLClient
 
-	avsWriter *avs.AvsWriter
+	avsWriter avs.IAvsWriter
 }
 
-func NewTaskProcessorService(taskType string, c *config.Config, logger logging.Logger, avsWriter *avs.AvsWriter) (*TaskProcessor, error) {
+func NewTaskProcessorService(taskType string, c *config.Config, logger logging.Logger, avsWriter avs.IAvsWriter) (*TaskProcessor, error) {
 
 	ethClient, err := eth.NewClient(c.EthConfig.RpcUrl)
 
@@ -176,9 +184,10 @@ func (t *TaskProcessor) ProcessSignedTaskResponse(req *tasks.CreateSignedTaskRes
 
 	taskIndex := req.Task.GetTaskIndex()
 
-	t.tasksMu.Lock()
-	t.tasks[taskIndex] = req.Task
-	t.tasksMu.Unlock()
+	//TODO: Check how mutex is performing here?
+	// t.tasksMu.Lock()
+	// t.tasks[taskIndex] = req.Task
+	// t.tasksMu.Unlock()
 
 	taskResponseDigest, err := req.Task.GetHeaderHash()
 
@@ -192,7 +201,7 @@ func (t *TaskProcessor) ProcessSignedTaskResponse(req *tasks.CreateSignedTaskRes
 	if task == nil {
 		t.logger.Error("task doesn't exist for given request hash", "err", err)
 
-		return nil, err
+		return nil, fmt.Errorf("task doesn't exist for given request hash")
 	}
 
 	err = t.blsAggrService.ProcessNewSignature(context.TODO(), taskIndex, taskResponseDigest.UnderlyingType(), &req.BlsSignature, req.OperatorId)
@@ -299,6 +308,7 @@ func (agg *TaskProcessor) InitializeNewTask(ctx context.Context, taskIndex sdkty
 	agg.tasks[taskIndex] = task
 	agg.tasksMu.Unlock()
 
+	//TODO: Define properly
 	taskTimeToExpiry := time.Duration(10) * time.Minute
 
 	err := agg.blsAggrService.InitializeNewTask(
@@ -380,13 +390,15 @@ func (t *TaskProcessor) SendAggregatedResponseToContract(blsResp blsaggregator.B
 	}
 
 	if res != nil {
-		reqHash, err := task.GetHeaderHash()
+		//delete from unfinisehed task
 
-		if err != nil {
-			t.logger.Error("agg failed to find req hash")
-		}
+		reqHash := task.GetUniqueHash()
 
-		t.SetFinishedTask(reqHash.String(), &types.FinishedTaskStatus{
+		// if err != nil {
+		// 	t.logger.Error("agg failed to find req hash")
+		// }
+
+		t.SetFinishedTask(reqHash, &types.FinishedTaskStatus{
 			Message:          task,
 			TxHash:           res.TxHash,
 			BlockHash:        res.BlockHash,

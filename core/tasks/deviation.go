@@ -53,7 +53,7 @@ func NewBalanceTaskInfo(req *aggregator.BalanceTaskInfo) (*BalanceTaskInfo, erro
 	return res, nil
 }
 
-func (r BalanceTaskInfo) ToPbType() *aggregator.BalanceTaskInfo {
+func (r *BalanceTaskInfo) ToPbType() *aggregator.BalanceTaskInfo {
 	return &aggregator.BalanceTaskInfo{
 		QuorumNumbers:              r.QuorumNumbers.UnderlyingType(),
 		QuorumThresholdPercentages: r.QuorumThresholdPercentages.UnderlyingType(),
@@ -66,7 +66,7 @@ func (r BalanceTaskInfo) ToPbType() *aggregator.BalanceTaskInfo {
 	}
 }
 
-func (r BalanceTaskInfo) ToCedroServiceManagerHeader() cedroservicemanager.CedroServiceDataDeviationBalanceHeader {
+func (r *BalanceTaskInfo) ToCedroServiceManagerHeader() cedroservicemanager.CedroServiceDataDeviationBalanceHeader {
 	return cedroservicemanager.CedroServiceDataDeviationBalanceHeader{
 		AgentAddress:               r.AgentAddress,
 		ReferenceBlockNumber:       uint32(r.ReferenceBlockNumber),
@@ -136,18 +136,26 @@ func (r *BalanceTaskInfo) EncodeSignHash() ([]byte, error) {
 	return bytes, nil
 }
 
-func (r BalanceTaskInfo) GetHeaderHash() (core.Bytes32, error) {
+func (r *BalanceTaskInfo) GetHeaderHash() (sdktypes.Bytes32, error) {
 	headerByte, err := r.EncodeSignHash()
 	if err != nil {
-		return core.Bytes32{}, err
+		return sdktypes.Bytes32{}, err
 	}
 
-	var headerHash core.Bytes32
+	var headerHash sdktypes.Bytes32
 	hasher := sha3.NewLegacyKeccak256()
 	hasher.Write(headerByte)
 	copy(headerHash[:], hasher.Sum(nil)[:32])
 
 	return headerHash.UnderlyingType(), nil
+}
+
+func (r *BalanceTaskInfo) GetTaskIndex() sdktypes.TaskIndex {
+	return r.TaskIndex
+}
+
+func (r *BalanceTaskInfo) GetUniqueHash() string {
+	return r.AgentAddress.Hex() + r.ReqId.String()
 }
 
 type CreateDeviationTaskRequest struct {
@@ -172,9 +180,32 @@ func NewCreateDeviationTaskRequest(req *aggregator.CreateDeviationTaskRequest) (
 }
 
 func (t *CreateDeviationTaskRequest) GetHash() (string, error) {
-	hash, err := GetRequestHash(t.ReqId, t.AgentAddress)
+	hash := t.AgentAddress.Hex() + t.ReqId.String()
 
-	return hash, err
+	return hash, nil
+}
+
+func (t *CreateDeviationTaskRequest) GetAgent() common.Address {
+	return t.AgentAddress
+}
+func (t *CreateDeviationTaskRequest) GetIdentifier() *big.Int {
+	return t.ReqId
+}
+func (t *CreateDeviationTaskRequest) GetRefBlock() uint64 {
+	return t.ReferenceBlockNumber
+}
+
+func (t *CreateDeviationTaskRequest) GetTaskInfo(taskIndex sdktypes.TaskIndex, quorumNums sdktypes.QuorumNums, quorumThresholds sdktypes.QuorumThresholdPercentages) ITaskInfo {
+	return &BalanceTaskInfo{
+		QuorumNumbers:              quorumNums,
+		QuorumThresholdPercentages: quorumThresholds,
+		TaskIndex:                  taskIndex,
+		ReferenceBlockNumber:       t.ReferenceBlockNumber,
+		ReqId:                      t.ReqId,
+		ActualBalance:              big.NewInt(0),
+		IdealBalance:               big.NewInt(0),
+		AgentAddress:               t.AgentAddress,
+	}
 }
 
 type CreateDeviationTaskResponse struct {
@@ -193,7 +224,7 @@ type SignedDeviationTaskRespRequest struct {
 	OperatorId   sdktypes.OperatorId
 }
 
-func NewSignedDeviationTaskRespRequest(req *aggregator.SignedDeviationTaskRespRequest) (*SignedDeviationTaskRespRequest, error) {
+func NewSignedDeviationTaskRespRequest(req *aggregator.SignedDeviationTaskRespRequest) (*CreateSignedTaskResRequest, error) {
 	operatorId := req.GetOperatorId()
 
 	if len(operatorId) != 32 {
@@ -214,8 +245,8 @@ func NewSignedDeviationTaskRespRequest(req *aggregator.SignedDeviationTaskRespRe
 	g1Point := bls.NewZeroG1Point().Deserialize(signRaw)
 	sign := bls.Signature{G1Point: g1Point}
 
-	res := &SignedDeviationTaskRespRequest{
-		Balance:      *balHead,
+	res := &CreateSignedTaskResRequest{
+		Task:         balHead,
 		BlsSignature: sign,
 	}
 

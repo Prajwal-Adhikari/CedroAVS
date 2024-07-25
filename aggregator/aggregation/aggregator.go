@@ -28,7 +28,7 @@ type Aggregator struct {
 	logger               sdklogging.Logger
 	grpcServerIpPortAddr string
 	gRpc                 *rpc.GRpcHandler
-	avsWriter            *avs.AvsWriter
+	avsWriter            avs.IAvsWriter
 
 	taskprocessors map[string]*taskprocessor.TaskProcessor
 }
@@ -131,19 +131,26 @@ func NewAggregator(cfg *config.Config) (*Aggregator, error) {
 	}, nil
 }
 
-func (a *Aggregator) Start(ctx context.Context, wg *sync.WaitGroup) error {
-	defer func() {
-		wg.Done()
-	}()
+func (a *Aggregator) Start(ctx context.Context) error {
+
+	var wg *sync.WaitGroup
 
 	a.logger.Infof("Aggregator is starting")
 
-	go a.gRpc.Start(ctx, a.grpcServerIpPortAddr)
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		a.gRpc.Start(ctx, a.grpcServerIpPortAddr)
+	}()
 
 	wg.Add(len(a.taskprocessors))
 
 	for _, tp := range a.taskprocessors {
-		go tp.Start(ctx)
+		go func(tp *taskprocessor.TaskProcessor) {
+			defer wg.Done()
+			tp.Start(ctx)
+		}(tp)
 	}
 
 	wg.Wait()

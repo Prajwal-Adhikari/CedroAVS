@@ -4,12 +4,10 @@ import (
 	"context"
 	"flag"
 	"log"
-	"sync"
 
 	aggregator "github.com/Cedro-Finance/CedroAVS/aggregator/aggregation"
 	"github.com/Cedro-Finance/CedroAVS/core/config"
 )
-
 
 type App struct{}
 
@@ -36,8 +34,6 @@ func main() {
 
 	}
 
-	_ = config
-
 	aggr, err := aggregator.NewAggregator(config)
 
 	if err != nil {
@@ -47,14 +43,13 @@ func main() {
 	// ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	// defer stop()
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	err = aggr.Start(context.Background(), wg)
+	err = aggr.Start(ctx)
 	if err != nil {
 		log.Fatalln("Aggregator run failed", "err", err)
 	}
 
-	wg.Wait()
+	<-ctx.Done()
 }
-

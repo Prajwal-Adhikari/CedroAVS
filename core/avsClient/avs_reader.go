@@ -23,6 +23,11 @@ type IAVSReader interface {
 
 	//GetQuorumThresholdPercentages
 	GetQuorumThresholdPercentages(ctx context.Context, blockNumber uint32, quorums sdktypes.QuorumNums) (sdktypes.QuorumThresholdPercentages, error)
+
+	//
+	GetOperatorsAvsStateAtBlock(ctx context.Context, quorumNumbers sdktypes.QuorumNums, blockNumber sdktypes.BlockNum) (map[sdktypes.OperatorId]sdktypes.OperatorAvsState, error)
+
+	GetQuorumsAvsStateAtBlock(ctx context.Context, quorumNumbers sdktypes.QuorumNums, blockNumber sdktypes.BlockNum) (map[sdktypes.QuorumNum]sdktypes.QuorumAvsState, error)
 }
 
 type AvsReader struct {
@@ -31,7 +36,7 @@ type AvsReader struct {
 	graphClient        *graphql.GraphQLClient
 }
 
-func NewAvsReader(c config.AVSConfig, ethClient eth.Client, logger logging.Logger, graphClient *graphql.GraphQLClient) (*AvsReader, error) {
+func NewAvsReader(c config.AVSConfig, ethClient eth.Client, logger logging.Logger, graphClient *graphql.GraphQLClient) (IAVSReader, error) {
 	regrAddr := c.RegistryCoordinatorAddr
 	osAddr := c.OperatorStateRetrieverAddr
 
@@ -151,4 +156,3 @@ func (ar *AvsReader) GetQuorumsAvsStateAtBlock(ctx context.Context, quorumNumber
 	}
 	return quorumsAvsState, nil
 }
-

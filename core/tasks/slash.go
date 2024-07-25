@@ -14,7 +14,6 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-
 type AgentSlashTaskInfo struct {
 	QuorumNumbers              sdktypes.QuorumNums
 	QuorumThresholdPercentages sdktypes.QuorumThresholdPercentages
@@ -46,7 +45,7 @@ func NewAgentSlashTaskInfo(req *aggregator.AgentSlashTaskInfo) (*AgentSlashTaskI
 	return res, nil
 }
 
-func (r AgentSlashTaskInfo) ToPbType() *aggregator.AgentSlashTaskInfo {
+func (r *AgentSlashTaskInfo) ToPbType() *aggregator.AgentSlashTaskInfo {
 
 	return &aggregator.AgentSlashTaskInfo{
 		QuorumNumbers:              r.QuorumNumbers.UnderlyingType(),
@@ -59,7 +58,7 @@ func (r AgentSlashTaskInfo) ToPbType() *aggregator.AgentSlashTaskInfo {
 	}
 }
 
-func (r AgentSlashTaskInfo) ToCedroServiceManagerHeader() cedroservicemanager.CedroServiceDataFraudBalanceHeader {
+func (r *AgentSlashTaskInfo) ToCedroServiceManagerHeader() cedroservicemanager.CedroServiceDataFraudBalanceHeader {
 	return cedroservicemanager.CedroServiceDataFraudBalanceHeader{
 		AgentAddress:               r.AgentAddress,
 		ReferenceBlockNumber:       uint32(r.ReferenceBlockNumber),
@@ -67,7 +66,6 @@ func (r AgentSlashTaskInfo) ToCedroServiceManagerHeader() cedroservicemanager.Ce
 		QuorumThresholdPercentages: r.QuorumThresholdPercentages.UnderlyingType(),
 		TransactionId:              r.TxnId,
 		InsufficientAmount:         r.InsufficientBalance,
-
 	}
 }
 
@@ -123,18 +121,26 @@ func (r *AgentSlashTaskInfo) EncodeSignHash() ([]byte, error) {
 	return bytes, nil
 }
 
-func (r AgentSlashTaskInfo) GetHeaderHash() (core.Bytes32, error) {
+func (r *AgentSlashTaskInfo) GetHeaderHash() (sdktypes.Bytes32, error) {
 	headerByte, err := r.EncodeSignHash()
 	if err != nil {
-		return core.Bytes32{}, err
+		return sdktypes.Bytes32{}, err
 	}
 
-	var headerHash core.Bytes32
+	var headerHash sdktypes.Bytes32
 	hasher := sha3.NewLegacyKeccak256()
 	hasher.Write(headerByte)
 	copy(headerHash[:], hasher.Sum(nil)[:32])
 
 	return headerHash.UnderlyingType(), nil
+}
+
+func (r *AgentSlashTaskInfo) GetTaskIndex() sdktypes.TaskIndex {
+	return r.TaskIndex
+}
+
+func (r *AgentSlashTaskInfo) GetUniqueHash() string {
+	return r.AgentAddress.Hex() + r.TxnId.String()
 }
 
 type CreateAgentSlashTaskRequest struct {
@@ -158,9 +164,31 @@ func NewCreateAgentSlashTaskRequest(req *aggregator.CreateAgentSlashTaskRequest)
 }
 
 func (t *CreateAgentSlashTaskRequest) GetHash() (string, error) {
-	hash, err := GetRequestHash(t.TxnId, t.AgentAddress)
+	hash := t.AgentAddress.Hex() + t.TxnId.String()
 
-	return hash, err
+	return hash, nil
+}
+
+func (t *CreateAgentSlashTaskRequest) GetAgent() common.Address {
+	return t.AgentAddress
+}
+func (t *CreateAgentSlashTaskRequest) GetIdentifier() *big.Int {
+	return t.TxnId
+}
+func (t *CreateAgentSlashTaskRequest) GetRefBlock() uint64 {
+	return t.ReferenceBlockNumber
+}
+
+func (t *CreateAgentSlashTaskRequest) GetTaskInfo(taskIndex sdktypes.TaskIndex, quorumNums sdktypes.QuorumNums, quorumThresholds sdktypes.QuorumThresholdPercentages) ITaskInfo {
+	return &AgentSlashTaskInfo{
+		QuorumNumbers:              quorumNums,
+		QuorumThresholdPercentages: quorumThresholds,
+		TaskIndex:                  taskIndex,
+		ReferenceBlockNumber:       t.ReferenceBlockNumber,
+		TxnId:                      t.TxnId,
+		InsufficientBalance:        big.NewInt(0),
+		AgentAddress:               t.AgentAddress,
+	}
 }
 
 type CreateAgentSlashTaskResponse struct {
@@ -179,7 +207,7 @@ type SignedAgentSlashTaskRespRequest struct {
 	OperatorId   sdktypes.OperatorId
 }
 
-func NewSignedAgentSlashTaskRespRequest(req *aggregator.SignedAgentSlashTaskRespRequest) (*SignedAgentSlashTaskRespRequest, error) {
+func NewSignedAgentSlashTaskRespRequest(req *aggregator.SignedAgentSlashTaskRespRequest) (*CreateSignedTaskResRequest, error) {
 	operatorId := req.GetOperatorId()
 
 	if len(operatorId) != 32 {
@@ -200,8 +228,8 @@ func NewSignedAgentSlashTaskRespRequest(req *aggregator.SignedAgentSlashTaskResp
 	g1Point := bls.NewZeroG1Point().Deserialize(signRaw)
 	sign := bls.Signature{G1Point: g1Point}
 
-	res := &SignedAgentSlashTaskRespRequest{
-		Balance:      *balHead,
+	res := &CreateSignedTaskResRequest{
+		Task:         balHead,
 		BlsSignature: sign,
 	}
 

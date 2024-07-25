@@ -18,6 +18,7 @@ type GraphQLClient struct {
 	logger logging.Logger
 }
 
+
 func NewGraphQLClient(url string, logger logging.Logger) *GraphQLClient {
 	client := graphql.NewClient(url, nil)
 

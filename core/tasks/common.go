@@ -2,9 +2,10 @@ package tasks
 
 import (
 	"fmt"
+	"math/big"
 
 	aggregator "github.com/Cedro-Finance/CedroAVS/api/grpc"
-	"github.com/Cedro-Finance/CedroAVS/core"
+	"github.com/Layr-Labs/eigensdk-go/crypto/bls"
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -13,6 +14,8 @@ const (
 	AgentDeviationTask = "deviation"
 	AgentSlashTask     = "agentslash"
 )
+
+var TaskTypes = [2]string{AgentDeviationTask, AgentSlashTask}
 
 type SignedTaskRespResponse struct {
 	Reply  bool
@@ -84,6 +87,33 @@ type ITaskInfo interface {
 	// ToPbType() interface{}
 	// ToCedroServiceManagerHeader() interface{}
 
+	GetTaskIndex() sdktypes.TaskIndex
 	EncodeSignHash() ([]byte, error)
-	GetHeaderHash() (core.Bytes32, error)
+	GetHeaderHash() (sdktypes.Bytes32, error)
+	GetUniqueHash() string
+}
+
+type ICreateTaskRequest interface {
+	GetHash() (string, error)
+	GetAgent() common.Address
+	GetIdentifier() *big.Int
+	GetRefBlock() uint64
+	GetTaskInfo(taskIndex sdktypes.TaskIndex, quorumNums sdktypes.QuorumNums, quorumThresholds sdktypes.QuorumThresholdPercentages) ITaskInfo
+}
+
+type ICreateTaskResponse struct {
+	Info ITaskInfo
+}
+
+type CreateSignedTaskResRequest struct {
+	Task         ITaskInfo
+	BlsSignature bls.Signature
+	OperatorId   sdktypes.OperatorId
+}
+
+type TaskInfo struct {
+	QuorumNumbers              sdktypes.QuorumNums
+	QuorumThresholdPercentages sdktypes.QuorumThresholdPercentages
+	TaskIndex                  uint32
+	ReferenceBlockNumber       uint64
 }
