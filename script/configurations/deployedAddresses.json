@@ -1,9 +1,10 @@
+
 {
-  "roleManagerCore": "0x287E860Cba1E05B330d0Bc536FC16282B243b1c2",
-  "blsApkRegistry": "0x4578C4a2833a6AE5402d972654961Ba8976bD3e5",
-  "indexRegistry": "0x0Cf9F6dE222ff0A150fd62DF16c5a54feDA55650",
-  "stakeRegistry": "0x7723fE30b28cA2d541DFe1c6EfAF5827A277C415",
-  "operatorStateRetriever": "0x0941F5971d1a03d5a52E21195cDB5975e62CC920",
-  "cedroServiceManager": "0xdBbE5334CfC0C98397dEf343fD0f29B48AD124DE",
-  "registryCoordinator": "0x17db11dAE61D0d9c66717bCac08e3B146d07B4fF"
+  "roleManagerCore": "0x5872a61B304293f98A17b32f6D98b6e2D7A46c66",
+  "blsApkRegistry": "0x6faed7Ba316c3b046b93D978CEFAA34C81f31b68",
+  "indexRegistry": "0x422bB39eF3530e7774e286fF988d933426f6d557",
+  "stakeRegistry": "0x4048D0922d230f6c83808FCEAa46efD4C6817aCC",
+  "operatorStateRetriever": "0xeAAb9DA7B87Ee17dA9BB40Fcfa4e15E67d58c02C",
+  "cedroServiceManager": "0xC78b7146629614280dF3dBffcEefce699636BdA9",
+  "registryCoordinator": "0xbc5DB5e02F8ff5C2dBB69784e318348d3d85E2e7"
 }
