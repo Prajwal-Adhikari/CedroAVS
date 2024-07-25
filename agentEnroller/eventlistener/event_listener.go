@@ -16,56 +16,25 @@ import (
 
 // Replace this with your contract's ABI
 const contractABI = `[
-	{
-		"inputs": [],
-		"stateMutability": "nonpayable",
-		"type": "constructor"
-	},
-	{
-		"anonymous": false,
-		"inputs": [
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "oldOwner",
-				"type": "address"
-			},
-			{
-				"indexed": true,
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "OwnerSet",
-		"type": "event"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "address",
-				"name": "newOwner",
-				"type": "address"
-			}
-		],
-		"name": "changeOwner",
-		"outputs": [],
-		"stateMutability": "nonpayable",
-		"type": "function"
-	},
-	{
-		"inputs": [],
-		"name": "getOwner",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	}
+	 {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "agent",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32[]",
+          "name": "chainIDs",
+          "type": "bytes32[]"
+        }
+      ],
+      "name": "AgentPodChainList",
+      "type": "event"
+    }
 ]`
 
 // TODO: Update to actual abi and contract adresses for agent pod
@@ -106,22 +75,25 @@ func Start() {
 			fmt.Println("Log received: ", vLog) // Handle the received log
 
 			event := struct {
-				OldOwner common.Address
-				NewOwner common.Address
+				Agent    common.Address
+				ChainIDs []common.Hash
 			}{}
 			fmt.Printf("Event data: %+v\n", event)
 
-			// TODO: Update event name
-			eventName := "OwnerSet"
+			eventName := "AgentPodChainList"
 
 			err := parsedABI.UnpackIntoInterface(&event, eventName, vLog.Data)
 			if err != nil {
 				log.Fatalf("Failed to unpack log data: %v", err)
 			}
-			event.OldOwner = common.HexToAddress(vLog.Topics[1].Hex())
-			event.NewOwner = common.HexToAddress(vLog.Topics[2].Hex())
+			event.Agent = common.HexToAddress(event.Agent.Hex())
 
-			eventhandler.EnrollAgentHandler(event)
+			chainIDs := make([]string, len(event.ChainIDs))
+			for i, chainID := range event.ChainIDs {
+				chainIDs[i] = chainID.Hex()
+			}
+
+			eventhandler.EnrollAgentHandler(event.Agent, chainIDs)
 		}
 	}
 }

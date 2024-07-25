@@ -1,0 +1,26 @@
+chains:
+  - name: ethereum
+    chain: evm 
+    short_name: ETH
+    chain_name_byte: "0x4554480000000000000000000000000000000000000000000000000000000000"
+    node_url: https://ethereum-holesky-rpc.publicnode.com
+    agent_manager: "0xD0621425d41cb00989d44D84FE10eF35FB0D879B"
+    oracle: "0x95fa1773547ff93dA51E27423Ca93cFbB0A6FDDE"
+
+
+  - name: ethereum-sepolia
+    short_name: SEP
+    chain: evm 
+    chain_name_byte: "0x5345500000000000000000000000000000000000000000000000000000000000"
+    node_url: https://rpc.sepolia.ethpandaops.io
+    agent_manager: "0x4425A318eFB46437278496d6AE29Ad2F0f701f1A"
+    oracle: "0x20843722Da939972b8D10dD94BF77050b2518F67"
+
+  
+  - name: binance
+    chain: evm
+    short_name: BNB
+    chain_name_byte: "0x424e420000000000000000000000000000000000000000000000000000000000"
+    node_url: https://bsc-testnet-rpc.publicnode.com
+    agent_manager: "0x7Bf9126F5A4727BC2652D0E52149CD6586442363"
+    oracle: "0x8d0a5001780Afb37ba16e1Bc701FbFEcd0BF805B"
