@@ -4,8 +4,7 @@ pragma solidity 0.8.24;
 import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "./interfaces/IRoute.sol";
-import "./interfaces/IAdapter.sol";
+import "./interfaces/IOracle.sol";
 import "./libraries/Data.sol";
 
 string constant TAG = "AgentManager";
@@ -20,9 +19,6 @@ contract AgentManager is
     ReentrancyGuardUpgradeable
 {
     address public oracle;
-    address public route;
-    address public adapter;
-
     uint256 public slashingTimeThreshold;
     bytes32 public chainID;
 
@@ -33,8 +29,45 @@ contract AgentManager is
     mapping(address => uint256) public requestID;
     mapping(address => mapping(uint256 => uint256)) public requestTimestamp;
     mapping(address => mapping(uint256 => bool)) public requestFulfilled;
+    mapping(address => uint256) public bondAmount;
+    mapping(address => uint256) public deviationPercentage;
+    uint256 public bondThreshold;
+    mapping(address => mapping(bytes32 => address)) public agentPodContracts;
 
     event DeviationCheck(address agent, uint256 requestID);
+    event BondAmount(address agent, uint256 bondAmount);
+    event AgentPodCreated(
+        address agent,
+        bytes32[] chainID,
+        address[] agentContract
+    );
+    event AgentPodChainList(address agent, bytes32[] chainIDs);
+    event Deposit(
+        address agent,
+        uint256 txnID,
+        address depositor,
+        bytes32 asset,
+        uint256 amount,
+        uint256 principalAmount,
+        uint256 timeInterval,
+        uint256 interestRate
+    );
+
+    event Claim(
+        address agent,
+        uint256 txnId,
+        address depositor,
+        bytes32[] assets,
+        uint256[] amounts,
+        Data.STATUS status
+    );
+
+    event SlashAgent(
+        address agent,
+        uint256 amountToSlash,
+        bytes32 chainID,
+        uint256 txnId
+    );
 
     error InsufficientFees();
     error ArgumentsMismatch(string contractTAG);
@@ -42,6 +75,9 @@ contract AgentManager is
     error PreviousDeviationInProgress(address agent, uint256 requestID);
     error NotAnAgent(address agent);
     error AIAgentAlreadyExists(address agent);
+    error BondAmountLessThanThreshold(address agent, uint256 bondAmount);
+    error DeviationAlreadySet(address agent, uint256 deviationPercentage);
+    error TransferEthFailed();
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -62,24 +98,6 @@ contract AgentManager is
     }
 
     /**
-     * @notice Configures adapter
-     * This function can only be accessed by the account with role MANAGER.
-     * @param _adapter - address of the adapter
-     **/
-    function setAdapter(address _adapter) external {
-        adapter = _adapter;
-    }
-
-    /**
-     * @notice Configures route
-     * This function can only be accessed by the account with role MANAGER.
-     * @param _route - address of the route
-     **/
-    function setRoute(address _route) external {
-        route = _route;
-    }
-
-    /**
      * @notice Configures chain id
      * This function can only be accessed by the account with role MANAGER.
      * @param _chainID - protocol specific key for the chain
@@ -89,46 +107,77 @@ contract AgentManager is
     }
 
     /**
+     * @notice Configures bond threshold
+     * This function can only be accessed by the account with role AGENT.
+     * @param _bondThreshold - minimum amount of bond to be deposited
+     **/
+    function setBondThreshold(uint256 _bondThreshold) external {
+        bondThreshold = _bondThreshold;
+    }
+
+    /**
+     * @notice Configures deviation percentage
+     * This function can only be accessed by the account with role AGENT.
+     * @param _deviationPercentage - deviation that is allowed for agent before slashing
+     **/
+    function setDeviationPercentage(uint256 _deviationPercentage) external {
+        if (deviationPercentage[_msgSender()] != 0)
+            revert DeviationAlreadySet(
+                _msgSender(),
+                deviationPercentage[_msgSender()]
+            );
+        deviationPercentage[_msgSender()] = _deviationPercentage;
+    }
+
+    /**
+     * @notice Configures bond amount for agent
+     * This function can only be accessed by the account with role AGENT.
+     **/
+    function updateBondAmount() external payable {
+        bondAmount[_msgSender()] += msg.value;
+        if (bondAmount[_msgSender()] < bondThreshold)
+            revert BondAmountLessThanThreshold(
+                _msgSender(),
+                bondAmount[_msgSender()]
+            );
+        emit BondAmount(_msgSender(), bondAmount[_msgSender()]);
+    }
+
+    /**
      * @notice Enrolls agent
      * This function can only be accessed by the account with role Agent.
      * @param _chainIDs - ids of the chain where agent wants to create AgentPod contract
      **/
-    function enrollAgent(bytes32[] memory _chainIDs, uint256[] memory fees)
-        external
-        payable
-    {
+    function enrollAgent(bytes32[] memory _chainIDs) external payable {
         if (isAgent[_msgSender()]) revert AIAgentAlreadyExists(_msgSender());
-        uint256 totalFees;
-        for (uint256 i; i < fees.length; ) {
-            totalFees += fees[i];
+        agents.push(_msgSender());
+        isAgent[_msgSender()] = true;
+
+        emit AgentPodChainList(_msgSender(), _chainIDs);
+    }
+
+    /**
+     * @notice Configures agents to their respective AgentPod contracts
+     * This function can only be accessed by the account with role Manager.
+     * @param _agent - address of the agent.
+     * @param _chainIDs - chain keys
+     * @param _agentPods - address of AgentPod contracts
+     **/
+    function mapAgent(
+        address _agent,
+        bytes32[] memory _chainIDs,
+        address[] memory _agentPods
+    ) external {
+        if (_chainIDs.length != _agentPods.length)
+            revert ArgumentsMismatch(TAG);
+        for (uint256 i; i < _chainIDs.length; ) {
+            agentPodContracts[_agent][_chainIDs[i]] = _agentPods[i];
             unchecked {
                 i++;
             }
         }
 
-        if (msg.value < totalFees) revert InsufficientFees();
-        if (msg.value > totalFees)
-            payable(_msgSender()).transfer(msg.value - totalFees);
-
-        agents.push(_msgSender());
-        isAgent[_msgSender()] = true;
-        IAdapter(adapter).enrollAgents{value: msg.value}(
-            address(this),
-            _msgSender(),
-            oracle,
-            _chainIDs,
-            fees
-        );
-    }
-
-    /**
-     * @notice Configures agents to their respective AgentPod contract
-     * This function can only be accessed by the account with role Manager.
-     * @param _agent - address of agent wallet
-     * @param _agentContract - address of AgentPod contract
-     **/
-    function mapAgent(address _agent, address _agentContract) external {
-        agentContract[_agent] = _agentContract;
+        emit AgentPodCreated(_agent, _chainIDs, _agentPods);
     }
 
     /**
@@ -180,16 +229,48 @@ contract AgentManager is
     /**
      * @notice Slash an agent in case of major deviation in holdings
      * @param _agent - address of the agent.
+     * @param _slashAmount - amount to be slashed in USD
      **/
-    function slashAgent(address _agent) external {
+    function slashAgent(address _agent, uint256 _slashAmount) external {
         if (
             block.timestamp >
             requestTimestamp[_agent][requestID[_agent]] +
                 (slashingTimeThreshold)
         ) revert SlashingTimeLimitExceeded(_agent, requestID[_agent]);
-        // TODO: Transfer slashAmount to AgentPod contract from AgentManager
+
+        _slashAmount =
+            (_slashAmount * (1e18)) /
+            IOracle(oracle).getSinglePrice(chainID);
+
+        if (_slashAmount > bondAmount[_agent])
+            _slashAmount = bondAmount[_agent];
+        bondAmount[_agent] -= _slashAmount;
+        (bool success, ) = (payable(agentPodContracts[_agent][chainID])).call{
+            value: _slashAmount
+        }("");
+
+        if (!success) revert TransferEthFailed();
     }
 
+    /**
+     * @notice Slash an agent in case of major deviation in holdings
+     * @param _agent - address of the agent.
+     * @param _slashAmount - amount to be slashed in USD
+     **/
+    function slashAgentForBankRun(
+        address _agent,
+        uint256 _slashAmount,
+        uint256 _txnId,
+        bytes32 _chainID,
+        address _agentContract
+    ) external {
+        // swap interface
+    }
+
+    /**
+     * @notice Invoked after receiving responses from operator for deviation check
+     * This function can only be accessed by CedroServiceManager
+     **/
     function receivedResponse(address _agent) external {
         requestFulfilled[_agent][requestID[_agent]] = true;
     }
@@ -208,14 +289,56 @@ contract AgentManager is
         emit DeviationCheck(_agent, requestID[_agent]);
     }
 
+    function emitDeposit(
+        address _agent,
+        uint256 _txnID,
+        address _depositor,
+        bytes32 _asset,
+        uint256 _amount,
+        uint256 _principalAmount,
+        uint256 _timeInterval,
+        uint256 _interestRate
+    ) external {
+        emit Deposit(
+            _agent,
+            _txnID,
+            _depositor,
+            _asset,
+            _amount,
+            _principalAmount,
+            _timeInterval,
+            _interestRate
+        );
+    }
+
+    function emitClaim(
+        address _agent,
+        uint256 _txnId,
+        address _depositor,
+        bytes32[] memory _assets,
+        uint256[] memory _amounts,
+        Data.STATUS _status
+    ) external {
+        emit Claim(_agent, _txnId, _depositor, _assets, _amounts, _status);
+    }
+
+    function emitSlash(
+        address _agent,
+        uint256 _amountToSlash,
+        bytes32 _chainID,
+        uint256 _txnId
+    ) external {
+        emit SlashAgent(_agent, _amountToSlash, _chainID, _txnId);
+    }
+
     /**
      * @notice Converts address to bytes32
-     * @param addr - token address to withdraw
+     * @param _addr - token address to withdraw
      **/
-    function addressToBytes32(address addr) public pure returns (bytes32) {
+    function addressToBytes32(address _addr) public pure returns (bytes32) {
         bytes32 result;
         assembly {
-            mstore(0, addr)
+            mstore(0, _addr)
             result := mload(0)
         }
         return result;

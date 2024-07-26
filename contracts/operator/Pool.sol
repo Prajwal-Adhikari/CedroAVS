@@ -1,26 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Context.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./interfaces/IOracle.sol";
-import "./interfaces/IAgentManager.sol";
-import "./interfaces/IAgentPod.sol";
-import "./libraries/Data.sol";
 import "../actions/interfaces/IAave.sol";
 
 string constant TAG = "Pool";
 
-contract Pool is Context, ReentrancyGuard {
-    using ECDSA for bytes32;
+contract Pool is Initializable, ContextUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     address public owner;
     address public agentPod;
-    address public oppurtunity;
 
     error IncorrectRequestId(
         string contractTAG,
@@ -36,8 +30,23 @@ contract Pool is Context, ReentrancyGuard {
     error AssetAlreadyExists(bytes32 asset);
     error AssetNotApprovedByAgentPod(bytes32 asset);
 
-    constructor(address _owner, address _agentPod) {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _owner, address _agentPod) public initializer {
+        __ReentrancyGuard_init();
         owner = _owner;
+        agentPod = _agentPod;
+    }
+ 
+    /**
+     * @notice Configures corresponding agentPod
+     * This function can be accessed by the role MANAGER
+     * @param _agentPod - address of the AgentPod
+     **/
+    function setAgentPod(address _agentPod) public {
         agentPod = _agentPod;
     }
 

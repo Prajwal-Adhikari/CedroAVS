@@ -40,25 +40,13 @@ contract AgentPod is Context, ReentrancyGuard {
     mapping(uint256 => Data.UserDepositData) public userDeposits; // txnID => userDeposits
     mapping(address => uint256[]) public userTxnIDs;
     mapping(bytes32 => bool) public isAssetAccepted; // assetID => isAccepted
+    mapping(bytes32 => bool) public isAssetDebt;
     mapping(bytes => bool) public signatureUsed; // signature => isUsed
     mapping(address => uint256) public reward;
-    bytes32[] public acceptedAssetList;
 
-    event Deposit(
-        uint256 txnID,
-        address depositor,
-        bytes32 asset,
-        uint256 amount,
-        uint256 timeInterval,
-        uint256 interestRate
-    );
-    event Claim(
-        uint256 txnId,
-        address depositor,
-        bytes32[] assets,
-        uint256[] amounts,
-        Data.STATUS status
-    );
+    bytes32[] public acceptedAssetList;
+    bytes32[] public debtAssetList;
+    mapping(uint256 => bool) public slashEmitted;
     event TransferAssetToPool(
         uint256 txnId,
         address depositor,
@@ -66,7 +54,6 @@ contract AgentPod is Context, ReentrancyGuard {
         uint256[] amounts,
         Data.STATUS status
     );
-    event SlashAgent(address _agent, uint256 _amountToSlash, bytes32 _chainID);
 
     error DepositNotMatured(uint256 _txnID, address _user);
     error IncorrectRequestId(
@@ -98,6 +85,8 @@ contract AgentPod is Context, ReentrancyGuard {
         owner = _owner;
         oracle = _oracle;
     }
+
+    receive() external payable {}
 
     /**
      * @notice Fetch oracle from AgentManger and sets it in the contract
@@ -178,6 +167,33 @@ contract AgentPod is Context, ReentrancyGuard {
         }
     }
 
+    function addDebtAsset(bytes32[] memory _assets) external {
+        uint256 len = _assets.length;
+        for (uint256 i; i < len; ) {
+            if (isAssetDebt[_assets[i]]) revert AssetAlreadyExists(_assets[i]);
+
+            debtAssetList.push(_assets[i]);
+            isAssetDebt[_assets[i]] = true;
+            unchecked {
+                i++;
+            }
+        }
+    }
+
+    function removeDebtAsset(bytes32 _asset) external {
+        uint256 len = debtAssetList.length;
+        for (uint256 i; i < len; ) {
+            if (debtAssetList[i] == _asset) {
+                debtAssetList[i] = debtAssetList[len - 1];
+                debtAssetList.pop();
+                break;
+            }
+            unchecked {
+                i++;
+            }
+        }
+    }
+
     /**
      * @notice Accept deposits from user
      * This function can only be accessed by the account with role Agent.
@@ -196,7 +212,7 @@ contract AgentPod is Context, ReentrancyGuard {
         uint256 _timeThreshold,
         bytes memory _signature
     ) external payable {
-        // if (signatureUsed[_signature]) revert SignatureAlreadyUsed(_signature);
+        if (signatureUsed[_signature]) revert SignatureAlreadyUsed(_signature);
         if (!isAssetAccepted[_asset]) revert AssetNotEnabledByAgent(_asset);
         if (block.timestamp > _timeThreshold) revert StaleMessage(_signature);
 
@@ -236,11 +252,13 @@ contract AgentPod is Context, ReentrancyGuard {
         ++txnIdCounter;
         signatureUsed[_signature] = true;
         _pay(poolInfo.token, _amount);
-        emit Deposit(
+        IAgentManager(agentManager).emitDeposit(
+            owner,
             userData.txnID,
             userData.user,
             _asset,
             _amount,
+            userData.principalAmount,
             _timeInterval,
             _interestRate
         );
@@ -301,17 +319,24 @@ contract AgentPod is Context, ReentrancyGuard {
         ) revert DepositNotMatured(_txnId, userData.user);
 
         uint256 amountToClaim = (userData.principalAmount *
-            (
-                ((userData.timeInterval / SECONDS_IN_A_YEAR) *
-                    (userData.interestRate)) /
-            (1e18) +
-            (1e18))) / (1e18);
+            (((userData.timeInterval / SECONDS_IN_A_YEAR) *
+                (userData.interestRate)) /
+                (1e18) +
+                (1e18))) / (1e18);
 
         uint256 totalBalance = poolBalanceOfAgentPod() +
             principalBalanceOfAgentPod();
 
         if (amountToClaim > totalBalance) {
-            emit SlashAgent(owner, amountToClaim - (totalBalance), chainID);
+            if (!slashEmitted[_txnId]) {
+                IAgentManager(agentManager).emitSlash(
+                    owner,
+                    amountToClaim - (totalBalance),
+                    chainID,
+                    _txnId
+                );
+                slashEmitted[_txnId] = true;
+            }
             return;
         }
 
@@ -352,7 +377,14 @@ contract AgentPod is Context, ReentrancyGuard {
         reward[userData.user] = 0;
         IPool(pool).trasferAssetToDepositor(userData.user, tokens, amounts);
         userData.status = Data.STATUS.CLAIMED;
-        emit Claim(_txnId, userData.user, _assets, amounts, userData.status);
+        IAgentManager(agentManager).emitClaim(
+            owner,
+            _txnId,
+            userData.user,
+            _assets,
+            amounts,
+            userData.status
+        );
     }
 
     /**
@@ -394,6 +426,25 @@ contract AgentPod is Context, ReentrancyGuard {
     /**
      * @notice Returns balance of agent in Pool contract
      **/
+    function debtBalanceOfAgentPod() public view returns (uint256 amountInUSD) {
+        uint256 len = debtAssetList.length;
+        for (uint256 i; i < len; ) {
+            Data.PoolInfo memory poolInfo = IAgentManager(agentManager).pools(
+                debtAssetList[i]
+            );
+            amountInUSD +=
+                (IERC20(poolInfo.token).balanceOf(pool) *
+                    (IOracle(oracle).getSinglePrice(debtAssetList[i]))) /
+                (1e18);
+            unchecked {
+                i++;
+            }
+        }
+    }
+
+    /**
+     * @notice Returns balance of agent in Pool contract
+     **/
     function poolBalanceOfAgentPod() public view returns (uint256 amountInUSD) {
         uint256 len = acceptedAssetList.length;
         for (uint256 i; i < len; ) {
@@ -421,9 +472,9 @@ contract AgentPod is Context, ReentrancyGuard {
         uint256 len = acceptedAssetList.length;
         for (uint256 i; i < len; ) {
             Data.PoolInfo memory poolInfo = IAgentManager(agentManager).pools(
-                acceptedAssetList[1]
+                acceptedAssetList[i]
             );
-            amountInUSD =
+            amountInUSD +=
                 (IERC20(poolInfo.token).balanceOf(address(this)) *
                     (IOracle(oracle).getSinglePrice(acceptedAssetList[i]))) /
                 (1e18);
@@ -437,7 +488,14 @@ contract AgentPod is Context, ReentrancyGuard {
      * @notice Returns totalBalance of the agent
      **/
     function getBalanceOfAgent() public view returns (uint256) {
-        return principalBalanceOfAgentPod() + poolBalanceOfAgentPod();
+        if (
+            principalBalanceOfAgentPod() + poolBalanceOfAgentPod() <
+            debtBalanceOfAgentPod()
+        ) return 0;
+        return
+            principalBalanceOfAgentPod() +
+            poolBalanceOfAgentPod() -
+            debtBalanceOfAgentPod();
     }
 
     function _pay(address _token, uint256 _amount) internal {
@@ -522,5 +580,35 @@ contract AgentPod is Context, ReentrancyGuard {
             );
             decimals = abi.decode(data, (uint8));
         }
+    }
+
+    function getAcceptedAssetList() public view returns (bytes32[] memory) {
+        bytes32[] memory result = new bytes32[](acceptedAssetList.length);
+        for (uint256 i = 0; i < acceptedAssetList.length; i++) {
+            result[i] = acceptedAssetList[i];
+        }
+        return result;
+    }
+
+    function getDebtAssetList() public view returns (bytes32[] memory) {
+        bytes32[] memory result = new bytes32[](debtAssetList.length);
+        for (uint256 i = 0; i < debtAssetList.length; i++) {
+            result[i] = debtAssetList[i];
+        }
+        return result;
+    }
+
+    function getInterestAccumulated(uint256 _txnId)
+        external
+        view
+        returns (uint256)
+    {
+        Data.UserDepositData storage userData = userDeposits[_txnId];
+        uint256 timeDiff = (block.timestamp - userData.createdAt) * (1e18);
+        if (userData.timeInterval < timeDiff) timeDiff = userData.timeInterval;
+        uint256 amountToClaim = (userData.principalAmount *
+            (((timeDiff / SECONDS_IN_A_YEAR) * (userData.interestRate)) /
+                (1e18))) / (1e18);
+        return amountToClaim;
     }
 }
