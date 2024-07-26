@@ -5,7 +5,6 @@ import {IRegistryCoordinator} from "./interfaces/IRegistryCoordinator.sol";
 import {IBLSApkRegistry} from "./interfaces/IBLSApkRegistry.sol";
 import {IStakeRegistry} from "./interfaces/IStakeRegistry.sol";
 import {IIndexRegistry} from "./interfaces/IIndexRegistry.sol";
-
 import {BitmapUtils} from "./libraries/BitmapUtils.sol";
 
 /**
