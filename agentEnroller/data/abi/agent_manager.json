@@ -1,0 +1,22 @@
+{
+    "abi": [
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_agent",
+                    "type": "address"
+                },
+                {
+                    "internalType": "address",
+                    "name": "_agentContract",
+                    "type": "address"
+                }
+            ],
+            "name": "mapAgent",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        }
+    ]
+}

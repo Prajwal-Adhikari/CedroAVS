@@ -11,6 +11,7 @@ import (
 	"github.com/Cedro-Finance/CedroAVS/agentEnroller/config"
 	contractcaller "github.com/Cedro-Finance/CedroAVS/agentEnroller/contract/caller"
 	contractdeployer "github.com/Cedro-Finance/CedroAVS/agentEnroller/contract/deployer"
+	contractutils "github.com/Cedro-Finance/CedroAVS/agentEnroller/contract/utils"
 	"github.com/Cedro-Finance/CedroAVS/agentEnroller/utils"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -37,7 +38,7 @@ func EnrollAgentHandler(owner common.Address, chainIDS []string) {
 			copy(chainBytes32[:], chainBytes[:32])
 			chainName := utils.Bytes32ToString(chainBytes32)
 
-			chainData := contractcaller.GetChainData(chainName, supportedChains)
+			chainData := contractutils.GetChainData(chainName, supportedChains)
 
 			_, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()

@@ -2,111 +2,26 @@ package contractcaller
 
 import (
 	"context"
-	"crypto/ecdsa"
 	"encoding/hex"
-	"errors"
 	"fmt"
-	"math/big"
 	"strings"
 
 	"sync"
 
 	"github.com/Cedro-Finance/CedroAVS/agentEnroller/config"
+	contractutils "github.com/Cedro-Finance/CedroAVS/agentEnroller/contract/utils"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-// const contractAbi = `[
-//
-//	  {
-//	    "inputs": [
-//	      {
-//	        "internalType": "address",
-//	        "name": "_agent",
-//	        "type": "address"
-//	      },
-//	      {
-//	        "internalType": "bytes32[]",
-//	        "name": "_chainIDs",
-//	        "type": "bytes32[]"
-//	      },
-//	      {
-//	        "internalType": "address[]",
-//	        "name": "_agentContract",
-//	        "type": "address[]"
-//	      }
-//	    ],
-//	    "name": "mapAgent",
-//	    "outputs": [],
-//	    "stateMutability": "nonpayable",
-//	    "type": "function"
-//	  }
-//	]`
-const contractAbi = `[
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "_agent",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "_agentContract",
-          "type": "address"
-        }
-      ],
-      "name": "mapAgent",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    }
-  ]`
-
 func CallMapAgent(agent common.Address, chainRPC string, contractAddress common.Address, chainIDs []string, agentContracts []common.Address, privateKeyHex string) error {
-	client, err := ethclient.Dial(chainRPC)
+	client, auth, err := contractutils.InitializeContractClient(chainRPC, privateKeyHex)
 	if err != nil {
-		return fmt.Errorf("failed to connect to Ethereum client: %v", err)
+		return err
 	}
 
-	privateKey, err := crypto.HexToECDSA(privateKeyHex)
-	if err != nil {
-		return fmt.Errorf("failed to load private key: %v", err)
-	}
-
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return errors.New("failed to cast public key to ECDSA")
-	}
-
-	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
-	if err != nil {
-		return fmt.Errorf("failed to get nonce: %v", err)
-	}
-
-	gasPrice, err := client.SuggestGasPrice(context.Background())
-	if err != nil {
-		return fmt.Errorf("failed to get gas price: %v", err)
-	}
-
-	chainID, err := client.NetworkID(context.Background())
-	if err != nil {
-		return fmt.Errorf("failed to get chain ID: %v", err)
-	}
-
-	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, chainID)
-	if err != nil {
-		return fmt.Errorf("failed to create transactor: %v", err)
-	}
-	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = big.NewInt(0)      // in wei
-	auth.GasLimit = uint64(3000000) // in wei
-	auth.GasPrice = gasPrice
+	contractAbi := config.GetAgentManagerAbi()
 
 	parsedAbi, err := abi.JSON(strings.NewReader(contractAbi))
 	if err != nil {
@@ -138,19 +53,6 @@ func CallMapAgent(agent common.Address, chainRPC string, contractAddress common.
 	fmt.Printf("Transaction complete: %s %s\n", chainRPC, tx.Hash())
 
 	return nil
-}
-
-func GetChainData(chainName string, chains []config.ChainConfig) config.ChainConfig {
-	var chainData config.ChainConfig
-
-	for _, chain := range chains {
-		if chain.ShortName == chainName {
-			chainData = chain
-			break
-		}
-	}
-
-	return chainData
 }
 
 type ContractCallChainData struct {
