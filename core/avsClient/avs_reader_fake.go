@@ -16,6 +16,16 @@ type FakeAvsRegistryService struct {
 	operators map[types.BlockNum]map[types.OperatorId]types.OperatorAvsState
 }
 
+// GetAgentSlashRequestId implements IAVSReader.
+func (f *FakeAvsRegistryService) GetAgentSlashRequestId(ctx context.Context, agent common.Address, blockNumber uint32) (*big.Int, error) {
+	return big.NewInt(0), nil
+}
+
+// GetDeviationRequestId implements IAVSReader.
+func (f *FakeAvsRegistryService) GetDeviationRequestId(ctx context.Context, agent common.Address, blockNumber uint32) (*big.Int, error) {
+	return big.NewInt(0), nil
+}
+
 // GetOperatorAddrsInQuorumsAtCurrentBlock implements IAVSReader.
 func (f *FakeAvsRegistryService) GetOperatorAddrsInQuorumsAtCurrentBlock(opts *bind.CallOpts, quorumNumbers types.QuorumNums) ([][]common.Address, error) {
 	panic("unimplemented")
@@ -63,7 +73,7 @@ func (f *FakeAvsRegistryService) GetQuorumCount(opts *bind.CallOpts) (uint8, err
 
 // GetQuorumThresholdPercentages implements IAVSReader.
 func (f *FakeAvsRegistryService) GetQuorumThresholdPercentages(ctx context.Context, blockNumber uint32, quorums types.QuorumNums) (types.QuorumThresholdPercentages, error) {
-	return []types.QuorumThresholdPercentage{100}, nil
+	return []types.QuorumThresholdPercentage{50}, nil
 }
 
 // GetQuorumsByBlockNumber implements IAVSReader.

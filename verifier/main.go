@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	// "fmt"
-	"github.com/Cedro-Finance/CedroAVS/verifier/config"
+	"github.com/Cedro-Finance/CedroAVS/core/config"
 	"github.com/Cedro-Finance/CedroAVS/verifier/operator"
 
 	_ "github.com/Cedro-Finance/CedroAVS/verifier/client/agents/evm"

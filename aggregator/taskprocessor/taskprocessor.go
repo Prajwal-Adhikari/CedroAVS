@@ -82,7 +82,7 @@ func NewTaskProcessorService(taskType string, c *config.Config, logger logging.L
 
 	chainioConfig := sdkclients.BuildAllConfig{
 		EthHttpUrl:                 c.EthConfig.RpcUrl,
-		EthWsUrl:                   c.EthConfig.WsUrl,
+		EthWsUrl:                   c.EthConfig.RpcUrl,
 		RegistryCoordinatorAddr:    c.AVS.RegistryCoordinatorAddr.String(),
 		OperatorStateRetrieverAddr: c.AVS.OperatorStateRetrieverAddr.String(),
 		AvsName:                    "CedroAVS",
@@ -120,7 +120,8 @@ func (t *TaskProcessor) Start(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case res := <-t.blsAggrService.GetResponseChannel():
-			t.SendAggregatedResponseToContract(res)
+			fmt.Println("Response signatre", res)
+			// t.SendAggregatedResponseToContract(res)
 		}
 	}
 }
@@ -209,7 +210,7 @@ func (t *TaskProcessor) ProcessSignedTaskResponse(req *tasks.CreateSignedTaskRes
 		t.logger.Error("ProcessNewSignature error", "err", err)
 	}
 
-	return &tasks.SignedTaskRespResponse{}, nil
+	return &tasks.SignedTaskRespResponse{}, err
 
 }
 

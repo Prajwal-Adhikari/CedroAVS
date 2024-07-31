@@ -8,9 +8,9 @@ import (
 	"time"
 
 	aggregator "github.com/Cedro-Finance/CedroAVS/api/grpc"
+	"github.com/Cedro-Finance/CedroAVS/core/config"
 	"github.com/Cedro-Finance/CedroAVS/core/tasks"
-	"github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
-	"github.com/Cedro-Finance/CedroAVS/verifier/config"
+	"github.com/Cedro-Finance/CedroAVS/verifier/client/agents"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -84,7 +84,7 @@ func (cl *AggregatorGRpcClient) InitOperatorToAggregator() error {
 	return nil
 }
 
-func (cl *AggregatorGRpcClient) CreateBalanceTaskToAggregator(req *avs.DeviationRequest) (*tasks.BalanceTaskInfo, error) {
+func (cl *AggregatorGRpcClient) CreateBalanceTaskToAggregator(req *agents.DeviationRequest) (*tasks.BalanceTaskInfo, error) {
 	conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {
@@ -148,7 +148,7 @@ func (cl *AggregatorGRpcClient) SendSignedTaskResponse(ctx context.Context, sign
 	return response, nil
 }
 
-func (cl *AggregatorGRpcClient) CreateAgentSlashTaskToAggregator(req *avs.AgentSlashRequest) (*tasks.AgentSlashTaskInfo, error) {
+func (cl *AggregatorGRpcClient) CreateAgentSlashTaskToAggregator(req *agents.AgentSlashRequest) (*tasks.AgentSlashTaskInfo, error) {
 	conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if err != nil {

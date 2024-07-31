@@ -113,7 +113,7 @@ func TestBlsAgg(t *testing.T) {
 		blockNum := uint32(1)
 		taskIndex := types.TaskIndex(0)
 		quorumNumbers := types.QuorumNums{0}
-		quorumThresholdPercentages := []types.QuorumThresholdPercentage{100}
+		quorumThresholdPercentages := []types.QuorumThresholdPercentage{50}
 		taskResponse := &mockTaskInfo{123}
 
 		taskResponseDigest, err := taskResponse.GetHeaderHash()

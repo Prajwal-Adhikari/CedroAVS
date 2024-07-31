@@ -8,9 +8,8 @@ import (
 
 	// "github.com/Cedro-Finance/CedroAVS/verifier/client/agents"
 	"github.com/Cedro-Finance/CedroAVS/api/graphql"
-	"github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
+	avsclient "github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
 	"github.com/Cedro-Finance/CedroAVS/verifier/common"
-	"github.com/Cedro-Finance/CedroAVS/verifier/config"
 	"github.com/Cedro-Finance/CedroAVS/verifier/opio"
 	"github.com/Cedro-Finance/CedroAVS/verifier/rpc"
 	"github.com/Cedro-Finance/CedroAVS/verifier/tasks"
@@ -20,19 +19,20 @@ import (
 	"github.com/Layr-Labs/eigensdk-go/chainio/txmgr"
 	sdkEcdsa "github.com/Layr-Labs/eigensdk-go/crypto/ecdsa"
 	"github.com/Layr-Labs/eigensdk-go/signerv2"
-	"github.com/Layr-Labs/eigensdk-go/types"
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
+	coreavs "github.com/Cedro-Finance/CedroAVS/core/avsClient"
+	"github.com/Cedro-Finance/CedroAVS/core/config"
 	"github.com/Cedro-Finance/CedroAVS/core/logger"
 	bls "github.com/Layr-Labs/eigensdk-go/crypto/bls"
 	sdklogging "github.com/Layr-Labs/eigensdk-go/logging"
 )
 
-var RegisteredClients = map[string]func(config.ChainConfig, sdklogging.Logger, *avs.AvsReader) common.IAgentPodClient{}
+var RegisteredClients = map[string]func(config.ChainConfig, sdklogging.Logger, coreavs.IAVSReader) common.IAgentPodClient{}
 
 type Operator struct {
-	avs        *avs.AVSClient
+	avs        *avsclient.AVSClient
 	blsKeyPair *bls.KeyPair
 
 	operatorId                sdktypes.OperatorId
@@ -107,7 +107,7 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 
 	txMgr := txmgr.NewSimpleTxManager(txSender, ethRpcClient, logger, operatorAddress)
 
-	avsClient := avs.NewAVSClient(&cfg, logger, txMgr)
+	avsClient := avsclient.NewAVSClient(&cfg, logger, txMgr)
 
 	chainioConfig := clients.BuildAllConfig{
 		EthHttpUrl:                 cfg.EthConfig.RpcUrl,
@@ -175,7 +175,7 @@ func NewOperator(cfg config.Config) (*Operator, error) {
 }
 
 type DeviationError struct {
-	TaskIndex types.TaskIndex
+	TaskIndex sdktypes.TaskIndex
 	Error     error
 }
 

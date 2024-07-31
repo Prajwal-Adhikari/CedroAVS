@@ -4,7 +4,7 @@ import (
 	"crypto/ecdsa"
 	"os"
 
-	"github.com/Cedro-Finance/CedroAVS/verifier/config"
+	"github.com/Cedro-Finance/CedroAVS/core/config"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 )
 

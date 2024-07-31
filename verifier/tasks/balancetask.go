@@ -9,7 +9,7 @@ import (
 
 	"github.com/Cedro-Finance/CedroAVS/api/graphql"
 	"github.com/Cedro-Finance/CedroAVS/core/tasks"
-	"github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
+	"github.com/Cedro-Finance/CedroAVS/verifier/client/agents"
 	"github.com/Cedro-Finance/CedroAVS/verifier/common"
 	"github.com/Cedro-Finance/CedroAVS/verifier/opio"
 	"github.com/Layr-Labs/eigensdk-go/logging"
@@ -19,7 +19,7 @@ import (
 var MAX_REQID, ok = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
 
 type OperatorDeviationTask struct {
-	req     *avs.DeviationRequest
+	req     *agents.DeviationRequest
 	retries uint64
 }
 
@@ -39,7 +39,7 @@ type BalanceTaskProcessor struct {
 	logger    logging.Logger
 	opio      *opio.OperatorIO
 
-	reqCh chan avs.TaskRequest
+	reqCh chan agents.TaskRequest
 }
 
 var _ Taskprocessor = (*BalanceTaskProcessor)(nil)
@@ -50,7 +50,7 @@ func NewBalanceTask(opioClient *opio.OperatorIO, agClients map[string]common.IAg
 		signCh:    make(chan *tasks.SignedDeviationTaskRespRequest, 10),
 		agClients: agClients,
 		logger:    logger,
-		reqCh:     make(chan avs.TaskRequest),
+		reqCh:     make(chan agents.TaskRequest),
 		opio:      opioClient,
 	}
 }
@@ -68,7 +68,7 @@ func (r *BalanceTaskProcessor) Start(ctx context.Context, wg *sync.WaitGroup) {
 		case req := <-r.reqCh:
 			r.logger.Info("Deviation Check request event received", "req", req)
 
-			reqData := req.(*avs.DeviationRequest)
+			reqData := req.(*agents.DeviationRequest)
 
 			newTask, err := r.CreateBalanceTask(reqData)
 
@@ -89,7 +89,7 @@ func (r *BalanceTaskProcessor) Start(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
-func (r *BalanceTaskProcessor) GetRequestCh() chan avs.TaskRequest {
+func (r *BalanceTaskProcessor) GetRequestCh() chan agents.TaskRequest {
 	return r.reqCh
 }
 
@@ -111,7 +111,7 @@ func (r *BalanceTaskProcessor) GetTaskByAgent(agent ethcommon.Address) *Operator
 	return res
 }
 
-func (r *BalanceTaskProcessor) CreateBalanceTask(req *avs.DeviationRequest) (*OperatorDeviationTask, error) {
+func (r *BalanceTaskProcessor) CreateBalanceTask(req *agents.DeviationRequest) (*OperatorDeviationTask, error) {
 	task := r.GetTaskByAgent(req.AgentAddress)
 
 	if task == nil {

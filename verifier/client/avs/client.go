@@ -1,4 +1,4 @@
-package avs
+package avsclient
 
 import (
 	"time"
@@ -7,7 +7,8 @@ import (
 	"math/big"
 
 	// "github.com/Cedro-Finance/CedroAVS/core/logger"
-	"github.com/Cedro-Finance/CedroAVS/verifier/config"
+	avs "github.com/Cedro-Finance/CedroAVS/core/avsClient"
+	"github.com/Cedro-Finance/CedroAVS/core/config"
 	"github.com/Layr-Labs/eigensdk-go/chainio/clients/eth"
 	"github.com/Layr-Labs/eigensdk-go/chainio/txmgr"
 	"github.com/Layr-Labs/eigensdk-go/logging"
@@ -24,8 +25,8 @@ type AVSClient struct {
 	BlockTime     time.Duration
 	BlockFinality uint64
 
-	AvsReader *AvsReader
-	AvsWriter *AvsWriter
+	AvsReader avs.IAVSReader
+	AvsWriter avs.IAvsWriter
 
 	Logger logging.Logger
 }
@@ -38,13 +39,13 @@ func NewAVSClient(cfg *config.Config, logger logging.Logger, txMgr txmgr.TxManag
 		panic(err)
 	}
 
-	avsReader, err := NewAvsReader(&cfg.AVS, ethClient, logger)
+	avsReader, err := avs.NewAvsReader(cfg.AVS, ethClient, logger, nil)
 
 	if err != nil {
 		logger.Error("Error while Createing AVS Reader", err)
 	}
 
-	avsWriter, err := NewAvsWriter(&cfg.AVS, txMgr, ethClient, logger)
+	avsWriter, err := avs.NewAvsWriter(cfg, txMgr, ethClient, logger)
 
 	if err != nil {
 		logger.Error("Error while creating AVS Writer")

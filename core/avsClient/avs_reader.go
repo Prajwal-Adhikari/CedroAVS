@@ -13,6 +13,7 @@ import (
 	sdktypes "github.com/Layr-Labs/eigensdk-go/types"
 	"github.com/Layr-Labs/eigensdk-go/utils"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type IAVSReader interface {
@@ -28,6 +29,12 @@ type IAVSReader interface {
 	GetOperatorsAvsStateAtBlock(ctx context.Context, quorumNumbers sdktypes.QuorumNums, blockNumber sdktypes.BlockNum) (map[sdktypes.OperatorId]sdktypes.OperatorAvsState, error)
 
 	GetQuorumsAvsStateAtBlock(ctx context.Context, quorumNumbers sdktypes.QuorumNums, blockNumber sdktypes.BlockNum) (map[sdktypes.QuorumNum]sdktypes.QuorumAvsState, error)
+
+	//Get Latest Request ID
+	GetDeviationRequestId(ctx context.Context, agent common.Address, blockNumber uint32) (*big.Int, error)
+
+	//Get Latest Request ID
+	GetAgentSlashRequestId(ctx context.Context, agent common.Address, blockNumber uint32) (*big.Int, error)
 }
 
 type AvsReader struct {
@@ -155,4 +162,30 @@ func (ar *AvsReader) GetQuorumsAvsStateAtBlock(ctx context.Context, quorumNumber
 		}
 	}
 	return quorumsAvsState, nil
+}
+
+func (r *AvsReader) GetDeviationRequestId(ctx context.Context, agent common.Address, blockNumber uint32) (*big.Int, error) {
+	reqId, err := r.AvsServiceBindings.ServiceManager.AgentsDeviationRequestId(&bind.CallOpts{
+		Context:     ctx,
+		BlockNumber: big.NewInt(int64(blockNumber)),
+	}, agent)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return reqId, nil
+}
+
+func (r *AvsReader) GetAgentSlashRequestId(ctx context.Context, agent common.Address, blockNumber uint32) (*big.Int, error) {
+	reqId, err := r.AvsServiceBindings.ServiceManager.AgentsFraudRequestId(&bind.CallOpts{
+		Context:     ctx,
+		BlockNumber: big.NewInt(int64(blockNumber)),
+	}, agent)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return reqId, nil
 }

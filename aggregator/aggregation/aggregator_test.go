@@ -19,10 +19,7 @@ func TestMain(t *testing.T) {
 		KeyStore:                 &config.KeyStore{},
 		GRpcAggregatorIpAddr:     "",
 		Agents:                   []config.ChainConfig{},
-		AgentManagerAddr:         [20]byte{},
 		EthConfig:                config.EthConfig{},
-		AgentManagerStartHeight:  0,
-		AgentManagerPollDuration: 0,
 		GraphQLUrl:               "",
 	}
 

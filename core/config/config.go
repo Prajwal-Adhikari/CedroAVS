@@ -27,7 +27,6 @@ type LoggerConfig struct {
 
 type EthConfigRaw struct {
 	RpcUrl        string `yaml:"rpc_url"`
-	WsUrl         string `yaml:"ws_url"`
 	StartHeight   uint64 `yaml:"start_height"`
 	BlockFinality uint64 `yaml:"block_finality"`
 	BlockTime     uint64 `yaml:"block_time"`
@@ -39,27 +38,27 @@ type AVSConfigRaw struct {
 }
 
 type ChainConfig struct {
-	Name           string `yaml:"name"`
-	Chain          string `yaml:"chain"`
-	ContactAddress string `yaml:"contract_address"`
-	NodeUrl        string `yaml:"node_url"`
-	BlockFinality  uint64 `yaml:"block_finality"`
-	BlockTime      uint64 `yaml:"block_time"` //in second
+	Name                    string `yaml:"name"`
+	Chain                   string `yaml:"chain"`
+	ChainId                 string `yaml:"chain_id"`
+	ContactAddress          string `yaml:"contract_address"`
+	NodeUrl                 string `yaml:"node_url"`
+	BlockFinality           uint64 `yaml:"block_finality"`
+	BlockTime               uint64 `yaml:"block_time"` //in second
+	GraphqlUrl              string `yaml:"graphql_url"`
+	AgentManager            string `yaml:"agent_manager"`
+	AgentManagerStartHeight uint64 `yaml:"agent_manager_start_height"`
 }
 
 type ConfigRaw struct {
-	Chains                   []ChainConfig `yaml:"chains"`
-	AVS                      AVSConfigRaw  `yaml:"avs"`
-	EthConfig                EthConfigRaw  `yaml:"ethereum"`
-	LogConfig                *LoggerConfig `yaml:"log"`
-	Mode                     string        `yaml:"mode"`
-	KeyStore                 *KeyStore     `yaml:"keystore"`
-	BlsPrivateKeyStorePath   string        `yaml:"bls_private_key_store_path"`
-	GRpcAggregatorIPAddr     string        `yaml:"gRpc_aggregator_addr"`
-	AgentManager             string        `yaml:"agent_manager"`
-	AgentManagerStartHeight  uint64        `yaml:"agent_manager_start_height"`
-	AgentManagerPollDuration uint64        `yaml:"agent_manager_poll_duration"`
-	GraphAPIURL              string        `yaml:"graphql_url"`
+	Chains               []ChainConfig `yaml:"chains"`
+	AVS                  AVSConfigRaw  `yaml:"avs"`
+	EthConfig            EthConfigRaw  `yaml:"ethereum"`
+	LogConfig            *LoggerConfig `yaml:"log"`
+	Mode                 string        `yaml:"mode"`
+	KeyStore             *KeyStore     `yaml:"keystore"`
+	GRpcAggregatorIPAddr string        `yaml:"gRpc_aggregator_addr"`
+	GraphAPIURL          string        `yaml:"graphql_url"`
 }
 
 type AVSConfig struct {
@@ -69,7 +68,6 @@ type AVSConfig struct {
 
 type EthConfig struct {
 	RpcUrl        string
-	WsUrl         string
 	StartHeight   uint64
 	BlockFinality uint64
 	BlockTime     uint64
@@ -77,17 +75,14 @@ type EthConfig struct {
 }
 
 type Config struct {
-	BlsPrivateKey            *bls.KeyPair
-	Production               bool
-	AVS                      AVSConfig
-	KeyStore                 *KeyStore
-	GRpcAggregatorIpAddr     string
-	Agents                   []ChainConfig
-	AgentManagerAddr         common.Address
-	EthConfig                EthConfig
-	AgentManagerStartHeight  uint64
-	AgentManagerPollDuration uint64
-	GraphQLUrl               string
+	BlsPrivateKey        *bls.KeyPair
+	Production           bool
+	AVS                  AVSConfig
+	KeyStore             *KeyStore
+	GRpcAggregatorIpAddr string
+	Agents               []ChainConfig
+	EthConfig            EthConfig
+	GraphQLUrl           string
 }
 
 var config *Config
@@ -119,7 +114,6 @@ func LoadConfig(path string) (*Config, error) {
 		panic("could not unmarshal config")
 	}
 
-
 	blsKeypair, err := bls.ReadPrivateKeyFromFile(configRaw.KeyStore.BlsPath, configRaw.KeyStore.BlsPassword)
 
 	if err != nil {
@@ -145,19 +139,15 @@ func LoadConfig(path string) (*Config, error) {
 			RegistryCoordinatorAddr:    common.HexToAddress(configRaw.AVS.RegistryCoordinatorAddr),
 			OperatorStateRetrieverAddr: common.HexToAddress(configRaw.AVS.OperatorStateRetrieverAddr),
 		},
-		BlsPrivateKey:            blsKeypair,
-		Agents:                   configRaw.Chains,
-		GRpcAggregatorIpAddr:     configRaw.GRpcAggregatorIPAddr,
-		KeyStore:                 configRaw.KeyStore,
-		AgentManagerAddr:         common.HexToAddress(configRaw.AgentManager),
-		AgentManagerStartHeight:  configRaw.AgentManagerStartHeight,
-		AgentManagerPollDuration: configRaw.AgentManagerPollDuration,
-		GraphQLUrl:               configRaw.GraphAPIURL,
+		BlsPrivateKey:        blsKeypair,
+		Agents:               configRaw.Chains,
+		GRpcAggregatorIpAddr: configRaw.GRpcAggregatorIPAddr,
+		KeyStore:             configRaw.KeyStore,
+		GraphQLUrl:           configRaw.GraphAPIURL,
 		EthConfig: EthConfig{
 			RpcUrl:        configRaw.EthConfig.RpcUrl,
 			BlockFinality: configRaw.EthConfig.BlockFinality,
 			BlockTime:     configRaw.EthConfig.BlockTime,
-			WsUrl:         configRaw.EthConfig.WsUrl,
 		},
 	}, nil
 }

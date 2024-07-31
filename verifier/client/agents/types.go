@@ -2,80 +2,31 @@ package agents
 
 import (
 	"math/big"
-
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"golang.org/x/crypto/sha3"
+	ethCommon "github.com/ethereum/go-ethereum/common"
 )
 
-type AggregateBalanceResponse struct {
-	//ReqId is the identifier for each request from AVS to get the balance
-	ReqId *big.Int
+type TaskRequest interface {
+	GetReqHash() string
+}
 
-	//Total Balance accumulated from each agent contract for given agent
-	ActualBalance *big.Int
-
-	//Total Balance that a agent should have in given timestamp
-	IdealBalance *big.Int
-
-	//A blocknumber on which check event is emitted
+type DeviationRequest struct {
+	ReqId                *big.Int
 	ReferenceBlockNumber uint64
+	AgentAddress         ethCommon.Address
+	Timestamp            uint64
 }
 
-func (a *AggregateBalanceResponse) EncodeSignHash() ([]byte, error) {
-
-	BalanceType, err := abi.NewType("tuple", "", []abi.ArgumentMarshaling{
-		{
-			Name: "reqId",
-			Type: "uint256",
-		},
-		{
-			Name: "actualBalance",
-			Type: "uint256",
-		},
-		{
-			Name: "idealBalance",
-			Type: "uint256",
-		},
-
-		{
-			Name: "referenceBlockNumber",
-			Type: "uint64",
-		},
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	arguments := abi.Arguments{
-		{
-			Type: BalanceType,
-		},
-	}
-
-	bytes, err := arguments.Pack(a)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes, nil
+func (d *DeviationRequest) GetReqHash() string {
+	return d.AgentAddress.Hex()
 }
 
-func (a AggregateBalanceResponse) SignHash() ([32]byte, error) {
-	balanceBytes, err := a.EncodeSignHash()
+type AgentSlashRequest struct {
+	TxnId                *big.Int
+	ReferenceBlockNumber uint64
+	AgentAddress         ethCommon.Address
+	InsufficientBalance  *big.Int
+}
 
-	if err != nil {
-		return [32]byte{}, err
-	}
-
-	var hash [32]byte
-
-	hasher := sha3.NewLegacyKeccak256()
-
-	hasher.Write(balanceBytes)
-
-	copy(hash[:], hasher.Sum(nil)[:32])
-
-	return hash, nil
+func (a *AgentSlashRequest) GetReqHash() string {
+	return a.AgentAddress.Hex()
 }

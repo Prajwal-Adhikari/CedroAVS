@@ -3,7 +3,7 @@ package actions
 import (
 	"fmt"
 
-	"github.com/Cedro-Finance/CedroAVS/verifier/config"
+	"github.com/Cedro-Finance/CedroAVS/core/config"
 	"github.com/Cedro-Finance/CedroAVS/verifier/operator"
 	"github.com/Layr-Labs/eigensdk-go/crypto/ecdsa"
 	"github.com/urfave/cli"

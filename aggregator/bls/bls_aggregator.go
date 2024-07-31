@@ -144,7 +144,7 @@ func (b *BLSAggregatorService) ProcessNewSignature(ctx context.Context,
 		// note that we need to wait synchronously here for this response because we want to
 		// send back an informative error message to the operator who sent his signature to the aggregator
 		err := <-signatureVerificationErrorC
-		
+
 		return err
 	}
 }
@@ -325,7 +325,10 @@ func (b *BLSAggregatorService) singleTaskAggregatorGoroutineFunc(
 					TotalStakeIndices:            indices.TotalStakeIndices,
 					NonSignerStakeIndices:        indices.NonSignerStakeIndices,
 				}
-				b.aggregatedResponsesC <- blsAggregationServiceResponse
+
+				fmt.Println(blsAggregationServiceResponse)
+				// b.aggregatedResponsesC <- blsAggregationServiceResponse
+				b.closeTaskGoroutine(taskIndex)
 				taskExpiredTimer.Stop()
 				return
 			}

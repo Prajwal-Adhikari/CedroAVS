@@ -4,10 +4,10 @@ import (
 	"context"
 	"sync"
 
-	"github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
+	"github.com/Cedro-Finance/CedroAVS/verifier/client/agents"
 )
 
 type Taskprocessor interface {
 	Start(ctx context.Context, wg *sync.WaitGroup)
-	GetRequestCh() chan avs.TaskRequest
+	GetRequestCh() chan agents.TaskRequest
 }

@@ -6,13 +6,13 @@ import (
 	"sync"
 
 	"github.com/Cedro-Finance/CedroAVS/core/tasks"
-	"github.com/Cedro-Finance/CedroAVS/verifier/client/avs"
+	"github.com/Cedro-Finance/CedroAVS/verifier/client/agents"
 	"github.com/Cedro-Finance/CedroAVS/verifier/opio"
 	"github.com/Layr-Labs/eigensdk-go/logging"
 )
 
 type OperatorAgentSlashTask struct {
-	req     *avs.AgentSlashRequest
+	req     *agents.AgentSlashRequest
 	retries uint64
 }
 
@@ -25,7 +25,7 @@ type SlashTaskProcessor struct {
 
 	signCh chan *tasks.SignedAgentSlashTaskRespRequest
 
-	reqCh chan avs.TaskRequest
+	reqCh chan agents.TaskRequest
 
 	opio *opio.OperatorIO
 }
@@ -38,7 +38,7 @@ func NewSlashTask(opio *opio.OperatorIO, logger logging.Logger) *SlashTaskProces
 		signCh: make(chan *tasks.SignedAgentSlashTaskRespRequest, 10),
 		opio:   opio,
 		logger: logger,
-		reqCh:  make(chan avs.TaskRequest),
+		reqCh:  make(chan agents.TaskRequest),
 	}
 }
 
@@ -54,7 +54,7 @@ func (r *SlashTaskProcessor) Start(ctx context.Context, wg *sync.WaitGroup) {
 		case req := <-r.reqCh:
 			r.logger.Info("Slash Task Request received", "req", req)
 
-			reqData := req.(*avs.AgentSlashRequest)
+			reqData := req.(*agents.AgentSlashRequest)
 
 			newTask, err := r.CreateSlashTask(reqData)
 
@@ -96,7 +96,7 @@ func (r *SlashTaskProcessor) GetSlashTask(txId *big.Int) *OperatorAgentSlashTask
 	return res
 }
 
-func (r *SlashTaskProcessor) CreateSlashTask(req *avs.AgentSlashRequest) (*OperatorAgentSlashTask, error) {
+func (r *SlashTaskProcessor) CreateSlashTask(req *agents.AgentSlashRequest) (*OperatorAgentSlashTask, error) {
 	task := r.GetSlashTask(req.TxnId)
 
 	if task == nil {
@@ -114,7 +114,7 @@ func (r *SlashTaskProcessor) CreateSlashTask(req *avs.AgentSlashRequest) (*Opera
 	return task, nil
 }
 
-func (r *SlashTaskProcessor) GetRequestCh() chan avs.TaskRequest {
+func (r *SlashTaskProcessor) GetRequestCh() chan agents.TaskRequest {
 	return r.reqCh
 }
 

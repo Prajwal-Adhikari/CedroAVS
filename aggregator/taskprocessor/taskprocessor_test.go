@@ -1,6 +1,8 @@
 package taskprocessor
 
 import (
+	"context"
+	"fmt"
 	"math/big"
 	"sync"
 	"testing"
@@ -58,7 +60,7 @@ func (m *mockTaskInfo) GetHeaderHash() (sdktypes.Bytes32, error) {
 }
 
 func (m *mockTaskInfo) GetTaskIndex() sdktypes.TaskIndex {
-	return uint32(1)
+	return uint32(0)
 }
 
 func (m *mockTaskInfo) GetUniqueHash() string {
@@ -174,6 +176,8 @@ func TestTaskProcessor(t *testing.T) {
 
 		taskResponseDigest, err := res.Info.GetHeaderHash()
 
+		fmt.Println(res.Info.GetTaskIndex())
+
 		require.Nil(t, err)
 
 		signedReq := &tasks.CreateSignedTaskResRequest{
@@ -188,6 +192,73 @@ func TestTaskProcessor(t *testing.T) {
 		require.Nil(t, err)
 	})
 
+	
+	t.Run("process new signature-multiple", func(t *testing.T) {
+
+		// numOfOperator := 100
+
+		opList := make([]sdktypes.TestOperator, 0)
+
+		for index := 0; index < 100; index++ {
+			op := sdktypes.TestOperator{
+				OperatorId:     sdktypes.OperatorId{byte(index)},
+				StakePerQuorum: map[sdktypes.QuorumNum]sdktypes.StakeAmount{0: big.NewInt(100), 1: big.NewInt(200)},
+				BlsKeypair:     newBlsKeyPairPanics("0x" + fmt.Sprint(index)),
+			}
+
+			opList = append(opList, op)
+		}
+
+		tp := &TaskProcessor{
+			taskType:        "",
+			tasks:           map[uint32]tasks.ITaskInfo{},
+			tasksMu:         sync.RWMutex{},
+			finishedTasks:   map[string]*types.FinishedTaskStatus{},
+			finishedTasksMu: sync.RWMutex{},
+			nextTaskIndex:   0,
+			nextTaskIndexMu: sync.RWMutex{},
+			logger:          logger,
+			ethClient:       nil,
+			avsReader:       avs.NewFakeAvsRegistryService(blockNum, opList),
+			blsAggrService:  blsaggregator.NewBlsAggregatorService(avs.NewFakeAvsRegistryService(blockNum, opList), logger),
+			cfg:             &config.Config{},
+			graphClient:     &graphql.GraphQLClient{},
+			avsWriter:       &avs.AvsWriter{},
+		}
+
+		go tp.Start(context.TODO())
+
+		reqTask := &mockCreateTaskReq{
+			Req: 1,
+		}
+		for index := 1; index < 52; index++ {
+
+			op := opList[index]
+
+			res, err := tp.CreateTask(reqTask)
+
+			assert.Nil(t, err)
+
+			taskResponseDigest, err := res.Info.GetHeaderHash()
+
+			require.Nil(t, err)
+
+			signedReq := &tasks.CreateSignedTaskResRequest{
+				Task:         res.Info,
+				BlsSignature: *op.BlsKeypair.SignMessage(taskResponseDigest),
+				OperatorId:   op.OperatorId,
+			}
+
+			_, err = tp.ProcessSignedTaskResponse(signedReq)
+
+			// <-taskprocessor.blsAggrService.GetResponseChannel()
+			// require.EqualError(t, err, "task doesn't exist for given request hash")
+			require.Nil(t, err)
+
+		}
+
+	})
+
 }
 
 func newBlsKeyPairPanics(hexKey string) *bls.KeyPair {
@@ -197,4 +268,3 @@ func newBlsKeyPairPanics(hexKey string) *bls.KeyPair {
 	}
 	return keypair
 }
-
