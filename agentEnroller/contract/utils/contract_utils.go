@@ -12,11 +12,18 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func InitializeContractClient(chainRPC string, privateKeyHex string) (*ethclient.Client, *bind.TransactOpts, error) {
+func GetClient(chainRPC string) (*ethclient.Client, error) {
 	client, err := ethclient.Dial(chainRPC)
+
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create transactor: %v", err)
+		return nil, fmt.Errorf("failed to create transactor: %v", err)
 	}
+
+	return client, nil
+}
+
+func InitializeContractClient(chainRPC string, privateKeyHex string) (*ethclient.Client, *bind.TransactOpts, error) {
+	client, _ := GetClient(chainRPC)
 
 	privateKey, err := crypto.HexToECDSA(privateKeyHex)
 	if err != nil {

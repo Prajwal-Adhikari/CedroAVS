@@ -14,17 +14,19 @@ type ChainConfig struct {
 	ShortName     string         `yaml:"short_name"`
 	ChainNameByte string         `yaml:"chain_name_byte"`
 	NodeUrl       string         `yaml:"node_url"`
+	NodeWSURL     string         `yaml:"node_wss_url"`
 	AgentManager  common.Address `yaml:"agent_manager"`
 	Oracle        common.Address `yaml:"oracle"`
 }
 
 type ConfigRaw struct {
-	Chains           []ChainConfig `yaml:"chains"`
-	WalletPrivateKey string        `yaml:"wallet_private_key"`
+	Chains        []ChainConfig `yaml:"chains"`
+	RootChainName string        `yaml:"root_chain_name"`
 }
 
 type Config struct {
 	Chains           []ChainConfig
+	RootChainData    ChainConfig
 	WalletPrivateKey string
 }
 
@@ -49,8 +51,22 @@ func LoadConfig() *Config {
 		log.Fatalf("Could not unmarshal config, %v", err)
 	}
 
+	var rootChainData ChainConfig
+
+	for _, chain := range configRaw.Chains {
+		if chain.ShortName == configRaw.RootChainName {
+			rootChainData = chain
+			break
+		}
+	}
+
+	if (rootChainData == ChainConfig{}) {
+		log.Fatalf("Root chain doesn't exist or is not defined")
+	}
+
 	config = &Config{
 		Chains:           configRaw.Chains,
+		RootChainData:    rootChainData,
 		WalletPrivateKey: os.Getenv(("WALLET_PRIVATE_KEY")),
 	}
 
