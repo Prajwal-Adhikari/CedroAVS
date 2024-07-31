@@ -19,6 +19,9 @@ contract AgentManager is
     ReentrancyGuardUpgradeable
 {
     address public oracle;
+    address public stargateIntegration;
+    address public stargateRouter;
+    address public stargateEthVault;
     uint256 public slashingTimeThreshold;
     bytes32 public chainID;
 
@@ -33,6 +36,7 @@ contract AgentManager is
     mapping(address => uint256) public deviationPercentage;
     uint256 public bondThreshold;
     mapping(address => mapping(bytes32 => address)) public agentPodContracts;
+    mapping(bytes32 => uint32) public mapIDs;
 
     event DeviationCheck(address agent, uint256 requestID);
     event BondAmount(address agent, uint256 bondAmount);
@@ -104,6 +108,18 @@ contract AgentManager is
      **/
     function setChainID(bytes32 _chainID) external {
         chainID = _chainID;
+    }
+
+    function mapChainID(bytes32[] memory _chainIDs, uint32[] memory _chainIds)
+        external
+    {
+        if (_chainIDs.length != _chainIds.length) revert ArgumentsMismatch(TAG);
+        for (uint256 i; i < _chainIDs.length; ) {
+            mapIDs[_chainIDs[i]] = _chainIds[i];
+            unchecked {
+                i++;
+            }
+        }
     }
 
     /**
@@ -231,7 +247,9 @@ contract AgentManager is
      * @param _agent - address of the agent.
      * @param _slashAmount - amount to be slashed in USD
      **/
-    function slashAgent(address _agent, uint256 _slashAmount) external {
+    function slashAgentForDeviation(address _agent, uint256 _slashAmount)
+        external
+    {
         if (
             block.timestamp >
             requestTimestamp[_agent][requestID[_agent]] +
@@ -253,14 +271,17 @@ contract AgentManager is
     }
 
     /**
-     * @notice Slash an agent in case of major deviation in holdings
+     * @notice Slash an agent in case of bank run
      * @param _agent - address of the agent.
      * @param _slashAmount - amount to be slashed in USD
+     * @param _txnID - id of the txn for which slash is initiated
+     * @param _chainID - id of the chain from which slash event is generated
+     * @param _agentContract - address to which the fund is to be sent
      **/
     function slashAgentForBankRun(
         address _agent,
         uint256 _slashAmount,
-        uint256 _txnId,
+        uint256 _txnID,
         bytes32 _chainID,
         address _agentContract
     ) external {
