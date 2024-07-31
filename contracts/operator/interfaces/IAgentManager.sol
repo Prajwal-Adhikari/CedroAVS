@@ -24,19 +24,6 @@ interface IAgentManager {
         returns (uint256);
 
     /**
-     * @notice Enrolls operator by service manager
-     * This function can only be accessed by the account with role OPERATOR.
-     **/
-    function enrollOperator() external;
-
-    /**
-     * @notice Removes agent from the operator
-     * This function can only be accessed by the account with role MANAGER.
-     * @param _operator - address of the agent
-     **/
-    function delistOperator(address _operator) external;
-
-    /**
      * @notice Configures pool for an asset
      * This function can only be accessed by account with role MANAGER.
      * @param _id - pool id for the asset.
@@ -108,6 +95,19 @@ interface IAgentManager {
         address[] memory _agentPods
     ) external;
 
+    function mapIDs(bytes32 _chainID) external view returns (uint32);
+
+    function agentPodContracts(address _agent, bytes32 _chainID)
+        external
+        view
+        returns (address);
+
+    function stargateIntegration() external view returns (address);
+
+    function stargateRouter() external view returns (address);
+
+    function stargateEthVault() external view returns (address);
+
     /**
      * @notice Invoked after receiving responses from operator for deviation check
      * This function can only be accessed by CedroServiceManager
@@ -120,5 +120,22 @@ interface IAgentManager {
      * @param _agent - address of the agent.
      * @param _agent - amount to be slashed
      **/
-    function slashAgent(address _agent, uint256 _slashAmount) external;
+    function slashAgentForDeviation(address _agent, uint256 _slashAmount)
+        external;
+
+    /**
+     * @notice Slash an agent in case of bank run
+     * @param _agent - address of the agent.
+     * @param _slashAmount - amount to be slashed in USD
+     * @param _txnID - id of the txn for which slash is initiated
+     * @param _chainID - id of the chain from which slash event is generated
+     * @param _agentContract - address to which the fund is to be sent
+     **/
+    function slashAgentForBankRun(
+        address _agent,
+        uint256 _slashAmount,
+        uint256 _txnID,
+        bytes32 _chainID,
+        address _agentContract
+    ) external;
 }
