@@ -7,6 +7,8 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "../actions/interfaces/IAave.sol";
+import "../actions/lido/interfaces/ILido.sol";
+import "../actions/lido/interfaces/ILidoWithdrawalQueue.sol";
 
 string constant TAG = "Pool";
 
@@ -40,7 +42,7 @@ contract Pool is Initializable, ContextUpgradeable, ReentrancyGuardUpgradeable {
         owner = _owner;
         agentPod = _agentPod;
     }
- 
+
     /**
      * @notice Configures corresponding agentPod
      * This function can be accessed by the role MANAGER
@@ -95,6 +97,32 @@ contract Pool is Initializable, ContextUpgradeable, ReentrancyGuardUpgradeable {
                 );
             }
         }
+
+        if (id == stringToBytes32("LIDO")) {
+            // 1: Stake ETH
+            if (methodName == 1) {
+                // This method stakes our eth and returns equivalent amount of stEth.
+                // Referral address is set to Zero address.
+                ILido(_protocol).submit{value: amount}(address(0));
+            }
+            // 2: Request for withdrawal
+            else if (methodName == 2) {
+                uint256[] memory _amount = new uint256[](1);
+                _amount[0] = amount;
+
+                // TODO: How to get the address of Lido contract here ? Currently using zero address as placeholder.
+                ILido(address(0)).approve(_protocol, amount);
+                ILidoWithdrawalQueue(_protocol).requestWithdrawals(
+                    _amount,
+                    address(this)
+                );
+            }
+            //  3: Claim withdrawals
+            else if (methodName == 3) {
+                // If there is no any matured withdrawal request, the transaction will revert. 
+                claimWithdrawals(_protocol);
+            }
+        }
     }
 
     // To be called only by agent pod
@@ -128,11 +156,58 @@ contract Pool is Initializable, ContextUpgradeable, ReentrancyGuardUpgradeable {
         }
     }
 
-    function stringToBytes32(string memory source)
-        public
-        pure
-        returns (bytes32 result)
-    {
+    // To be called for LIDO claim action
+    function claimWithdrawals(address _withdrawContractAddress) internal {
+        ILidoWithdrawalQueue withdrawContract = ILidoWithdrawalQueue(
+            _withdrawContractAddress
+        );
+
+        uint256[] memory requestIds = withdrawContract.getWithdrawalRequests(
+            address(this)
+        );
+
+        require(requestIds.length > 0, "Withdrawal requests ids not found");
+
+        WithdrawalRequestStatus[] memory reqStatusArray = withdrawContract
+            .getWithdrawalStatus(requestIds);
+
+        require(requestIds.length > 0, "Withdrawal requests status not found");
+
+        // Count the number of matured requests
+        uint count = 0;
+        for (uint i = 0; i < reqStatusArray.length; i++) {
+            if (reqStatusArray[i].isFinalized && !reqStatusArray[i].isClaimed) {
+                count++;
+            }
+        }
+
+        // Revert if there are no matured withdrawals
+        require(count > 0, "No claimable withdrawals yet");
+
+        // store matured requests in an array
+        uint256[] memory maturedRequestIds = new uint256[](count);
+
+        uint index = 0;
+        for (uint i = 0; i < reqStatusArray.length; i++) {
+            if (reqStatusArray[i].isFinalized && !reqStatusArray[i].isClaimed) {
+                maturedRequestIds[index] = requestIds[i];
+                index++;
+            }
+        }
+
+        require(
+            requestIds.length > 0,
+            "Matured Withdrawal requests status not found"
+        );
+
+        for (uint i = 0; i < maturedRequestIds.length; i++) {
+            withdrawContract.claimWithdrawal(maturedRequestIds[i]);
+        }
+    }
+
+    function stringToBytes32(
+        string memory source
+    ) public pure returns (bytes32 result) {
         bytes memory tempEmptyStringTest = bytes(source);
         if (tempEmptyStringTest.length == 0) {
             return 0x0;
