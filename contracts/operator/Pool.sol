@@ -105,20 +105,29 @@ contract Pool is Initializable, ContextUpgradeable, ReentrancyGuardUpgradeable {
                 // Referral address is set to Zero address.
                 ILido(_protocol).submit{value: amount}(address(0));
             }
-            // 2: Request for withdrawal
+
+            // 2: Token approval
             else if (methodName == 2) {
+                address _spender;
+
+                assembly {
+                    _spender := mload(add(_payload, 171))
+                }
+
+                ILido(_protocol).approve(_spender, amount);
+            }
+            // 3: Request for withdrawal
+            // method 2 for token approval is mandatory before calling this method.
+            else if (methodName == 3) {
                 uint256[] memory _amount = new uint256[](1);
                 _amount[0] = amount;
-
-                // TODO: How to get the address of Lido contract here ? Currently using zero address as placeholder.
-                ILido(address(0)).approve(_protocol, amount);
                 ILidoWithdrawalQueue(_protocol).requestWithdrawals(
                     _amount,
                     address(this)
                 );
             }
-            //  3: Claim withdrawals
-            else if (methodName == 3) {
+            //  4: Claim withdrawals
+            else if (methodName == 4) {
                 // If there is no any matured withdrawal request, the transaction will revert. 
                 claimWithdrawals(_protocol);
             }
