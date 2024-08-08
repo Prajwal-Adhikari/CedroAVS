@@ -61,16 +61,21 @@ contract Pool is Initializable, ContextUpgradeable, ReentrancyGuardUpgradeable {
     function takeAction(bytes memory _payload, address _protocol) public {
         bytes32 id;
         uint8 methodName;
-        address asset;
-        uint256 amount;
+      
         assembly {
             id := mload(add(_payload, 34))
             methodName := mload(add(_payload, 35))
-            asset := mload(add(_payload, 107))
-            amount := mload(add(_payload, 139))
         }
 
         if (id == stringToBytes32("AAVE")) {
+              address asset;
+              uint256 amount;
+
+              assembly {
+                 asset := mload(add(_payload, 107))
+                 amount := mload(add(_payload, 139))
+              }
+
             if (methodName == 1) {
                 uint256 interestRateMode;
                 uint16 referralCode;
@@ -99,6 +104,13 @@ contract Pool is Initializable, ContextUpgradeable, ReentrancyGuardUpgradeable {
         }
 
         if (id == stringToBytes32("LIDO")) {
+
+            uint256 amount;
+            
+            assembly {
+                amount := mload(add(_payload, 87))
+            }
+
             // 1: Stake ETH
             if (methodName == 1) {
                 // This method stakes our eth and returns equivalent amount of stEth.
@@ -109,9 +121,8 @@ contract Pool is Initializable, ContextUpgradeable, ReentrancyGuardUpgradeable {
             // 2: Token approval
             else if (methodName == 2) {
                 address _spender;
-
                 assembly {
-                    _spender := mload(add(_payload, 171))
+                    _spender := mload(add(_payload, 107))
                 }
 
                 ILido(_protocol).approve(_spender, amount);
