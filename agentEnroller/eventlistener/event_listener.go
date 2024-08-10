@@ -17,9 +17,9 @@ import (
 
 func Start() {
 	contractABI := config.GetAgentManagerAbi()
-	contractAddress := config.LoadConfig().RootChainData.AgentManager
-	wssURL := config.LoadConfig().RootChainData.NodeWSURL
-	client, err := ethclient.Dial(wssURL)
+	rootChainData := config.LoadConfig().RootChainData
+
+	client, err := ethclient.Dial(rootChainData.NodeWSURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
@@ -32,7 +32,7 @@ func Start() {
 
 	// Create a filter query to listen for specific events
 	query := ethereum.FilterQuery{
-		Addresses: []common.Address{contractAddress},
+		Addresses: []common.Address{rootChainData.AgentManager},
 	}
 
 	// Subscribe to the logs

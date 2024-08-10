@@ -12,7 +12,9 @@ import (
 	contractcaller "github.com/Cedro-Finance/CedroAVS/agentEnroller/contract/caller"
 	contractdeployer "github.com/Cedro-Finance/CedroAVS/agentEnroller/contract/deployer"
 	contractutils "github.com/Cedro-Finance/CedroAVS/agentEnroller/contract/utils"
+	db "github.com/Cedro-Finance/CedroAVS/agentEnroller/database"
 	"github.com/Cedro-Finance/CedroAVS/agentEnroller/utils"
+	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -23,7 +25,17 @@ type EventMetadata struct {
 	ContractAddress common.Address
 	BlockNumber     uint64
 	TxHash          common.Hash
-	logIndex        uint
+	LogIndex        uint
+	TimeStamp       uint
+}
+
+type EventData struct {
+	Agent    common.Address
+	ChainIDs []common.Hash
+}
+type EventPayload struct {
+	EventMetadata
+	Data EventData
 }
 
 func enrollAgentHandler(owner common.Address, chainIDS []string) {
@@ -39,6 +51,8 @@ func enrollAgentHandler(owner common.Address, chainIDS []string) {
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
+	var contractStatuses []db.ChainDeployment
+
 	for _, chain := range chainsToEnroll {
 		wg.Add(1)
 		go func(chain string) {
@@ -53,12 +67,29 @@ func enrollAgentHandler(owner common.Address, chainIDS []string) {
 			_, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
 
-			log.Println(chainData.NodeUrl)
-			contractAddress, err := contractdeployer.DeployContract(owner, chainData)
+			contractAddress, txHash, err := contractdeployer.DeployContract(owner, chainData)
 			if err != nil {
+				contractStatuses = append(contractStatuses, db.ChainDeployment{
+					ManagerAddress:  chainData.AgentManager.String(),
+					ContractAddress: contractAddress.String(),
+					Chain:           chainName,
+					TransactionHash: txHash.String(),
+					Status:          "failed",
+					Error:           err.Error(),
+				})
+
 				fmt.Printf("Failed to deploy contract on chain %s: %v\n", chain, err)
 				return
 			}
+
+			contractStatuses = append(contractStatuses, db.ChainDeployment{
+				ManagerAddress:  chainData.AgentManager.String(),
+				ContractAddress: contractAddress.String(),
+				Chain:           chainName,
+				TransactionHash: txHash.String(),
+				Status:          "success",
+				Error:           "",
+			})
 
 			mu.Lock()
 			addresses[chain] = contractAddress
@@ -67,6 +98,12 @@ func enrollAgentHandler(owner common.Address, chainIDS []string) {
 	}
 
 	wg.Wait()
+
+	db.ContractDeploymentInstance().Add(db.DBContractDeploymentData{
+		Owner:                  owner.String(),
+		Chains:                 contractStatuses,
+		DeploymentNotification: []db.DeploymentNotification{},
+	})
 
 	fmt.Printf("Deployed contract addresses: %+v\n", addresses)
 	contractcaller.MakeManagerContractCalls(owner, addresses)
@@ -77,24 +114,20 @@ func parseEventData(vLog types.Log) EventMetadata {
 		ContractAddress: vLog.Address,
 		BlockNumber:     vLog.BlockNumber,
 		TxHash:          vLog.TxHash,
-		logIndex:        vLog.Index,
+		LogIndex:        vLog.Index,
 	}
 }
 
 func HandleEventReceived(parsedABI abi.ABI, vLog types.Log) {
 	eventName := "AgentPodChainList"
-	fmt.Println("Log received: ", vLog)
+	fmt.Println("Log received: ", vLog.Index)
 
-	event := struct {
-		Agent    common.Address
-		ChainIDs []common.Hash
-	}{}
+	event := EventData{}
 	fmt.Printf("Event data: %+v\n", event)
 
-	eventData := parseEventData(vLog)
+	eventMetaData := parseEventData(vLog)
 
-	fmt.Print(eventData)
-	fmt.Println()
+	fmt.Println(vLog.Data)
 
 	err := parsedABI.UnpackIntoInterface(&event, eventName, vLog.Data)
 	if err != nil {
@@ -106,6 +139,27 @@ func HandleEventReceived(parsedABI abi.ABI, vLog types.Log) {
 	for i, chainID := range event.ChainIDs {
 		chainIDs[i] = chainID.Hex()
 	}
+	eventPayload := EventPayload{
+		EventMetadata: eventMetaData,
+		Data:          event,
+	}
 
-	enrollAgentHandler(event.Agent, chainIDs)
+	_, err = db.EventServiceInstance().Get(db.EventGetFilter{
+		TransactionHash: eventMetaData.TxHash.Hex(),
+		LogIndex:        int(eventMetaData.LogIndex),
+	})
+
+	if err == mongo.ErrNoDocuments {
+		db.EventServiceInstance().Add(db.DBEventData{
+			Agent:           event.Agent.Hex(),
+			ChainIDs:        chainIDs,
+			Timestamp:       time.Now(),
+			TransactionHash: eventMetaData.TxHash.Hex(),
+			LogIndex:        int(eventMetaData.LogIndex),
+		})
+
+		fmt.Print(eventPayload)
+
+		enrollAgentHandler(event.Agent, chainIDs)
+	}
 }

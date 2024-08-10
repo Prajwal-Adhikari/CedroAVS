@@ -1,6 +1,515 @@
 {
     "abi": [
         {
+            "inputs": [],
+            "stateMutability": "nonpayable",
+            "type": "constructor"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "agent",
+                    "type": "address"
+                }
+            ],
+            "name": "AIAgentAlreadyExists",
+            "type": "error"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "string",
+                    "name": "contractTAG",
+                    "type": "string"
+                }
+            ],
+            "name": "ArgumentsMismatch",
+            "type": "error"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "agent",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "bondAmount",
+                    "type": "uint256"
+                }
+            ],
+            "name": "BondAmountLessThanThreshold",
+            "type": "error"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "agent",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "deviationPercentage",
+                    "type": "uint256"
+                }
+            ],
+            "name": "DeviationAlreadySet",
+            "type": "error"
+        },
+        {
+            "inputs": [],
+            "name": "InsufficientFees",
+            "type": "error"
+        },
+        {
+            "inputs": [],
+            "name": "InvalidInitialization",
+            "type": "error"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "agent",
+                    "type": "address"
+                }
+            ],
+            "name": "NotAnAgent",
+            "type": "error"
+        },
+        {
+            "inputs": [],
+            "name": "NotInitializing",
+            "type": "error"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "agent",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "requestID",
+                    "type": "uint256"
+                }
+            ],
+            "name": "PreviousDeviationInProgress",
+            "type": "error"
+        },
+        {
+            "inputs": [],
+            "name": "ReentrancyGuardReentrantCall",
+            "type": "error"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "agent",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "requestID",
+                    "type": "uint256"
+                }
+            ],
+            "name": "SlashingTimeLimitExceeded",
+            "type": "error"
+        },
+        {
+            "inputs": [],
+            "name": "TransferEthFailed",
+            "type": "error"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": false,
+                    "internalType": "address",
+                    "name": "agent",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "bytes32[]",
+                    "name": "chainIDs",
+                    "type": "bytes32[]"
+                }
+            ],
+            "name": "AgentPodChainList",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": false,
+                    "internalType": "address",
+                    "name": "agent",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "bytes32[]",
+                    "name": "chainID",
+                    "type": "bytes32[]"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "address[]",
+                    "name": "agentContract",
+                    "type": "address[]"
+                }
+            ],
+            "name": "AgentPodCreated",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": false,
+                    "internalType": "address",
+                    "name": "agent",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "bondAmount",
+                    "type": "uint256"
+                }
+            ],
+            "name": "BondAmount",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": false,
+                    "internalType": "address",
+                    "name": "agent",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "txnId",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "address",
+                    "name": "depositor",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "bytes32[]",
+                    "name": "assets",
+                    "type": "bytes32[]"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256[]",
+                    "name": "amounts",
+                    "type": "uint256[]"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "enum Data.STATUS",
+                    "name": "status",
+                    "type": "uint8"
+                }
+            ],
+            "name": "Claim",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": false,
+                    "internalType": "address",
+                    "name": "agent",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "txnID",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "address",
+                    "name": "depositor",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "bytes32",
+                    "name": "asset",
+                    "type": "bytes32"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "amount",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "principalAmount",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "timeInterval",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "interestRate",
+                    "type": "uint256"
+                }
+            ],
+            "name": "Deposit",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": false,
+                    "internalType": "address",
+                    "name": "agent",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "requestID",
+                    "type": "uint256"
+                }
+            ],
+            "name": "DeviationCheck",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": false,
+                    "internalType": "uint64",
+                    "name": "version",
+                    "type": "uint64"
+                }
+            ],
+            "name": "Initialized",
+            "type": "event"
+        },
+        {
+            "anonymous": false,
+            "inputs": [
+                {
+                    "indexed": false,
+                    "internalType": "address",
+                    "name": "agent",
+                    "type": "address"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "amountToSlash",
+                    "type": "uint256"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "bytes32",
+                    "name": "chainID",
+                    "type": "bytes32"
+                },
+                {
+                    "indexed": false,
+                    "internalType": "uint256",
+                    "name": "txnId",
+                    "type": "uint256"
+                }
+            ],
+            "name": "SlashAgent",
+            "type": "event"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_addr",
+                    "type": "address"
+                }
+            ],
+            "name": "addressToBytes32",
+            "outputs": [
+                {
+                    "internalType": "bytes32",
+                    "name": "",
+                    "type": "bytes32"
+                }
+            ],
+            "stateMutability": "pure",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "name": "agentContract",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                },
+                {
+                    "internalType": "bytes32",
+                    "name": "",
+                    "type": "bytes32"
+                }
+            ],
+            "name": "agentPodContracts",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "name": "agents",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "name": "bondAmount",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "bondThreshold",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "chainID",
+            "outputs": [
+                {
+                    "internalType": "bytes32",
+                    "name": "",
+                    "type": "bytes32"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_agent",
+                    "type": "address"
+                }
+            ],
+            "name": "delistAgent",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "name": "deviationPercentage",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
             "inputs": [
                 {
                     "internalType": "address",
@@ -8,14 +517,498 @@
                     "type": "address"
                 },
                 {
+                    "internalType": "uint256",
+                    "name": "_txnId",
+                    "type": "uint256"
+                },
+                {
                     "internalType": "address",
-                    "name": "_agentContract",
+                    "name": "_depositor",
                     "type": "address"
+                },
+                {
+                    "internalType": "bytes32[]",
+                    "name": "_assets",
+                    "type": "bytes32[]"
+                },
+                {
+                    "internalType": "uint256[]",
+                    "name": "_amounts",
+                    "type": "uint256[]"
+                },
+                {
+                    "internalType": "enum Data.STATUS",
+                    "name": "_status",
+                    "type": "uint8"
+                }
+            ],
+            "name": "emitClaim",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_agent",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "_txnID",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "address",
+                    "name": "_depositor",
+                    "type": "address"
+                },
+                {
+                    "internalType": "bytes32",
+                    "name": "_asset",
+                    "type": "bytes32"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "_amount",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "_principalAmount",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "_timeInterval",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "_interestRate",
+                    "type": "uint256"
+                }
+            ],
+            "name": "emitDeposit",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_agent",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "_amountToSlash",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "bytes32",
+                    "name": "_chainID",
+                    "type": "bytes32"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "_txnId",
+                    "type": "uint256"
+                }
+            ],
+            "name": "emitSlash",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "bytes32[]",
+                    "name": "_chainIDs",
+                    "type": "bytes32[]"
+                }
+            ],
+            "name": "enrollAgent",
+            "outputs": [],
+            "stateMutability": "payable",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "initialize",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_agent",
+                    "type": "address"
+                }
+            ],
+            "name": "invokeDeviationCheck",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "name": "isAgent",
+            "outputs": [
+                {
+                    "internalType": "bool",
+                    "name": "",
+                    "type": "bool"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_agent",
+                    "type": "address"
+                },
+                {
+                    "internalType": "bytes32[]",
+                    "name": "_chainIDs",
+                    "type": "bytes32[]"
+                },
+                {
+                    "internalType": "address[]",
+                    "name": "_agentPods",
+                    "type": "address[]"
                 }
             ],
             "name": "mapAgent",
             "outputs": [],
             "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "bytes32[]",
+                    "name": "_chainIDs",
+                    "type": "bytes32[]"
+                },
+                {
+                    "internalType": "uint32[]",
+                    "name": "_chainIds",
+                    "type": "uint32[]"
+                }
+            ],
+            "name": "mapChainID",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "bytes32",
+                    "name": "",
+                    "type": "bytes32"
+                }
+            ],
+            "name": "mapIDs",
+            "outputs": [
+                {
+                    "internalType": "uint32",
+                    "name": "",
+                    "type": "uint32"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "oracle",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "bytes32",
+                    "name": "",
+                    "type": "bytes32"
+                }
+            ],
+            "name": "pools",
+            "outputs": [
+                {
+                    "internalType": "bool",
+                    "name": "enable",
+                    "type": "bool"
+                },
+                {
+                    "internalType": "address",
+                    "name": "token",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_agent",
+                    "type": "address"
+                }
+            ],
+            "name": "receivedResponse",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "name": "requestFulfilled",
+            "outputs": [
+                {
+                    "internalType": "bool",
+                    "name": "",
+                    "type": "bool"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "name": "requestID",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "name": "requestTimestamp",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "_bondThreshold",
+                    "type": "uint256"
+                }
+            ],
+            "name": "setBondThreshold",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "bytes32",
+                    "name": "_chainID",
+                    "type": "bytes32"
+                }
+            ],
+            "name": "setChainID",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "_deviationPercentage",
+                    "type": "uint256"
+                }
+            ],
+            "name": "setDeviationPercentage",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_oracle",
+                    "type": "address"
+                }
+            ],
+            "name": "setOracle",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "bytes32[]",
+                    "name": "_id",
+                    "type": "bytes32[]"
+                },
+                {
+                    "internalType": "address[]",
+                    "name": "_token",
+                    "type": "address[]"
+                },
+                {
+                    "internalType": "bool[]",
+                    "name": "_enable",
+                    "type": "bool[]"
+                }
+            ],
+            "name": "setPools",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_agent",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "_slashAmount",
+                    "type": "uint256"
+                }
+            ],
+            "name": "slashAgent",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [
+                {
+                    "internalType": "address",
+                    "name": "_agent",
+                    "type": "address"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "_slashAmount",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "uint256",
+                    "name": "_txnId",
+                    "type": "uint256"
+                },
+                {
+                    "internalType": "bytes32",
+                    "name": "_chainID",
+                    "type": "bytes32"
+                },
+                {
+                    "internalType": "address",
+                    "name": "_agentContract",
+                    "type": "address"
+                }
+            ],
+            "name": "slashAgentForBankRun",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "slashingTimeThreshold",
+            "outputs": [
+                {
+                    "internalType": "uint256",
+                    "name": "",
+                    "type": "uint256"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "stargateIntegration",
+            "outputs": [
+                {
+                    "internalType": "address",
+                    "name": "",
+                    "type": "address"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "updateBondAmount",
+            "outputs": [],
+            "stateMutability": "payable",
             "type": "function"
         }
     ]

@@ -10,22 +10,23 @@ import (
 
 	"github.com/Cedro-Finance/CedroAVS/agentEnroller/config"
 	contractutils "github.com/Cedro-Finance/CedroAVS/agentEnroller/contract/utils"
+	db "github.com/Cedro-Finance/CedroAVS/agentEnroller/database"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func CallMapAgent(agent common.Address, chainRPC string, contractAddress common.Address, chainIDs []string, agentContracts []common.Address, privateKeyHex string) error {
+func CallMapAgent(agent common.Address, chainRPC string, contractAddress common.Address, chainIDs []string, agentContracts []common.Address, privateKeyHex string) (common.Hash, error) {
 	client, auth, err := contractutils.InitializeContractClient(chainRPC, privateKeyHex)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
 
 	contractAbi := config.GetAgentManagerAbi()
 
 	parsedAbi, err := abi.JSON(strings.NewReader(contractAbi))
 	if err != nil {
-		return fmt.Errorf("failed to parse ABI: %v", err)
+		return common.Hash{}, fmt.Errorf("failed to parse ABI: %v", err)
 	}
 
 	chainIDBytes := make([][32]byte, len(chainIDs))
@@ -33,7 +34,7 @@ func CallMapAgent(agent common.Address, chainRPC string, contractAddress common.
 		var b [32]byte
 		decodedChainID, err := hex.DecodeString(chainID[2:])
 		if err != nil {
-			return fmt.Errorf("failed to decode chain ID: %v", err)
+			return common.Hash{}, fmt.Errorf("failed to decode chain ID: %v", err)
 		}
 		copy(b[:], decodedChainID[:32])
 		chainIDBytes[i] = b
@@ -42,17 +43,17 @@ func CallMapAgent(agent common.Address, chainRPC string, contractAddress common.
 	// tx, err := bind.NewBoundContract(contractAddress, parsedAbi, client, client, client).Transact(auth, "mapAgent", agent, chainIDBytes, agentContracts)
 	tx, err := bind.NewBoundContract(contractAddress, parsedAbi, client, client, client).Transact(auth, "mapAgent", agent, agentContracts[0])
 	if err != nil {
-		return fmt.Errorf("failed to transact: %v", err)
+		return common.Hash{}, fmt.Errorf("failed to transact: %v", err)
 	}
 
 	_, err = bind.WaitMined(context.Background(), client, tx)
 	if err != nil {
-		return fmt.Errorf("failed to wait for transaction to be mined: %v", err)
+		return tx.Hash(), fmt.Errorf("failed to wait for transaction to be mined: %v", err)
 	}
 
 	fmt.Printf("Transaction complete: %s %s\n", chainRPC, tx.Hash())
 
-	return nil
+	return tx.Hash(), nil
 }
 
 type ContractCallChainData struct {
@@ -72,6 +73,7 @@ func MakeManagerContractCalls(owner common.Address, addresses map[string]common.
 	}
 
 	privateKeyHex := appConfig.WalletPrivateKey
+	var deploymentNotificationStatuses []db.DeploymentNotification
 
 	var wg sync.WaitGroup
 	wg.Add(len(appConfig.Chains))
@@ -81,21 +83,41 @@ func MakeManagerContractCalls(owner common.Address, addresses map[string]common.
 			defer wg.Done()
 			chainRPC := chainData.NodeUrl
 
+			chainDeploymentNotification := db.DeploymentNotification{
+				Chain:          chainData.ShortName,
+				ManagerAddress: chainData.AgentManager.String(),
+			}
+
 			if chainRPC == "" {
-				fmt.Printf("No rpc defined for chain: %s\n", chainData.Name)
+				chainDeploymentNotification.Status = "error"
+				chainDeploymentNotification.Error = "No rpc defined for chain"
+
+				fmt.Printf("[%v] No rpc defined for chain: %s\n", chainData.ShortName, chainData.Name)
 				return
 			}
 
 			fmt.Println(chainData)
 
-			err := CallMapAgent(owner, chainRPC, chainData.AgentManager, chainIDs, agentContracts, privateKeyHex)
+			txHash, err := CallMapAgent(owner, chainRPC, chainData.AgentManager, chainIDs, agentContracts, privateKeyHex)
+
+			chainDeploymentNotification.TransactionHash = txHash.String()
+
 			if err != nil {
-				fmt.Printf("Failed to call mapAgent on chain %s: %v\n", chainData.Name, err)
+				chainDeploymentNotification.Status = "error"
+				chainDeploymentNotification.Error = err.Error()
+				fmt.Printf("[%v] Failed to call mapAgent on chain %s: %v\n", chainData.ShortName, chainData.Name, err)
+			} else {
+				chainDeploymentNotification.Status = "success"
+				chainDeploymentNotification.Error = ""
 			}
+
+			deploymentNotificationStatuses = append(deploymentNotificationStatuses, chainDeploymentNotification)
 		}(chainData)
 	}
 
 	wg.Wait()
+
+	db.ContractDeploymentInstance().BulkUpdateDeploymentNotification(owner, deploymentNotificationStatuses)
 
 	fmt.Printf("Done Contract call")
 }

@@ -13,41 +13,44 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func DeployContract(owner common.Address, chainData config.ChainConfig) (common.Address, error) {
+func DeployContract(owner common.Address, chainData config.ChainConfig) (common.Address, common.Hash, error) {
 	appConfig := config.LoadConfig()
 
 	client, auth, err := contractutils.InitializeContractClient(chainData.NodeUrl, appConfig.WalletPrivateKey)
 
 	if err != nil {
-		return common.Address{}, err
+		return common.Address{}, common.Hash{}, err
 	}
 
 	contractAbi, contractBytecode := config.GetAgentPodAbi()
 
 	parsed, err := abi.JSON(strings.NewReader(contractAbi))
 	if err != nil {
-		return common.Address{}, fmt.Errorf("failed to parse abi: %w", err)
+		return common.Address{}, common.Hash{}, fmt.Errorf("[%v] failed to parse abi: %w", chainData.ShortName, err)
 	}
 
 	// Deploy the contract
 	address, tx, _, err := bind.DeployContract(auth, parsed, common.FromHex(contractBytecode), client, chainData.AgentManager, owner, chainData.Oracle)
 	if err != nil {
-		return common.Address{}, fmt.Errorf("failed to deploy contract: %w", err)
+		if tx != nil {
+			return common.Address{}, tx.Hash(), fmt.Errorf("[%v] failed to deploy contract: %w", chainData.ShortName, err)
+		}
+		return common.Address{}, common.Hash{}, fmt.Errorf("[%v] failed to deploy contract: %w", chainData.ShortName, err)
 	}
 
-	fmt.Printf("Contract pending deploy: 0x%x\n", address)
-	fmt.Printf("Transaction waiting to be mined: 0x%x\n", tx.Hash())
+	fmt.Printf("[%v] Contract pending deploy: 0x%x\n", chainData.ShortName, address)
+	fmt.Printf("[%v] Transaction waiting to be mined: 0x%x\n", chainData.ShortName, tx.Hash())
 
 	// Wait for the transaction to be mined
 	receipt, err := bind.WaitMined(context.Background(), client, tx)
 	if err != nil {
-		return common.Address{}, fmt.Errorf("failed to wait for the transaction to be mined: %w", err)
+		return common.Address{}, tx.Hash(), fmt.Errorf("failed to wait for the transaction to be mined: %w", err)
 	}
 
 	if receipt.Status == types.ReceiptStatusSuccessful {
-		fmt.Printf("Contract deployed at address: 0x%x\n", address)
-		return address, nil
+		fmt.Printf("[%v] Contract deployed at address: 0x%x\n", chainData.ShortName, address)
+		return address, tx.Hash(), nil
 	}
 
-	return common.Address{}, fmt.Errorf("contract deployment failed: 0x%x", tx.Hash())
+	return common.Address{}, tx.Hash(), fmt.Errorf("[%v] contract deployment failed: 0x%x", chainData.ShortName, tx.Hash())
 }

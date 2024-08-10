@@ -20,14 +20,21 @@ type ChainConfig struct {
 }
 
 type ConfigRaw struct {
-	Chains        []ChainConfig `yaml:"chains"`
-	RootChainName string        `yaml:"root_chain_name"`
+	Chains            []ChainConfig `yaml:"chains"`
+	RootChainName     string        `yaml:"root_chain_name"`
+	DeafultStartBlock int64         `yaml:"default_start_block"`
 }
 
 type Config struct {
-	Chains           []ChainConfig
-	RootChainData    ChainConfig
-	WalletPrivateKey string
+	Chains            []ChainConfig
+	RootChainData     ChainConfig
+	DeafultStartBlock int64
+	WalletPrivateKey  string
+	DBHost            string
+	DBPort            string
+	DBUser            string
+	DBPass            string
+	DBName            string
 }
 
 var config *Config
@@ -65,9 +72,15 @@ func LoadConfig() *Config {
 	}
 
 	config = &Config{
-		Chains:           configRaw.Chains,
-		RootChainData:    rootChainData,
-		WalletPrivateKey: os.Getenv(("WALLET_PRIVATE_KEY")),
+		Chains:            configRaw.Chains,
+		RootChainData:     rootChainData,
+		DeafultStartBlock: configRaw.DeafultStartBlock,
+		WalletPrivateKey:  os.Getenv(("WALLET_PRIVATE_KEY")),
+		DBHost:            os.Getenv("DB_HOST"),
+		DBPort:            os.Getenv("DB_PORT"),
+		DBUser:            os.Getenv("DB_USER"),
+		DBPass:            os.Getenv("DB_PASSWORD"),
+		DBName:            os.Getenv("DB_NAME"),
 	}
 
 	return config

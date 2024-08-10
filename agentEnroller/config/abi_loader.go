@@ -46,7 +46,7 @@ func GetAgentPodAbi() (string, string) {
 }
 
 func GetAgentManagerAbi() string {
-	contractData, err := LoadContractData("data/abi/agent_manage.json")
+	contractData, err := LoadContractData("data/abi/agent_manager.json")
 	if err != nil {
 		log.Fatalf("Failed to load contract data: %v", err)
 	}
