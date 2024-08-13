@@ -68,14 +68,16 @@ func enrollAgentHandler(owner common.Address, chainIDS []string) {
 			defer cancel()
 
 			contractAddress, txHash, err := contractdeployer.DeployContract(owner, chainData)
+
 			if err != nil {
 				contractStatuses = append(contractStatuses, db.ChainDeployment{
-					ManagerAddress:  chainData.AgentManager.String(),
-					ContractAddress: contractAddress.String(),
-					Chain:           chainName,
-					TransactionHash: txHash.String(),
-					Status:          "failed",
-					Error:           err.Error(),
+					ManagerAddress:         chainData.AgentManager.String(),
+					ContractAddress:        contractAddress.String(),
+					Chain:                  chainName,
+					TransactionHash:        txHash.String(),
+					Status:                 "failed",
+					Error:                  err.Error(),
+					DeploymentNotification: []db.DeploymentNotification{},
 				})
 
 				fmt.Printf("Failed to deploy contract on chain %s: %v\n", chain, err)
@@ -83,12 +85,13 @@ func enrollAgentHandler(owner common.Address, chainIDS []string) {
 			}
 
 			contractStatuses = append(contractStatuses, db.ChainDeployment{
-				ManagerAddress:  chainData.AgentManager.String(),
-				ContractAddress: contractAddress.String(),
-				Chain:           chainName,
-				TransactionHash: txHash.String(),
-				Status:          "success",
-				Error:           "",
+				ManagerAddress:         chainData.AgentManager.String(),
+				ContractAddress:        contractAddress.String(),
+				Chain:                  chainName,
+				TransactionHash:        txHash.String(),
+				Status:                 "success",
+				Error:                  "",
+				DeploymentNotification: []db.DeploymentNotification{},
 			})
 
 			mu.Lock()
@@ -100,9 +103,8 @@ func enrollAgentHandler(owner common.Address, chainIDS []string) {
 	wg.Wait()
 
 	db.ContractDeploymentInstance().Add(db.DBContractDeploymentData{
-		Owner:                  owner.String(),
-		Chains:                 contractStatuses,
-		DeploymentNotification: []db.DeploymentNotification{},
+		Owner:  owner.String(),
+		Chains: contractStatuses,
 	})
 
 	fmt.Printf("Deployed contract addresses: %+v\n", addresses)

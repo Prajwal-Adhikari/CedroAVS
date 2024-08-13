@@ -3,15 +3,51 @@ package contractdeployer
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/Cedro-Finance/CedroAVS/agentEnroller/config"
 	contractutils "github.com/Cedro-Finance/CedroAVS/agentEnroller/contract/utils"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
+
+func getAgentContractAddress(owner common.Address, managerAddress common.Address, client ethclient.Client) common.Address {
+	contractAbi := config.GetAgentManagerAbi()
+
+	parsedAbi, err := abi.JSON(strings.NewReader(contractAbi))
+	if err != nil {
+		fmt.Printf("Failed to pack method data: %v", err)
+	}
+	data, err := parsedAbi.Pack("agentContract", owner)
+	if err != nil {
+		fmt.Printf("Failed to pack method data: %v", err)
+	}
+
+	msg := ethereum.CallMsg{
+		To:   &managerAddress,
+		Data: data,
+	}
+
+	output, err := client.CallContract(context.Background(), msg, nil)
+	if err != nil {
+		log.Fatalf("Failed to call contract method: %v", err)
+	}
+
+	var agentContractAddress common.Address
+	err = parsedAbi.UnpackIntoInterface(&agentContractAddress, "agentContract", output)
+	if err != nil {
+		log.Fatalf("Failed to unpack the returned data: %v", err)
+	}
+
+	fmt.Printf("The agentContract for the address %s is: %s\n", owner.Hex(), agentContractAddress.Hex())
+
+	return agentContractAddress
+}
 
 func DeployContract(owner common.Address, chainData config.ChainConfig) (common.Address, common.Hash, error) {
 	appConfig := config.LoadConfig()
@@ -27,6 +63,12 @@ func DeployContract(owner common.Address, chainData config.ChainConfig) (common.
 	parsed, err := abi.JSON(strings.NewReader(contractAbi))
 	if err != nil {
 		return common.Address{}, common.Hash{}, fmt.Errorf("[%v] failed to parse abi: %w", chainData.ShortName, err)
+	}
+
+	agentPodAddress := getAgentContractAddress(owner, chainData.AgentManager, *client)
+
+	if (agentPodAddress != common.Address{}) {
+		return agentPodAddress, common.Hash{}, fmt.Errorf("agent already has contract deployed in chain")
 	}
 
 	// Deploy the contract

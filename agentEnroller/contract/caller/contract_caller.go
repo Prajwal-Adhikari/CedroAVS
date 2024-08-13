@@ -11,6 +11,7 @@ import (
 	"github.com/Cedro-Finance/CedroAVS/agentEnroller/config"
 	contractutils "github.com/Cedro-Finance/CedroAVS/agentEnroller/contract/utils"
 	db "github.com/Cedro-Finance/CedroAVS/agentEnroller/database"
+	"github.com/Cedro-Finance/CedroAVS/agentEnroller/utils"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -40,8 +41,7 @@ func CallMapAgent(agent common.Address, chainRPC string, contractAddress common.
 		chainIDBytes[i] = b
 	}
 
-	// tx, err := bind.NewBoundContract(contractAddress, parsedAbi, client, client, client).Transact(auth, "mapAgent", agent, chainIDBytes, agentContracts)
-	tx, err := bind.NewBoundContract(contractAddress, parsedAbi, client, client, client).Transact(auth, "mapAgent", agent, agentContracts[0])
+	tx, err := bind.NewBoundContract(contractAddress, parsedAbi, client, client, client).Transact(auth, "mapAgent", agent, chainIDBytes, agentContracts)
 	if err != nil {
 		return common.Hash{}, fmt.Errorf("failed to transact: %v", err)
 	}
@@ -66,10 +66,17 @@ func MakeManagerContractCalls(owner common.Address, addresses map[string]common.
 
 	agentContracts := make([]common.Address, 0, len(addresses))
 	chainIDs := make([]string, 0, len(addresses))
+	deployedChainNames := make([]string, 0, len(addresses))
 
 	for chainID, agentContractAddress := range addresses {
 		agentContracts = append(agentContracts, agentContractAddress)
 		chainIDs = append(chainIDs, chainID)
+		chainBytes, _ := hex.DecodeString(chainID[2:])
+		var chainBytes32 [32]byte
+		copy(chainBytes32[:], chainBytes[:32])
+		chainName := utils.Bytes32ToString(chainBytes32)
+
+		deployedChainNames = append(deployedChainNames, chainName)
 	}
 
 	privateKeyHex := appConfig.WalletPrivateKey
@@ -117,7 +124,7 @@ func MakeManagerContractCalls(owner common.Address, addresses map[string]common.
 
 	wg.Wait()
 
-	db.ContractDeploymentInstance().BulkUpdateDeploymentNotification(owner, deploymentNotificationStatuses)
+	db.ContractDeploymentInstance().BulkUpdateDeploymentNotification(owner, deploymentNotificationStatuses, deployedChainNames)
 
 	fmt.Printf("Done Contract call")
 }

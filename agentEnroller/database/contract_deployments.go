@@ -20,18 +20,18 @@ type DeploymentNotification struct {
 }
 
 type ChainDeployment struct {
-	Chain           string `bson:"chain"`
-	ContractAddress string `bson:"contractAddress"`
-	TransactionHash string `bson:"transactionHash"`
-	ManagerAddress  string `bson:"managerAddress"`
-	Status          string `bson:"status"`
-	Error           string `bson:"error"`
+	Chain                  string                   `bson:"chain"`
+	ContractAddress        string                   `bson:"contractAddress"`
+	TransactionHash        string                   `bson:"transactionHash"`
+	ManagerAddress         string                   `bson:"managerAddress"`
+	Status                 string                   `bson:"status"`
+	Error                  string                   `bson:"error"`
+	DeploymentNotification []DeploymentNotification `bson:"deploymentNotifications"`
 }
 
 type DBContractDeploymentData struct {
-	Owner                  string                   `bson:"owner"`
-	Chains                 []ChainDeployment        `bson:"chains"`
-	DeploymentNotification []DeploymentNotification `bson:"deploymentNotifications"`
+	Owner  string            `bson:"owner"`
+	Chains []ChainDeployment `bson:"chains"`
 }
 
 type ContractDeploymentGetFilter struct {
@@ -116,26 +116,29 @@ func (collection *ContractDeploymentCollection) UpdateDeploymentNotification(own
 	return nil
 }
 
-func (cdc *ContractDeploymentCollection) BulkUpdateDeploymentNotification(owner common.Address, deploymentNotifications []DeploymentNotification) error {
+func (cdc *ContractDeploymentCollection) BulkUpdateDeploymentNotification(owner common.Address, deploymentNotifications []DeploymentNotification, deployedChainNames []string) error {
 	var models []mongo.WriteModel
 
 	for _, notification := range deploymentNotifications {
-		filter := bson.M{
-			"owner": owner.String(),
+		for _, chainName := range deployedChainNames {
+			filter := bson.M{
+				"owner":        owner.String(),
+				"chains.chain": chainName,
+			}
+
+			update := bson.M{
+				"$push": bson.M{
+					"chains.$.deploymentNotifications": notification,
+				},
+			}
+
+			updateModel := mongo.NewUpdateOneModel().
+				SetFilter(filter).
+				SetUpdate(update).
+				SetUpsert(true)
+
+			models = append(models, updateModel)
 		}
-
-		update := bson.M{
-			"$push": bson.M{
-				"deploymentNotifications": notification,
-			},
-		}
-
-		updateModel := mongo.NewUpdateOneModel().
-			SetFilter(filter).
-			SetUpdate(update).
-			SetUpsert(true)
-
-		models = append(models, updateModel)
 	}
 
 	bulkOption := options.BulkWrite().SetOrdered(true)
@@ -144,14 +147,6 @@ func (cdc *ContractDeploymentCollection) BulkUpdateDeploymentNotification(owner 
 		log.Printf("Failed to perform bulk update: %v", err)
 		return err
 	}
-
-	// Debug: Fetch the document after update
-	var afterUpdate DBContractDeploymentData
-	err = cdc.Collection.FindOne(context.Background(), bson.M{"owner": owner}).Decode(&afterUpdate)
-	if err != nil {
-		return fmt.Errorf("failed to fetch document after update: %v", err)
-	}
-	log.Printf("After Update: %+v\n", afterUpdate)
 
 	return nil
 }
