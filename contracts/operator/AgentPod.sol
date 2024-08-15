@@ -430,15 +430,15 @@ contract AgentPod is Context, ReentrancyGuard {
                 amount
             );
 
-        (bytes memory payload, uint256 nativeValue) = IAction(
+        (bytes memory payload, uint256 nativeValue, address contractAddress) = IAction(
             IAgentManager(agentManager).payloadFetchFrom(id)
         ).extractPayloads(_payload);
         if (nativeValue > 0) {
-            (success, data) = (IAgentManager(agentManager).protocol(id)).call{
+            (success, data) = (contractAddress).call{
                 value: nativeValue
             }(payload);
         } else {
-            (success, data) = (IAgentManager(agentManager).protocol(id)).call(
+            (success, data) = (contractAddress).call(
                 payload
             );
         }
