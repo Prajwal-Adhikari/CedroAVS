@@ -6,8 +6,13 @@ import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IStargate} from "@stargatefinance/stg-evm-v2/src/interfaces/IStargate.sol";
+import {MessagingFee, OFTReceipt, SendParam} from "@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol";
 import "./interfaces/IOracle.sol";
 import "./interfaces/IPool.sol";
+import "./interfaces/IStargateInterface.sol";
+import "./interfaces/IStargateRouter.sol";
+import "./interfaces/IStargateEthVault.sol";
 import "./interfaces/IAgentManager.sol";
 import "../actions/interfaces/IAction.sol";
 import "./libraries/Data.sol";
@@ -55,7 +60,10 @@ contract AgentPod is Context, ReentrancyGuard {
         Data.STATUS status
     );
 
+    event ProtocolResponse(bytes32 id,bytes payload, bytes response);
+
     error DepositNotMatured(uint256 _txnID, address _user);
+    error ActionReverted(bytes32 id, bytes payload);
     error IncorrectRequestId(
         string contractTAG,
         uint256 sentId,
@@ -75,6 +83,7 @@ contract AgentPod is Context, ReentrancyGuard {
     error StaleMessage(bytes signature);
     error SignatureAlreadyUsed(bytes signature);
     error AssetAlreadyClaimed(uint256 _txnID);
+    error InsufficientQuantity();
 
     constructor(
         address _agentManager,
@@ -167,6 +176,11 @@ contract AgentPod is Context, ReentrancyGuard {
         }
     }
 
+    /**
+     * @notice Configures list of debt assets
+     * This function can only be accessed by account with role MANAGER.
+     * @param _assets - ids of the debt assets
+     **/
     function addDebtAsset(bytes32[] memory _assets) external {
         uint256 len = _assets.length;
         for (uint256 i; i < len; ) {
@@ -180,6 +194,11 @@ contract AgentPod is Context, ReentrancyGuard {
         }
     }
 
+    /**
+     * @notice Removes debt asset from the list
+     * This function can only be accessed by account with role MANAGER.
+     * @param _asset - id of the debt asset
+     **/
     function removeDebtAsset(bytes32 _asset) external {
         uint256 len = debtAssetList.length;
         for (uint256 i; i < len; ) {
@@ -393,33 +412,40 @@ contract AgentPod is Context, ReentrancyGuard {
      * @param _payload - fixed bytes pattern to be provided for a DeFi action
      **/
     function takeAction(bytes memory _payload) public {
-        uint8 actionType;
-        uint8 receiver;
         bytes32 id;
         address asset;
         uint256 amount;
-        assembly {
-            actionType := mload(add(_payload, 1))
-            receiver := mload(add(_payload, 2))
-            id := mload(add(_payload, 34))
-            asset := mload(add(_payload, 55))
-            amount := mload(add(_payload, 87))
-        }
-        if (actionType == 1) {
-            if (amount != 0 && asset != address(0))
-                IERC20(asset).transfer(pool, amount);
+        bool success;
+        bytes memory data;
 
-            IPool(pool).takeAction(_payload, IAction(oppurtunity).protocol(id));
-            return;
+        assembly {
+            id := mload(add(_payload, 32))
+            asset := mload(add(_payload, 52))
+            amount := mload(add(_payload, 84))
         }
-        IERC20(asset).transfer(
-            IAction(oppurtunity).protocolInterface(id),
-            amount
-        );
-        if (receiver == 0) {
-            IAction(oppurtunity).transferPayload(_payload, address(this));
+
+        if (amount != 0 && asset != address(0))
+            IERC20(asset).approve(
+                IAgentManager(agentManager).protocol(id),
+                amount
+            );
+
+        (bytes memory payload, uint256 nativeValue) = IAction(
+            IAgentManager(agentManager).payloadFetchFrom(id)
+        ).extractPayloads(_payload);
+        if (nativeValue > 0) {
+            (success, data) = (IAgentManager(agentManager).protocol(id)).call{
+                value: nativeValue
+            }(payload);
         } else {
-            IAction(oppurtunity).transferPayload(_payload, pool);
+            (success, data) = (IAgentManager(agentManager).protocol(id)).call(
+                payload
+            );
+        }
+        if (!success) {
+            revert ActionReverted(id, _payload);
+        } else {
+            emit ProtocolResponse(id, _payload, data);
         }
     }
 
@@ -532,6 +558,7 @@ contract AgentPod is Context, ReentrancyGuard {
                 _timeThreshold
             )
         );
+
         bytes32 signedHash = keccak256(
             abi.encodePacked("\x19Ethereum Signed Message:\n32", msgHash)
         );
@@ -582,6 +609,9 @@ contract AgentPod is Context, ReentrancyGuard {
         }
     }
 
+    /**
+     * @notice Returns list of assets accepted for deposits from users
+     **/
     function getAcceptedAssetList() public view returns (bytes32[] memory) {
         bytes32[] memory result = new bytes32[](acceptedAssetList.length);
         for (uint256 i = 0; i < acceptedAssetList.length; i++) {
@@ -590,6 +620,9 @@ contract AgentPod is Context, ReentrancyGuard {
         return result;
     }
 
+    /**
+     * @notice Returns list of debt assets
+     **/
     function getDebtAssetList() public view returns (bytes32[] memory) {
         bytes32[] memory result = new bytes32[](debtAssetList.length);
         for (uint256 i = 0; i < debtAssetList.length; i++) {
@@ -598,6 +631,9 @@ contract AgentPod is Context, ReentrancyGuard {
         return result;
     }
 
+    /**
+     * @notice Returns interest accumulated till date for a particular deposit
+     **/
     function getInterestAccumulated(uint256 _txnId)
         external
         view
@@ -610,5 +646,94 @@ contract AgentPod is Context, ReentrancyGuard {
             (((timeDiff / SECONDS_IN_A_YEAR) * (userData.interestRate)) /
                 (1e18))) / (1e18);
         return amountToClaim;
+    }
+
+    /**
+     * @notice Allows swap of token to agentPod contracts of other chains
+     **/
+    function sendToken(
+        address _stargate,
+        bytes32 chainId,
+        uint256 _amount
+    ) external {
+        SendParam memory sendParam;
+        MessagingFee memory messagingFee;
+        uint256 valueToSend;
+
+        IERC20(IStargate(_stargate).token()).approve(_stargate, _amount);
+
+        (valueToSend, sendParam, messagingFee) = IStargateInterface(
+            IAgentManager(agentManager).stargateIntegration()
+        ).prepareTakeTaxi(
+                _stargate,
+                IAgentManager(agentManager).mapIDs(chainId),
+                _amount,
+                IAgentManager(agentManager).agentPodContracts(owner, chainId)
+            );
+
+        IStargate(_stargate).sendToken{value: valueToSend}(
+            sendParam,
+            messagingFee,
+            address(this)
+        );
+    }
+
+    /**
+     * @notice Swaps liquidity across chain
+     * This function can only be accessed by account with role SWAP.
+     * @param qty - amount to be swapped
+     * @param id - id of the pool
+     * @param dstChainId - chain id of destination
+     * @param srcPoolId - pool id of source token in Stargate
+     * @param dstPoolId - pool id of destination token in Stargate
+     * @param amountMin - The minimum amount to receive.
+     **/
+    function swapRequest(
+        uint256 qty,
+        bytes32 id,
+        bytes32 dstChainId,
+        uint16 srcPoolId,
+        uint16 dstPoolId,
+        uint256 amountMin,
+        uint256 valueToSend
+    ) external {
+        if (valueToSend == 0) revert InsufficientValue(TAG, valueToSend, 0);
+        if (qty == 0) revert InsufficientQuantity();
+
+        Data.PoolInfo memory poolInfo = IAgentManager(agentManager).pools(id);
+        if (!poolInfo.enable) revert AssetNotEnabledByAgentManager(id);
+
+        if (poolInfo.token == address(0)) {
+            if (valueToSend <= qty)
+                revert InsufficientValue(TAG, valueToSend, qty);
+            // wrap the ETH into WETH
+            IStargateEthVault(IAgentManager(agentManager).stargateEthVault())
+                .deposit{value: qty}();
+            IStargateEthVault(IAgentManager(agentManager).stargateEthVault())
+                .approve(IAgentManager(agentManager).stargateRouter(), qty);
+        } else {
+            IERC20(poolInfo.token).approve(
+                IAgentManager(agentManager).stargateRouter(),
+                qty
+            );
+        }
+
+        bytes memory destination = abi.encodePacked(
+                IAgentManager(agentManager).agentPodContracts(owner, dstChainId)
+            );
+
+        IStargateRouter(IAgentManager(agentManager).stargateRouter()).swap{
+            value: valueToSend
+        }(
+            uint16(IAgentManager(agentManager).mapIDsV1(dstChainId)), // the destination chain id
+            srcPoolId, // the source Stargate poolId
+            dstPoolId, // the destination Stargate poolId
+            payable(address(this)), // refund adddress. if msg.sender pays too much gas, return extra eth
+            qty, // total tokens to send to destination chain
+            amountMin, // min amount allowed out
+            IStargateRouter.lzTxObj(0, 0, "0x"), // default lzTxObj
+            destination, // destination address, the sgReceive() implementer
+            bytes("") // bytes payload
+        );
     }
 }
