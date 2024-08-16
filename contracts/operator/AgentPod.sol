@@ -32,7 +32,6 @@ contract AgentPod is Context, ReentrancyGuard {
     address public operator;
     address public agentManager;
     address public pool;
-    address public oppurtunity;
 
     uint256 public constant ROOT_DECIMALS = 18;
     uint256 public constant SECONDS_IN_A_YEAR = 365 * 86400;
@@ -112,15 +111,6 @@ contract AgentPod is Context, ReentrancyGuard {
      **/
     function setPool(address _pool) external {
         pool = _pool;
-    }
-
-    /**
-     * @notice Configures oppurtunity contract interface to all protocols
-     * This function can only be accessed by the account with role MANAGER.
-     * @param _oppurtunity - address of the oppurtunity contract
-     **/
-    function setOppurtunity(address _oppurtunity) external {
-        oppurtunity = _oppurtunity;
     }
 
     /**
