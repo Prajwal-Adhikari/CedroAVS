@@ -150,7 +150,7 @@ contract CedroServiceManager is
             )
         );
 
-        agentManager.slashAgent(
+        agentManager.slashAgentForDeviation(
             deviationBalanceHeader.agentAddress,
             slashingAmount
         );
