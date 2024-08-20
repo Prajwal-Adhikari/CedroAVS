@@ -14,8 +14,11 @@ contract LidoInteraction {
         withdrawQueueContract = _address;
     }
 
-    function extractPayload(bytes memory rawPayload)
+    function extractPayload(
+        bytes memory rawPayload
+    )
         internal
+        view
         returns (
             bytes memory actionPayload,
             uint256 returnValue,
@@ -84,85 +87,90 @@ contract LidoInteraction {
 
         // Claim withdrawal
         if (methodName == 4) {
-            ILidoWithdrawalQueue withdrawContract = ILidoWithdrawalQueue(
-                withdrawQueueContract
-            );
-            uint256[] memory requestIds = withdrawContract
-                .getWithdrawalRequests(address(this));
+            (
+                uint256[] memory maturedRequestIds,
+                uint256[] memory hintIds
+            ) = getMaturedIdsAndHintIds();
 
-            require(
-                requestIds.length > 0,
-                string(
-                    abi.encodePacked(
-                        "Withdrawal requests not found ",
-                        requestIds
-                    )
-                )
-            );
-
-            WithdrawalRequestStatus[] memory reqStatusArray = withdrawContract
-                .getWithdrawalStatus(requestIds);
-
-            require(
-                requestIds.length > 0,
-                string(
-                    abi.encodePacked(
-                        "Withdrawal requests status not found ",
-                        reqStatusArray.length
-                    )
-                )
-            );
-
-            // Count the number of matured requests
-            uint256 count = 0;
-            for (uint256 i = 0; i < reqStatusArray.length; i++) {
-                if (
-                    reqStatusArray[i].isFinalized &&
-                    !reqStatusArray[i].isClaimed
-                ) {
-                    count++;
-                }
-            }
-
-            // Revert if there are no matured withdrawals
-            require(count > 0, "No claimable withdrawals yet");
-
-            // store matured requests in an array
-            uint256[] memory maturedRequestIds = new uint256[](count);
-
-            uint256 index = 0;
-            for (uint256 i = 0; i < reqStatusArray.length; i++) {
-                if (
-                    reqStatusArray[i].isFinalized &&
-                    !reqStatusArray[i].isClaimed
-                ) {
-                    maturedRequestIds[index] = requestIds[i];
-                    index++;
-                }
-            }
-
-            require(
-                requestIds.length > 0,
-                string(
-                    abi.encodePacked(
-                        "Matured Withdrawal requests status not found ",
-                        maturedRequestIds
-                    )
-                )
-            );
-
-            uint256 lastCheckpointIndex = withdrawContract
-                .getLastCheckpointIndex();
-            uint256[] memory hintIds = withdrawContract.findCheckpointHints(
+            actionPayload = abi.encodeWithSignature(
+                "claimWithdrawals(uint256[],uint256[])",
                 maturedRequestIds,
-                1,
-                lastCheckpointIndex
+                hintIds
             );
-
-            withdrawContract.claimWithdrawals(maturedRequestIds, hintIds);
-            
-            actionPayload = abi.encodeWithSignature("claimWithdrawals(uint256[],uint256[])", maturedRequestIds, hintIds);
             _protocol = withdrawQueueContract;
         }
+    }
+
+    function getMaturedIdsAndHintIds()
+        internal
+        view
+        returns (uint256[] memory maturedRequestIds, uint256[] memory hintIds)
+    {
+        ILidoWithdrawalQueue withdrawContract = ILidoWithdrawalQueue(
+            withdrawQueueContract
+        );
+
+        uint256[] memory requestIds = withdrawContract.getWithdrawalRequests(
+            msg.sender
+        );
+
+        require(
+            requestIds.length > 0,
+            string(
+                abi.encodePacked("Withdrawal requests not found ", requestIds)
+            )
+        );
+
+        WithdrawalRequestStatus[] memory reqStatusArray = withdrawContract
+            .getWithdrawalStatus(requestIds);
+
+        require(
+            requestIds.length > 0,
+            string(
+                abi.encodePacked(
+                    "Withdrawal requests status not found ",
+                    reqStatusArray.length
+                )
+            )
+        );
+
+        // Count the number of matured requests
+        uint count = 0;
+        for (uint i = 0; i < reqStatusArray.length; i++) {
+            if (reqStatusArray[i].isFinalized && !reqStatusArray[i].isClaimed) {
+                count++;
+            }
+        }
+
+        // Revert if there are no matured withdrawals
+        require(count > 0, "No claimable withdrawals yet");
+
+        // store matured requests in an array
+        maturedRequestIds = new uint256[](count);
+
+        uint index = 0;
+        for (uint i = 0; i < reqStatusArray.length; i++) {
+            if (reqStatusArray[i].isFinalized && !reqStatusArray[i].isClaimed) {
+                maturedRequestIds[index] = requestIds[i];
+                index++;
+            }
+        }
+
+        require(
+            requestIds.length > 0,
+            string(
+                abi.encodePacked(
+                    "Matured Withdrawal requests status not found ",
+                    maturedRequestIds
+                )
+            )
+        );
+
+        uint256 lastCheckpointIndex = withdrawContract.getLastCheckpointIndex();
+        hintIds = withdrawContract.findCheckpointHints(
+            maturedRequestIds,
+            1,
+            lastCheckpointIndex
+        );
     }
 }
