@@ -17,7 +17,7 @@ contract LidoInteraction {
     function extractPayload(
         bytes memory rawPayload
     )
-        internal
+        public
         view
         returns (
             bytes memory actionPayload,
