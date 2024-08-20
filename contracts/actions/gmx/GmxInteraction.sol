@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../interfaces/IGmx.sol";
+import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import {IGmx} from "./interfaces/IGmx.sol";
+import {IRoleManager} from "../interfaces/IRoleManager.sol";
 
 string constant TAG = "GmxInteraction";
 
@@ -16,9 +18,16 @@ contract GMXInteraction is ContextUpgradeable {
     address orderVault;
     address depositVault;
     address gmxProtocol;
+    address roleManagerAddress;
 
     mapping(address => bool) allowedAsset;
+
     error UnsupportedFunctionType(string contractTAG, uint8 functionType);
+
+    modifier onlyRoles(bytes32 role) {
+        IRoleManager(roleManagerAddress).checkRole(role, _msgSender());
+        _;
+    }
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -31,11 +40,15 @@ contract GMXInteraction is ContextUpgradeable {
     function initialize(
         address _nativeTokenAddrees,
         address _orderVaultAddress,
-        address _depositVaultAddress
+        address _depositVaultAddress,
+        address _gmxProtocolAddress,
+        address _roleManagerAddress
     ) public initializer {
         nativeToken = _nativeTokenAddrees;
         orderVault = _orderVaultAddress;
         depositVault = _depositVaultAddress;
+        gmxProtocol = _gmxProtocolAddress;
+        roleManagerAddress = _roleManagerAddress;
     }
 
     function extractPayload(
@@ -54,6 +67,8 @@ contract GMXInteraction is ContextUpgradeable {
             methodToCall := mload(add(_payload, 85))
         }
 
+        protocolAddress = gmxProtocol;
+
         if (methodToCall == 1) {
             bytes[] memory extractedData;
             (extractedData, nativeAssetAmountValue) = extractOrderArray(
@@ -63,7 +78,6 @@ contract GMXInteraction is ContextUpgradeable {
                 IGmx.multicall.selector,
                 extractedData
             );
-            protocolAddress = gmxProtocol;
         } else if (methodToCall == 2) {
             bytes[] memory extractedData;
             (extractedData, nativeAssetAmountValue) = extractUpdateOrderArray(
@@ -73,7 +87,6 @@ contract GMXInteraction is ContextUpgradeable {
                 IGmx.multicall.selector,
                 extractedData
             );
-            protocolAddress = gmxProtocol;
         } else if (methodToCall == 3) {
             bytes[] memory extractedData;
             (extractedData, nativeAssetAmountValue) = extractCancelOrderArray(
@@ -83,7 +96,6 @@ contract GMXInteraction is ContextUpgradeable {
                 IGmx.multicall.selector,
                 extractedData
             );
-            protocolAddress = gmxProtocol;
         } else if (methodToCall == 4) {
             bytes[] memory extractedData;
             (extractedData, nativeAssetAmountValue) = extractDepositArray(
@@ -93,7 +105,6 @@ contract GMXInteraction is ContextUpgradeable {
                 IGmx.multicall.selector,
                 extractedData
             );
-            protocolAddress = gmxProtocol;
         } else if (methodToCall == 5) {
             bytes[] memory extractedData;
             (extractedData, nativeAssetAmountValue) = extractCancelDepositArray(
@@ -103,7 +114,6 @@ contract GMXInteraction is ContextUpgradeable {
                 IGmx.multicall.selector,
                 extractedData
             );
-            protocolAddress = gmxProtocol;
         } else if (methodToCall == 6) {
             bytes[] memory extractedData;
             (extractedData, nativeAssetAmountValue) = extractWithdrawalArray(
@@ -113,7 +123,6 @@ contract GMXInteraction is ContextUpgradeable {
                 IGmx.multicall.selector,
                 extractedData
             );
-            protocolAddress = gmxProtocol;
         } else if (methodToCall == 7) {
             bytes[] memory extractedData;
             (
@@ -124,7 +133,6 @@ contract GMXInteraction is ContextUpgradeable {
                 IGmx.multicall.selector,
                 extractedData
             );
-            protocolAddress = gmxProtocol;
         } else if (methodToCall == 8) {
             bytes[] memory extractedData;
             (extractedData, nativeAssetAmountValue) = extractCreateShiftArray(
@@ -134,7 +142,6 @@ contract GMXInteraction is ContextUpgradeable {
                 IGmx.multicall.selector,
                 extractedData
             );
-            protocolAddress = gmxProtocol;
         } else if (methodToCall == 9) {
             bytes[] memory extractedData;
             (extractedData, nativeAssetAmountValue) = extractCancelShiftArray(
@@ -144,7 +151,6 @@ contract GMXInteraction is ContextUpgradeable {
                 IGmx.multicall.selector,
                 extractedData
             );
-            protocolAddress = gmxProtocol;
         } else if (methodToCall == 10) {
             bytes[] memory extractedData;
             (
@@ -155,7 +161,6 @@ contract GMXInteraction is ContextUpgradeable {
                 IGmx.multicall.selector,
                 extractedData
             );
-            protocolAddress = gmxProtocol;
         } else if (methodToCall == 11) {
             bytes[] memory extractedData;
             (
@@ -166,7 +171,6 @@ contract GMXInteraction is ContextUpgradeable {
                 IGmx.multicall.selector,
                 extractedData
             );
-            protocolAddress = gmxProtocol;
         } else {
             bytes[] memory extractedData;
             (
@@ -177,7 +181,6 @@ contract GMXInteraction is ContextUpgradeable {
                 IGmx.multicall.selector,
                 extractedData
             );
-            protocolAddress = gmxProtocol;
         }
     }
 
@@ -986,12 +989,28 @@ contract GMXInteraction is ContextUpgradeable {
         nativeToken = _nativeToken;
     }
 
-    function setOrderVault(address _orderVault) internal {
+    function setOrderVault(
+        address _orderVault
+    ) external onlyRoles(IRoleManager(roleManagerAddress).ACTIONS_ADMIN()) {
         orderVault = _orderVault;
     }
 
-    function setDepositVault(address _depositVault) internal {
+    function setDepositVault(
+        address _depositVault
+    ) external onlyRoles(IRoleManager(roleManagerAddress).ACTIONS_ADMIN()) {
         depositVault = _depositVault;
+    }
+
+    function setGmxProtocolVault(
+        address _gmxProtocolVault
+    ) external onlyRoles(IRoleManager(roleManagerAddress).ACTIONS_ADMIN()) {
+        gmxProtocol = _gmxProtocolVault;
+    }
+
+    function setRoleManagerAddress(
+        address _roleManagerAddress
+    ) external onlyRoles(IRoleManager(roleManagerAddress).ACTIONS_ADMIN()) {
+        roleManagerAddress = _roleManagerAddress;
     }
 
     function stringToBytes32(

@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.24;
 
-import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../interfaces/ICompound.sol";
+import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+import {ICompound} from "../interfaces/ICompound.sol";
+import {IRoleManager} from "../interfaces/IRoleManager.sol";
 
 string constant TAG = "CompoundInteraction";
 
@@ -15,9 +17,34 @@ contract CompoundInteraction is ContextUpgradeable {
     address rewardContract;
     address wethContract;
     address nativeToken;
+    address roleManagerAddress;
     mapping(address => address) addressToInteract;
 
     error InvalidAsset(string contractTAG);
+
+    modifier onlyRoles(bytes32 role) {
+        IRoleManager(roleManagerAddress).checkRole(role, _msgSender());
+        _;
+    }
+
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
+     * @notice Initilize the contract.
+     **/
+    function initialize(
+        address _nativeTokenAddress,
+        address _rewardContractAddress,
+        address _wethContractAddress,
+        address _roleManagerAddress
+    ) public initializer {
+        nativeToken = _nativeTokenAddress;
+        rewardContract = _rewardContractAddress;
+        wethContract = _wethContractAddress;
+        roleManagerAddress = _roleManagerAddress;
+    }
 
     function extractPayload(
         bytes memory _payload
@@ -46,25 +73,6 @@ contract CompoundInteraction is ContextUpgradeable {
         }
     }
 
-    function setRewardContract(address rewardConractAddress) external {
-        rewardContract = rewardConractAddress;
-    }
-
-    function setNativeToken(address nativeTokenAddress) external {
-        nativeToken = nativeTokenAddress;
-    }
-
-    function setCometAddress(
-        address assetAddress,
-        address cometAddress
-    ) external {
-        addressToInteract[assetAddress] = cometAddress;
-    }
-
-    function setWethContract(address wethContractAddress) external {
-        wethContract = wethContractAddress;
-    }
-
     function extractSupplyData(
         bytes memory _payload
     )
@@ -91,6 +99,37 @@ contract CompoundInteraction is ContextUpgradeable {
             amount
         );
         nativeAssetValue = 0;
+    }
+
+    function setRewardContract(
+        address rewardConractAddress
+    ) external onlyRoles(IRoleManager(roleManagerAddress).ACTIONS_ADMIN()) {
+        rewardContract = rewardConractAddress;
+    }
+
+    function setNativeToken(
+        address nativeTokenAddress
+    ) external onlyRoles(IRoleManager(roleManagerAddress).ACTIONS_ADMIN()) {
+        nativeToken = nativeTokenAddress;
+    }
+
+    function setCometAddress(
+        address assetAddress,
+        address cometAddress
+    ) external onlyRoles(IRoleManager(roleManagerAddress).ACTIONS_ADMIN()) {
+        addressToInteract[assetAddress] = cometAddress;
+    }
+
+    function setWethContract(
+        address wethContractAddress
+    ) external onlyRoles(IRoleManager(roleManagerAddress).ACTIONS_ADMIN()) {
+        wethContract = wethContractAddress;
+    }
+
+    function setRoleManagerAddress(
+        address _roleManagerAddress
+    ) external onlyRoles(IRoleManager(roleManagerAddress).ACTIONS_ADMIN()) {
+        roleManagerAddress = _roleManagerAddress;
     }
 
     function extractWithdrawData(
