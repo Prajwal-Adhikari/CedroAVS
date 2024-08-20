@@ -65,5 +65,13 @@ func (collection *ConfirmedBlockCollection) Get(chain string) (ConfirmedBlock, e
 }
 
 func (collection *ConfirmedBlockCollection) Update(chainName string, blockNumber int64) error {
-	return fmt.Errorf("missing implementation")
+	_, err := collection.Collection.UpdateOne(context.TODO(), bson.D{{Key: "chain", Value: chainName}}, bson.D{{Key: "$set", Value: bson.M{"blockNumber": blockNumber}}}, options.Update().SetUpsert(true))
+
+	if err != nil {
+		log.Printf("Failed to insert confirmed block into MongoDB: %v", err)
+
+		return err
+	}
+
+	return nil
 }

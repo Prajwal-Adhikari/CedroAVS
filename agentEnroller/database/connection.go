@@ -31,7 +31,7 @@ func InitDBConnection() {
 	dbPass := appConfig.DBPass
 	dbName := appConfig.DBName
 
-	mongodbURI := fmt.Sprintf("mongodb://%s:%s@%s:%s", dbUser, dbPass, dbHost, dbPort)
+	mongodbURI := fmt.Sprintf("mongodb+srv://%s:%s@%s", dbUser, dbPass, dbHost)
 
 	if dbUser == "" || dbPass == "" {
 		mongodbURI = fmt.Sprintf("mongodb://%s:%s", dbHost, dbPort)

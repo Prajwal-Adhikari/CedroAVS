@@ -28,6 +28,9 @@ func SyncToLatest() {
 		FromBlock = confirmedBlockNumber.BlockNumber
 	}
 
+	// Reduced one block from current synced state to resync any missed event on latest sync
+	FromBlock = FromBlock - 1
+
 	fmt.Printf("Syncing block events from block %v\n", FromBlock)
 
 	client, err := contractutils.GetClient(RootChainData.NodeUrl)
