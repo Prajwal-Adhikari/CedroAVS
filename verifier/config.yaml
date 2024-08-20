@@ -34,9 +34,9 @@ chains:
 
 
 keystore:
-  path: /Users/rabindraregmi/.eigenlayer/operator_keys/cedroavs.ecdsa.key.json
+  path: ../keys/operator_keys/cedroavs.ecdsa.key.json
   password: Cedrolabs@123
-  bls_path: /Users/rabindraregmi/.eigenlayer/operator_keys/cedroavs4.bls.key.json
+  bls_path: ../keys/operator_keys/cedroavs4.bls.key.json
   bls_password: Cedrolabs@123
 
 # keystore: 

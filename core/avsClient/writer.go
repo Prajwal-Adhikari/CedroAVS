@@ -102,6 +102,7 @@ func (w *AvsWriter) SendConfirmationBatch(ctx context.Context, balanceHeader tas
 	return receipt, nil
 }
 
+// Send Confirmation Batch to the contract
 func (w *AvsWriter) SendConfirmationAgentSlash(ctx context.Context, slashHeader *tasks.AgentSlashTaskInfo, nonSignerStakeSignature cedroservicemanager.IBLSSignatureCheckerNonSignerStakesAndSignature) (*types.Receipt, error) {
 	txOpts, err := w.TxMgr.GetNoSendTxOpts()
 

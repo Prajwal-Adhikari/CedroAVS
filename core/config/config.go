@@ -134,6 +134,14 @@ func LoadConfig(path string) (*Config, error) {
 		configRaw.AVS.RegistryCoordinatorAddr = avsRegistryCoordinatorAddress
 	}
 
+	gRpcIpAddress, ok := os.LookupEnv("AGGREGATOR_URL")
+
+	if !ok || gRpcIpAddress == "" {
+		gRpcIpAddress = configRaw.GRpcAggregatorIPAddr
+	}
+
+	fmt.Println("GRPC AGGREATOR URL", gRpcIpAddress)
+
 	return &Config{
 		AVS: AVSConfig{
 			RegistryCoordinatorAddr:    common.HexToAddress(configRaw.AVS.RegistryCoordinatorAddr),
@@ -141,7 +149,7 @@ func LoadConfig(path string) (*Config, error) {
 		},
 		BlsPrivateKey:        blsKeypair,
 		Agents:               configRaw.Chains,
-		GRpcAggregatorIpAddr: configRaw.GRpcAggregatorIPAddr,
+		GRpcAggregatorIpAddr: gRpcIpAddress,
 		KeyStore:             configRaw.KeyStore,
 		GraphQLUrl:           configRaw.GraphAPIURL,
 		EthConfig: EthConfig{

@@ -1,0 +1,34 @@
+services:
+  aggregator:
+    image: aggregator-image
+    volumes:
+      - .:/app
+    working_dir: /app/aggregator
+    ports:
+      - "50051:50051"
+      
+    healthcheck:
+      test: ["CMD", "nc", "-z", "aggregator", "50051"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    
+    environment:
+      - OPERATOR_ECDSA_KEY_PASSWORD=Cedrolabs@123
+
+  verifier:
+    image: verifier-image
+    volumes:
+      - .:/app
+    working_dir: /app/verifier
+
+    environment:
+      - OPERATOR_ECDSA_KEY_PASSWORD=Cedrolabs@123
+      - AGGREGATOR_URL=aggregator:50051
+
+    depends_on:
+      aggregator:
+        condition: service_healthy
+        
+
+

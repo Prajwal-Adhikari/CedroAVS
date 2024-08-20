@@ -11,3 +11,6 @@ type Taskprocessor interface {
 	Start(ctx context.Context, wg *sync.WaitGroup)
 	GetRequestCh() chan agents.TaskRequest
 }
+
+type TaskProcessor struct {
+}

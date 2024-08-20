@@ -45,13 +45,15 @@ func NewAggregatorGRpcClient(config config.Config, operatorId sdktypes.OperatorI
 		operatorAddr:               opearatorAddr,
 		OperatorStateRetrieverAddr: config.AVS.OperatorStateRetrieverAddr,
 		RegistryCoodrinatorAddr:    config.AVS.RegistryCoordinatorAddr,
-		gRPCAggreagatorIpPortAddr:  "localhost:50051",
+		gRPCAggreagatorIpPortAddr:  config.GRpcAggregatorIpAddr,
 		timeout:                    1 * time.Minute,
 	}, nil
 }
 
 func (cl *AggregatorGRpcClient) InitOperatorToAggregator() error {
 	conn, err := grpc.NewClient(cl.gRPCAggreagatorIpPortAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+	fmt.Println(conn)
 
 	if err != nil {
 		return fmt.Errorf("dial initOperatorToAggregator connection failed: %v", err.Error())

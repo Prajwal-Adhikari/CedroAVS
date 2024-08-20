@@ -1,0 +1,1 @@
+docker build -f aggregator/Dockerfile -t aggregator-image .

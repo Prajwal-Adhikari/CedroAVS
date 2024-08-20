@@ -1,0 +1,1 @@
+docker build -f verifier/Dockerfile -t verifier-image .

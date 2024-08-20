@@ -133,7 +133,7 @@ func NewAggregator(cfg *config.Config) (*Aggregator, error) {
 
 func (a *Aggregator) Start(ctx context.Context) error {
 
-	var wg *sync.WaitGroup
+	var wg sync.WaitGroup
 
 	a.logger.Infof("Aggregator is starting")
 

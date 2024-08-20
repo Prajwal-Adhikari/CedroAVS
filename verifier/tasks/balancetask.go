@@ -16,7 +16,7 @@ import (
 	ethcommon "github.com/ethereum/go-ethereum/common"
 )
 
-var MAX_REQID, ok = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
+var MAX_REQID, _ = new(big.Int).SetString("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF", 16)
 
 type OperatorDeviationTask struct {
 	req     *agents.DeviationRequest

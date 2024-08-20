@@ -12,9 +12,9 @@ chains:
     block_time: 12
 
 keystore: 
-  path: /Users/rabindraregmi/.eigenlayer/operator_keys/cedroavs.ecdsa.key.json
+  path: ../keys/operator_keys/cedroavs.ecdsa.key.json
   password: Cedrolabs@123
-  bls_path: /Users/rabindraregmi/.eigenlayer/operator_keys/cedroavs.bls.key.json
+  bls_path: ../keys/operator_keys/cedroavs.bls.key.json
   bls_password: Cedrolabs@123
 
 ethereum:

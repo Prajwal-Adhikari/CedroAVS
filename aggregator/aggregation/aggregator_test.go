@@ -17,10 +17,11 @@ func TestMain(t *testing.T) {
 		Production:               false,
 		AVS:                      config.AVSConfig{},
 		KeyStore:                 &config.KeyStore{},
-		GRpcAggregatorIpAddr:     "",
+		GRpcAggregatorIpAddr:     "123",
 		Agents:                   []config.ChainConfig{},
 		EthConfig:                config.EthConfig{},
 		GraphQLUrl:               "",
+		
 	}
 
 	actualAggregator, _ := NewAggregator(cfg)

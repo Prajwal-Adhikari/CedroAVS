@@ -3,9 +3,7 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 
-	// "fmt"
 	"github.com/Cedro-Finance/CedroAVS/core/config"
 	"github.com/Cedro-Finance/CedroAVS/verifier/operator"
 
@@ -35,8 +33,7 @@ func main() {
 	configFile, err := config.LoadConfig(flagArgs.ConfigFile)
 
 	if err != nil {
-		fmt.Print(err)
-		panic("Failed loading config")
+		panic(err)
 	}
 	_ = configFile
 
