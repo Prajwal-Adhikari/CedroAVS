@@ -108,7 +108,10 @@ func enrollAgentHandler(owner common.Address, chainIDS []string) {
 	})
 
 	fmt.Printf("Deployed contract addresses: %+v\n", addresses)
-	contractcaller.MakeManagerContractCalls(owner, addresses)
+
+	if len(addresses) > 0 {
+		contractcaller.MakeManagerContractCalls(owner, addresses)
+	}
 }
 
 func parseEventData(vLog types.Log) EventMetadata {
