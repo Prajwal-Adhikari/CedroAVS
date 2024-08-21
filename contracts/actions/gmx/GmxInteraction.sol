@@ -438,17 +438,10 @@ contract GMXInteraction is ContextUpgradeable {
         bytes memory firstFunction = extractOrderFirstFunction(_payload);
         bytes memory shiftData = extractShiftParams(_payload);
 
-        // if (asset == nativeToken) {
-        //     dataArray = new bytes[](2);
-        //     dataArray[0] = firstFunction;
-        //     dataArray[1] = orderData;
-        // } else {
-        //     dataArray = new bytes[](3);
-        //     bytes memory secondFunction = extractOrderSecondFunction(_payload);
-        //     dataArray[0] = firstFunction;
-        //     dataArray[1] = secondFunction;
-        //     dataArray[2] = orderData;
-        // }
+        dataArray = new bytes[](2);
+        dataArray[0] = firstFunction;
+        dataArray[1] = shiftData;
+
         nativeAssetAmount = executionFee;
     }
 
