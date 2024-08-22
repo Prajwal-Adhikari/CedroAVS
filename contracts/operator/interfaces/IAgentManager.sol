@@ -18,6 +18,14 @@ interface IAgentManager {
      **/
     function setChainID(bytes32 _chainID) external;
 
+    /**
+     * @notice Configures key for protocols
+     * This function can only be accessed by the account with role MANAGER.
+     * @param _protocolId - id of the protocol
+     * @param _protocol - address of the protocol
+     **/
+    function setProtocol(bytes32 _protocolId, address _protocol) external;
+
     function deviationPercentage(address _agent)
         external
         view
@@ -97,6 +105,8 @@ interface IAgentManager {
 
     function mapIDs(bytes32 _chainID) external view returns (uint32);
 
+    function mapIDsV1(bytes32 _chainID) external view returns (uint16);
+
     function agentPodContracts(address _agent, bytes32 _chainID)
         external
         view
@@ -138,4 +148,8 @@ interface IAgentManager {
         bytes32 _chainID,
         address _agentContract
     ) external;
+
+    function payloadFetchFrom(bytes32 _id) external view returns (address);
+
+    function protocol(bytes32 _id) external view returns (address);
 }

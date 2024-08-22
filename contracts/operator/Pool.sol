@@ -6,7 +6,6 @@ import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../actions/interfaces/IAave.sol";
 
 string constant TAG = "Pool";
 
@@ -50,53 +49,6 @@ contract Pool is Initializable, ContextUpgradeable, ReentrancyGuardUpgradeable {
         agentPod = _agentPod;
     }
 
-    /**
-     * @notice Allows agent to perform DeFi action that requires direct interaction as msg.sender
-     * This function can be accessed by the owner
-     * @param _payload - fixed bytes pattern to be provided for a DeFi action
-     * @param _protocol - address of the DeFi protocol
-     **/
-    function takeAction(bytes memory _payload, address _protocol) public {
-        bytes32 id;
-        uint8 methodName;
-        address asset;
-        uint256 amount;
-        assembly {
-            id := mload(add(_payload, 34))
-            methodName := mload(add(_payload, 35))
-            asset := mload(add(_payload, 107))
-            amount := mload(add(_payload, 139))
-        }
-
-        if (id == stringToBytes32("AAVE")) {
-            if (methodName == 1) {
-                uint256 interestRateMode;
-                uint16 referralCode;
-                assembly {
-                    interestRateMode := mload(add(_payload, 171))
-                    referralCode := mload(add(_payload, 173))
-                }
-                IAave(_protocol).borrow(
-                    asset,
-                    amount,
-                    interestRateMode,
-                    referralCode,
-                    _msgSender()
-                );
-            } else if (methodName == 2) {
-                uint256 interestRateMode;
-                assembly {
-                    interestRateMode := mload(add(_payload, 171))
-                }
-                IAave(_protocol).repayWithATokens(
-                    asset,
-                    amount,
-                    interestRateMode
-                );
-            }
-        }
-    }
-
     // To be called only by agent pod
     function trasferAssetToDepositor(
         address _user,
@@ -125,21 +77,6 @@ contract Pool is Initializable, ContextUpgradeable, ReentrancyGuardUpgradeable {
             unchecked {
                 i++;
             }
-        }
-    }
-
-    function stringToBytes32(string memory source)
-        public
-        pure
-        returns (bytes32 result)
-    {
-        bytes memory tempEmptyStringTest = bytes(source);
-        if (tempEmptyStringTest.length == 0) {
-            return 0x0;
-        }
-
-        assembly {
-            result := mload(add(source, 32))
         }
     }
 }
