@@ -114,6 +114,16 @@ contract AgentManager is
     }
 
     /**
+     * @notice Configures key for protocols
+     * This function can only be accessed by the account with role MANAGER.
+     * @param _protocolId - id of the protocol
+     * @param _protocol - address of the protocol
+     **/
+    function setProtocol(bytes32 _protocolId, address _protocol) external {
+        protocol[_protocolId] = _protocol;
+    }
+
+    /**
      * @notice Maps chain ids of the protocol to LayerZero V2 chain ids
      * This function can only be accessed by the account with role MANAGER.
      * @param _chainIDs - protocol specific keys for the chains
@@ -150,13 +160,15 @@ contract AgentManager is
     }
 
     /**
-     * @notice Configures chain id
+     * @notice Configures address to fetch payload structure specific to the protocol
      * This function can only be accessed by the account with role MANAGER.
-     * @param _chainID - protocol specific key for the chain
+     * @param _id - id of protocol
      * @param _fetchAddress - address of interaction contract to fetch payload
      **/
-    function setPayloadFetchAddress(bytes32 _chainID, address _fetchAddress) external {
-        payloadFetchFrom[_chainID] = _fetchAddress;
+    function setPayloadFetchAddress(bytes32 _id, address _fetchAddress)
+        external
+    {
+        payloadFetchFrom[_id] = _fetchAddress;
     }
 
     /**
