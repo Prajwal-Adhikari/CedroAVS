@@ -39,7 +39,7 @@ contract Pool is Initializable, ContextUpgradeable, ReentrancyGuardUpgradeable {
         owner = _owner;
         agentPod = _agentPod;
     }
- 
+
     /**
      * @notice Configures corresponding agentPod
      * This function can be accessed by the role MANAGER
