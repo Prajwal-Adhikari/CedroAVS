@@ -6,9 +6,6 @@ import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "../actions/interfaces/IAave.sol";
-import "../actions/lido/interfaces/ILido.sol";
-import "../actions/lido/interfaces/ILidoWithdrawalQueue.sol";
 
 string constant TAG = "Pool";
 
@@ -52,99 +49,6 @@ contract Pool is Initializable, ContextUpgradeable, ReentrancyGuardUpgradeable {
         agentPod = _agentPod;
     }
 
-    /**
-     * @notice Allows agent to perform DeFi action that requires direct interaction as msg.sender
-     * This function can be accessed by the owner
-     * @param _payload - fixed bytes pattern to be provided for a DeFi action
-     * @param _protocol - address of the DeFi protocol
-     **/
-    function takeAction(bytes memory _payload, address _protocol) public {
-        bytes32 id;
-        uint8 methodName;
-      
-        assembly {
-            id := mload(add(_payload, 34))
-            methodName := mload(add(_payload, 35))
-        }
-
-        if (id == stringToBytes32("AAVE")) {
-              address asset;
-              uint256 amount;
-
-              assembly {
-                 asset := mload(add(_payload, 107))
-                 amount := mload(add(_payload, 139))
-              }
-
-            if (methodName == 1) {
-                uint256 interestRateMode;
-                uint16 referralCode;
-                assembly {
-                    interestRateMode := mload(add(_payload, 171))
-                    referralCode := mload(add(_payload, 173))
-                }
-                IAave(_protocol).borrow(
-                    asset,
-                    amount,
-                    interestRateMode,
-                    referralCode,
-                    _msgSender()
-                );
-            } else if (methodName == 2) {
-                uint256 interestRateMode;
-                assembly {
-                    interestRateMode := mload(add(_payload, 171))
-                }
-                IAave(_protocol).repayWithATokens(
-                    asset,
-                    amount,
-                    interestRateMode
-                );
-            }
-        }
-
-        if (id == stringToBytes32("LIDO")) {
-
-            uint256 amount;
-            
-            assembly {
-                amount := mload(add(_payload, 87))
-            }
-
-            // 1: Stake ETH
-            if (methodName == 1) {
-                // This method stakes our eth and returns equivalent amount of stEth.
-                // Referral address is set to Zero address.
-                ILido(_protocol).submit{value: amount}(address(0));
-            }
-
-            // 2: Token approval
-            else if (methodName == 2) {
-                address _spender;
-                assembly {
-                    _spender := mload(add(_payload, 107))
-                }
-
-                ILido(_protocol).approve(_spender, amount);
-            }
-            // 3: Request for withdrawal
-            // method 2 for token approval is mandatory before calling this method.
-            else if (methodName == 3) {
-                uint256[] memory _amount = new uint256[](1);
-                _amount[0] = amount;
-                ILidoWithdrawalQueue(_protocol).requestWithdrawals(
-                    _amount,
-                    address(this)
-                );
-            }
-            //  4: Claim withdrawals
-            else if (methodName == 4) {
-                // If there is no any matured withdrawal request, the transaction will revert. 
-                claimWithdrawals(_protocol);
-            }
-        }
-    }
-
     // To be called only by agent pod
     function trasferAssetToDepositor(
         address _user,
@@ -175,6 +79,7 @@ contract Pool is Initializable, ContextUpgradeable, ReentrancyGuardUpgradeable {
             }
         }
     }
+<<<<<<< HEAD
 
     // To be called for LIDO claim action
     function claimWithdrawals(address _withdrawContractAddress) internal {
@@ -237,4 +142,6 @@ contract Pool is Initializable, ContextUpgradeable, ReentrancyGuardUpgradeable {
             result := mload(add(source, 32))
         }
     }
+=======
+>>>>>>> 235aad504e9f6b12c999cdc39415aba9c5cd7c2b
 }

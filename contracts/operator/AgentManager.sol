@@ -37,6 +37,9 @@ contract AgentManager is
     uint256 public bondThreshold;
     mapping(address => mapping(bytes32 => address)) public agentPodContracts;
     mapping(bytes32 => uint32) public mapIDs;
+    mapping(bytes32 => uint16) public mapIDsV1;
+    mapping(bytes32 => address) public payloadFetchFrom;
+    mapping(bytes32 => address) public protocol;
 
     event DeviationCheck(address agent, uint256 requestID);
     event BondAmount(address agent, uint256 bondAmount);
@@ -110,6 +113,22 @@ contract AgentManager is
         chainID = _chainID;
     }
 
+    /**
+     * @notice Configures key for protocols
+     * This function can only be accessed by the account with role MANAGER.
+     * @param _protocolId - id of the protocol
+     * @param _protocol - address of the protocol
+     **/
+    function setProtocol(bytes32 _protocolId, address _protocol) external {
+        protocol[_protocolId] = _protocol;
+    }
+
+    /**
+     * @notice Maps chain ids of the protocol to LayerZero V2 chain ids
+     * This function can only be accessed by the account with role MANAGER.
+     * @param _chainIDs - protocol specific keys for the chains
+     * @param _chainIds - LayerZero V2 chain ids
+     **/
     function mapChainID(bytes32[] memory _chainIDs, uint32[] memory _chainIds)
         external
     {
@@ -120,6 +139,36 @@ contract AgentManager is
                 i++;
             }
         }
+    }
+
+    /**
+     * @notice Maps chain ids of the protocol to LayerZero V1 chain ids
+     * This function can only be accessed by the account with role MANAGER.
+     * @param _chainIDs - protocol specific keys for the chains
+     * @param _chainIds - LayerZero V1 chain ids
+     **/
+    function mapChainIDV1(bytes32[] memory _chainIDs, uint16[] memory _chainIds)
+        external
+    {
+        if (_chainIDs.length != _chainIds.length) revert ArgumentsMismatch(TAG);
+        for (uint256 i; i < _chainIDs.length; ) {
+            mapIDsV1[_chainIDs[i]] = _chainIds[i];
+            unchecked {
+                i++;
+            }
+        }
+    }
+
+    /**
+     * @notice Configures address to fetch payload structure specific to the protocol
+     * This function can only be accessed by the account with role MANAGER.
+     * @param _id - id of protocol
+     * @param _fetchAddress - address of interaction contract to fetch payload
+     **/
+    function setPayloadFetchAddress(bytes32 _id, address _fetchAddress)
+        external
+    {
+        payloadFetchFrom[_id] = _fetchAddress;
     }
 
     /**
@@ -168,7 +217,6 @@ contract AgentManager is
         if (isAgent[_msgSender()]) revert AIAgentAlreadyExists(_msgSender());
         agents.push(_msgSender());
         isAgent[_msgSender()] = true;
-
         emit AgentPodChainList(_msgSender(), _chainIDs);
     }
 
@@ -350,18 +398,5 @@ contract AgentManager is
         uint256 _txnId
     ) external {
         emit SlashAgent(_agent, _amountToSlash, _chainID, _txnId);
-    }
-
-    /**
-     * @notice Converts address to bytes32
-     * @param _addr - token address to withdraw
-     **/
-    function addressToBytes32(address _addr) public pure returns (bytes32) {
-        bytes32 result;
-        assembly {
-            mstore(0, _addr)
-            result := mload(0)
-        }
-        return result;
     }
 }
