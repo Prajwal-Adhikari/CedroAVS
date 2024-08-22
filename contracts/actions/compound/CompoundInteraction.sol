@@ -4,7 +4,7 @@ pragma solidity 0.8.24;
 import {ContextUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {ICompound} from "../interfaces/ICompound.sol";
+import {ICompound} from "./interfaces/ICompound.sol";
 import {IRoleManager} from "../interfaces/IRoleManager.sol";
 
 string constant TAG = "CompoundInteraction";
